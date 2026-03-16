@@ -1,12 +1,19 @@
+const path = require('path')
 const fastify = require('fastify')({ logger: true })
 const cors = require('@fastify/cors')
+const fastifyStatic = require('@fastify/static')
 const { Server } = require('socket.io')
-const http = require('http')
 
 // Setup CORS
 fastify.register(cors, {
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE']
+})
+
+// Serve Next.js static export
+fastify.register(fastifyStatic, {
+  root: path.join(__dirname, '..', 'out'),
+  prefix: '/',
 })
 
 // Health check
@@ -53,8 +60,9 @@ fastify.post('/api/messages', async (request, reply) => {
 // Create HTTP server
 const start = async () => {
   try {
-    const server = fastify.listen({ port: 3001, host: '0.0.0.0' })
-    
+    const port = process.env.PORT || 3001
+    await fastify.listen({ port: Number(port), host: '0.0.0.0' })
+
     // Setup Socket.io
     const io = new Server(fastify.server, {
       cors: {
@@ -69,9 +77,9 @@ const start = async () => {
       socket.on('join', (userId) => {
         socket.userId = userId
         console.log(`User ${userId} joined`)
-        
+
         // Broadcast user online
-        users = users.map(u => 
+        users = users.map(u =>
           u.id === userId ? { ...u, online: true } : u
         )
         io.emit('users:update', users)
@@ -86,7 +94,7 @@ const start = async () => {
           createdAt: new Date().toISOString()
         }
         messages.push(message)
-        
+
         // Emit to both sender and receiver
         io.emit('message:new', message)
       })
@@ -95,7 +103,7 @@ const start = async () => {
         console.log('Client disconnected:', socket.id)
         if (socket.userId) {
           // Broadcast user offline
-          users = users.map(u => 
+          users = users.map(u =>
             u.id === socket.userId ? { ...u, online: false } : u
           )
           io.emit('users:update', users)
@@ -103,7 +111,7 @@ const start = async () => {
       })
     })
 
-    console.log(`Server running on http://localhost:3001`)
+    console.log(`Server running on http://localhost:${port}`)
   } catch (err) {
     fastify.log.error(err)
     process.exit(1)
