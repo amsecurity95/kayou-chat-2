@@ -38,4 +38,5 @@ logs
 # Testing
 coverage/
 kayou-config.json
+uploads/
 out/uploads/

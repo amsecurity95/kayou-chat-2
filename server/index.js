@@ -23,7 +23,7 @@ function resolveEnv(val) {
   if (typeof val === 'string' && val.startsWith('ENV:')) return process.env[val.slice(4)] || ''
   return val
 }
-const UPLOADS_DIR = path.join(__dirname, '..', 'out', 'uploads')
+const UPLOADS_DIR = path.join(__dirname, '..', 'uploads')
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true })
 
 function loadConfig() {
@@ -36,6 +36,7 @@ function saveConfig(config) { fs.writeFileSync(CONFIG_PATH, JSON.stringify(confi
 
 fastify.register(cors, { origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE'] })
 fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'out'), prefix: '/' })
+fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'uploads'), prefix: '/uploads/', decorateReply: false })
 fastify.get('/health', async () => ({ status: 'ok' }))
 
 // ══════════════ AGENTS ══════════════
@@ -51,6 +52,7 @@ fastify.put('/api/config/agents/:id', async (req, reply) => {
   ;['name','model','systemPrompt','enabled','provider','color'].forEach(k => { if (u[k] !== undefined) a[k] = u[k] })
   if (u.permissions) a.permissions = u.permissions
   if (u.tasks) a.tasks = u.tasks
+  if (u.profilePhoto !== undefined) a.profilePhoto = u.profilePhoto
   c.agents[idx] = a; saveConfig(c)
   return { ...a, apiKey: a.apiKey ? '••••' + a.apiKey.slice(-4) : '', hasKey: !!a.apiKey }
 })
@@ -198,9 +200,11 @@ fastify.post('/api/chat', async (req, reply) => {
   const channelId = req.body.channelId || ''
   let channelContext = ''
   if (channelId === 'general') {
-    channelContext = '\n\nYou are in #general — the team room. Everyone is here: Aimar (CEO), and the other AI agents. This is a group conversation. You can respond to anyone — the CEO or other agents. Keep it natural, like coworkers chatting. Be concise. If another agent said something you agree or disagree with, respond to them directly. The messages show who said what in [Name]: format.'
+    channelContext = '\n\nYou\'re in #general — team room. Group chat with Aimar (CEO) and other agents. Messages show who said what as [Name]: format. Talk like you\'re texting coworkers. Keep it SHORT — 1-3 sentences unless you really need more. Don\'t repeat what someone already said.'
   } else if (channelId === 'ideas') {
-    channelContext = '\n\nYou are in #ideas. The CEO pitched an idea. Analyze from YOUR expertise and propose HOW to make it happen. Be specific — tools, timeline, architecture, costs, research. Be constructive. The messages show who said what in [Name]: format. You can also respond to other agents\' proposals.'
+    channelContext = '\n\nYou\'re in #ideas. Give your take from your expertise. Be specific and useful. Messages show who said what as [Name]: format. Keep it concise unless you\'re laying out a real plan.'
+  } else if (channelId === 'build' || channelId === 'testing' || channelId === 'release' || channelId === 'research') {
+    channelContext = `\n\nYou're in #${channelId}. This is a focused work channel. Group chat — messages show who said what as [Name]: format. Be concise and actionable. If you're the team lead, give your verdict after hearing from the team.`
   }
 
   const fullSystemPrompt = agent.systemPrompt + rulesText + contextText + tasksText + channelContext

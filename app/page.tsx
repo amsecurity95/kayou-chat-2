@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 
 /* ═══════════════════════════════════════════════════════════
    TYPES
@@ -82,52 +82,22 @@ const CHANNEL_AGENTS: Record<string, string[]> = {
 const ALL_EMOJIS = ['😀','😂','😍','🥰','😎','🤔','😭','🥳','🔥','💯','🚀','⚡','❤️','👍','👎','👏','🎉','🎨','💡','🐛','✅','❌','👀','🤝','💪','🧠','☕','🌟','⭐','💎','🏆','🎯','📦','🔒','🌈','✨','💬','📌','🔔','⏰']
 
 const SEED: Record<string, Msg[]> = {
-  general: [
-    { id: '1', channelId: 'general', senderId: 'aimar', content: 'Team, this is HQ. I want us focused on **one thing**: building products that make money. Let\'s go.', ts: new Date(Date.now() - 3600000).toISOString(), reactions: [{ emoji: '💰', users: ['kayou-code', 'kayou-kilo'] }], pinned: true },
-    { id: '2', channelId: 'general', senderId: 'kayou-kilo', content: 'Already on it. I\'ve been looking at your existing projects — Tropical Map, Chambana Rides, the album site. There\'s untapped revenue in all three. I\'ll put together a breakdown.', ts: new Date(Date.now() - 3400000).toISOString() },
-    { id: '3', channelId: 'general', senderId: 'kayou-code', content: 'I can ship fast. @Kayou Kilo you find the opportunity, I\'ll build the MVP. What\'s the quickest path to revenue right now?', ts: new Date(Date.now() - 3200000).toISOString() },
-    { id: '3b', channelId: 'general', senderId: 'kayou-kilo', content: 'Kayou Chat itself. If we add multi-tenant support, this becomes a SaaS product. Companies would pay $29/mo for an AI team chat. That\'s the play.', ts: new Date(Date.now() - 3000000).toISOString(), reactions: [{ emoji: '🧠', users: ['aimar'] }] },
-    { id: '3c', channelId: 'general', senderId: 'kayou-code', content: 'I like that. I can add auth + Stripe billing in a day. Boss, say the word.', ts: new Date(Date.now() - 2800000).toISOString() },
-  ],
-  ideas: [
-    { id: '4', channelId: 'ideas', senderId: 'aimar', content: 'Thinking about adding **voice rooms** to Kayou. Real-time audio between agents and humans.', ts: new Date(Date.now() - 2000000).toISOString() },
-    { id: '5', channelId: 'ideas', senderId: 'kayou-kilo', content: 'I\'ll research the top WebRTC solutions. Give me 5 minutes to pull comparison data.', ts: new Date(Date.now() - 1800000).toISOString(), reactions: [{ emoji: '💡', users: ['aimar'] }] },
-  ],
-  research: [
-    { id: '6', channelId: 'research', senderId: 'kayou-kilo', content: 'Benchmarked three WebRTC libraries. `simple-peer` is the lightest at **12KB** gzipped.', ts: new Date(Date.now() - 1500000).toISOString(), pinned: true },
-    { id: '7', channelId: 'research', senderId: 'kayou-kilo', content: 'Also evaluated LiveKit and Daily.co. LiveKit gives us the most control for self-hosting.', ts: new Date(Date.now() - 1200000).toISOString() },
-  ],
-  build: [
-    { id: '8', channelId: 'build', senderId: 'kayou-code', content: 'WebSocket layer is live. Real-time messaging with `sub-50ms` latency.', ts: new Date(Date.now() - 1000000).toISOString(), reactions: [{ emoji: '⚡', users: ['aimar'] }], pinned: true },
-    { id: '9', channelId: 'build', senderId: 'kayou-code', content: 'Project scaffold created in ~/Applications/kayou-chat/. All dependencies installed.', ts: new Date(Date.now() - 800000).toISOString() },
-    { id: '10', channelId: 'build', senderId: 'aimar', content: 'This is the speed I want. What\'s our deploy pipeline?', ts: new Date(Date.now() - 600000).toISOString() },
-  ],
-  testing: [
-    { id: '11', channelId: 'testing', senderId: 'kayou-code', content: 'All 47 tests passing. Coverage at **94%**. No regressions from the WebSocket merge.', ts: new Date(Date.now() - 500000).toISOString(), reactions: [{ emoji: '✅', users: ['aimar'] }] },
-  ],
-  release: [
-    { id: '12', channelId: 'release', senderId: 'kayou-code', content: '**Kayou v0.1.0** — deployed to production. All systems green.', ts: new Date(Date.now() - 900000).toISOString(), reactions: [{ emoji: '🎉', users: ['aimar', 'claude'] }], pinned: true },
-  ],
-  'dm-kayou-code': [
-    { id: '20', channelId: 'dm-kayou-code', senderId: 'kayou-code', content: 'Build team is ready. Dev and Ops are standing by. What are we shipping?', ts: new Date(Date.now() - 700000).toISOString() },
-  ],
-  'dm-kayou-kilo': [
-    { id: '21', channelId: 'dm-kayou-kilo', senderId: 'kayou-kilo', content: 'Scout is tracking trends and Analyst is crunching numbers. We\'ll have a revenue report soon.', ts: new Date(Date.now() - 800000).toISOString() },
-  ],
-  'dm-claude': [
-    { id: '22', channelId: 'dm-claude', senderId: 'claude', content: 'Security review queue is empty. Send code my way before any release.', ts: new Date(Date.now() - 600000).toISOString() },
-  ],
+  general: [],
+  ideas: [],
+  research: [],
+  build: [],
+  testing: [],
+  release: [],
+  'dm-kayou-code': [],
+  'dm-kayou-kilo': [],
+  'dm-claude': [],
   'dm-dev': [],
   'dm-ops': [],
   'dm-scout': [],
   'dm-analyst': [],
 }
 
-const INITIAL_NOTIFS: Notification[] = [
-  { id: 'n1', type: 'mention', from: 'openclaw', channelId: 'general', preview: 'Ready when you are, @Aimar', ts: new Date(Date.now() - 2400000).toISOString(), read: false },
-  { id: 'n2', type: 'reaction', from: 'claude', channelId: 'general', preview: '🚀 reacted to your message', ts: new Date(Date.now() - 3500000).toISOString(), read: false },
-  { id: 'n3', type: 'dm', from: 'claude', channelId: 'dm-claude', preview: 'Morning boss. PRs reviewed...', ts: new Date(Date.now() - 700000).toISOString(), read: false },
-]
+const INITIAL_NOTIFS: Notification[] = []
 
 /* ═══════════════════════════════════════════════════════════
    AI REPLIES
@@ -204,6 +174,7 @@ export default function KayouChat() {
   const [input, setInput] = useState('')
   const [typing, setTyping] = useState<string | null>(null)
   const [showProfile, setShowProfile] = useState<string | null>(null)
+  const [pendingPhoto, setPendingPhoto] = useState<{ preview: string; base64: string; filename: string } | null>(null)
   const [railView, setRailView] = useState<'home' | 'dms' | 'notifs' | 'saved' | 'search' | 'projects'>('home')
   const [showEmoji, setShowEmoji] = useState(false)
   const [showMention, setShowMention] = useState(false)
@@ -226,6 +197,7 @@ export default function KayouChat() {
   const [myAvatar, setMyAvatar] = useState<string | null>(null)
   const [replyTo, setReplyTo] = useState<Msg | null>(null)
   const [chillMode, setChillMode] = useState(false)
+  const [darkMode, setDarkMode] = useState(false)
   const [agents, setAgents] = useState<any[]>([])
   const [webhookInfo, setWebhookInfo] = useState<any>(null)
   const [settingsTab, setSettingsTab] = useState<'agents' | 'rules' | 'projects' | 'mcps' | 'services' | 'github' | 'webhook' | 'add' | 'finances'>('agents')
@@ -241,6 +213,9 @@ export default function KayouChat() {
   const [githubConfig, setGithubConfig] = useState<any>({})
   const [showProjects, setShowProjects] = useState(false)
   const [mobileSidebar, setMobileSidebar] = useState(false)
+  const [appLoading, setAppLoading] = useState(true)
+  const [channelsCollapsed, setChannelsCollapsed] = useState(false)
+  const [dmsCollapsed, setDmsCollapsed] = useState(false)
   const [mobileView, setMobileView] = useState<'chat' | 'channels'>('chat')
   const [isMobile, setIsMobile] = useState(false)
 
@@ -282,7 +257,11 @@ export default function KayouChat() {
   const loadGithub = async () => { try { const r = await fetch('/api/config/github'); if (r.ok) setGithubConfig(await r.json()) } catch(e){} }
 
   /* ── Effects ── */
-  useEffect(() => { loadAgents(); loadWebhook(); loadRules(); loadProjects(); loadMcps(); loadServices(); loadGithub() }, [])
+  useEffect(() => {
+    loadAgents(); loadWebhook(); loadRules(); loadProjects(); loadMcps(); loadServices(); loadGithub()
+    const t = setTimeout(() => setAppLoading(false), 1800)
+    return () => clearTimeout(t)
+  }, [])
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768)
     check(); window.addEventListener('resize', check); return () => window.removeEventListener('resize', check)
@@ -303,7 +282,7 @@ export default function KayouChat() {
   }, [showEmoji])
 
   /* ── Close right panels when switching ── */
-  const closeRightPanels = () => { setShowProfile(null); setShowPins(false); setShowMembers(false); setShowSearch(false); setThreadMsg(null) }
+  const closeRightPanels = () => { setShowProfile(null); setPendingPhoto(null); setShowPins(false); setShowMembers(false); setShowSearch(false); setThreadMsg(null) }
 
   /* ── Switch channel ── */
   const switchChannel = (chId: string) => { setActiveChannel(chId); closeRightPanels(); setShowEmoji(false); setShowMention(false); setMobileSidebar(false); setMobileView('chat') }
@@ -341,13 +320,21 @@ export default function KayouChat() {
     if (isDM) {
       responders = [activeChannel.replace('dm-', '')]
     } else {
-      // Pick 2 agents from the channel's team
-      responders = channelAgents.filter(() => Math.random() > 0.3).slice(0, 2)
-      if (responders.length === 0) responders = [channelAgents[0]]
-      // Add Claude if mentioned
-      if (mentionsClaude && !responders.includes('claude')) responders.push('claude')
+      // The first agent in CHANNEL_AGENTS is the lead for that channel
+      const lead = channelAgents[0]
+      const members = channelAgents.slice(1)
+
+      // Pick 1-2 members first, then add lead last (lead speaks last, makes final call)
+      const picked = members.filter(() => Math.random() > 0.4).slice(0, 2)
+      if (picked.length === 0 && members.length > 0) picked.push(members[Math.floor(Math.random() * members.length)])
+
+      // Lead always responds last in group channels
+      responders = [...picked, lead]
+
+      // Add Claude if mentioned (before lead so lead still speaks last)
+      if (mentionsClaude && !responders.includes('claude')) responders.splice(responders.length - 1, 0, 'claude')
       // Add any specifically mentioned agent
-      Object.keys(PEOPLE).forEach(id => { if (id !== 'aimar' && mentionsAgent(PEOPLE[id].name) && !responders.includes(id)) responders.push(id) })
+      Object.keys(PEOPLE).forEach(id => { if (id !== 'aimar' && mentionsAgent(PEOPLE[id].name) && !responders.includes(id)) responders.splice(responders.length - 1, 0, id) })
     }
 
     setReplyTo(null)
@@ -360,8 +347,8 @@ export default function KayouChat() {
         try {
           const currentMsgs = allMessages[activeChannel] || []
           const history = currentMsgs.slice(-12).map(m => ({
-            role: m.senderId === 'aimar' ? 'user' : 'assistant',
-            content: `[${PEOPLE[m.senderId]?.name || m.senderId}]: ${m.content}`,
+            role: m.senderId === 'aimar' ? 'user' as const : 'assistant' as const,
+            content: m.senderId === 'aimar' ? m.content : (m.senderId === rid ? m.content : `[${PEOPLE[m.senderId]?.name || m.senderId}]: ${m.content}`),
           }))
           const res = await fetch('/api/chat', {
             method: 'POST',
@@ -391,7 +378,7 @@ export default function KayouChat() {
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
                         agentId: reactor,
-                        message: `${PEOPLE[rid]?.name} just said: "${replyContent}". Respond to their point briefly — agree, disagree, or add to it. Keep it short (1-2 sentences). You are in a team chat with the CEO and other agents.`,
+                        message: `${PEOPLE[rid]?.name} said: "${replyContent}". React naturally — agree, push back, or add something new. Keep it to 1-2 sentences max. Don't repeat what they said. Talk like you're texting a coworker.`,
                         history: followHistory,
                         channelId: activeChannel,
                       }),
@@ -556,11 +543,18 @@ export default function KayouChat() {
     e.target.value = ''
   }
 
-  // Load saved avatar
+  // Load saved avatar + dark mode
   useEffect(() => {
     const saved = localStorage.getItem('kayou-avatar')
     if (saved) setMyAvatar(saved)
+    const dm = localStorage.getItem('kayou-dark')
+    if (dm === 'true') { setDarkMode(true); document.documentElement.classList.add('dark') }
   }, [])
+
+  useEffect(() => {
+    if (darkMode) { document.documentElement.classList.add('dark'); localStorage.setItem('kayou-dark', 'true') }
+    else { document.documentElement.classList.remove('dark'); localStorage.setItem('kayou-dark', 'false') }
+  }, [darkMode])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -595,11 +589,27 @@ export default function KayouChat() {
   /* ═══════════════════════════════════════════════════════════
      RENDER
      ═══════════════════════════════════════════════════════════ */
+  // Splash screen
+  if (appLoading) {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center transition-opacity" style={{ background: darkMode ? '#0D0D0F' : '#FFFFFF' }}>
+        <div className="animate-pulse">
+          <img src="/kayou-logo.png" alt="Kayou" className="w-20 h-20 rounded-2xl mb-5" style={{ boxShadow: '0 8px 40px rgba(53,99,201,0.2)' }} />
+        </div>
+        <p className="text-[20px] mb-2" style={{ fontWeight: 900, letterSpacing: '-0.04em', color: darkMode ? '#FFFFFF' : '#1A2332' }}>Kayou Chat</p>
+        <p className="text-[12px]" style={{ color: darkMode ? '#48484A' : '#AEAEB2', fontWeight: 600 }}>Your AI team is loading...</p>
+        <div className="mt-6 w-32 h-1 rounded-full overflow-hidden" style={{ background: darkMode ? '#1C1C1E' : '#F0F0F2' }}>
+          <div className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, #3563C9, #2A4FAF)', animation: 'loadBar 1.5s ease-in-out forwards' }}></div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <>
     <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ position: 'fixed', top: -9999, left: -9999, opacity: 0 }} />
     <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} style={{ position: 'fixed', top: -9999, left: -9999, opacity: 0 }} />
-    <div className="flex h-screen overflow-hidden" style={{ background: '#FFFFFF' }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: darkMode ? '#1C1C1E' : '#FFFFFF' }}>
 
       {/* ═══ MOBILE SIDEBAR OVERLAY ═══ */}
       {mobileSidebar && isMobile && (
@@ -615,13 +625,13 @@ export default function KayouChat() {
         <div className="bubble bubble-4"></div>
         <div className="bubble bubble-5"></div>
 
-        <div className="relative z-10 flex flex-col flex-1">
+        <div className="relative z-10 flex flex-col flex-1 overflow-hidden">
           {/* Logo + title */}
           <div className="h-[76px] flex items-center px-4 gap-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
             <div className="w-[58px] h-[58px] flex-shrink-0 transition-transform hover:scale-105">
               <img src="/kayou-logo.png" alt="Kayou" className="w-full h-full object-contain" />
             </div>
-            <h1 className="text-[17px] font-extrabold text-white flex-1 tracking-tight">Kayou Chat</h1>
+            <h1 className="text-[18px] text-white flex-1" style={{ fontWeight: 900, letterSpacing: '-0.04em' }}>Kayou Chat</h1>
             <button onClick={() => { setShowSettings(true); loadAgents(); loadWebhook(); loadRules(); loadProjects(); loadMcps(); loadServices(); loadGithub() }} className="nav-btn w-8 h-8 rounded-lg flex items-center justify-center" style={{ color: 'rgba(255,255,255,0.8)' }} title="Settings">
               <span className="material-symbols-rounded" style={{ fontSize: 18 }}>settings</span>
             </button>
@@ -656,27 +666,66 @@ export default function KayouChat() {
             {/* ── Notifications view ── */}
             {railView === 'notifs' && (
               <div className="px-3">
-                <div className="flex items-center justify-between mb-3 px-1">
-                  <span className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/70">Activity</span>
-                  <button onClick={markAllRead} className="text-[11px] font-medium text-white hover:text-white">Mark all read</button>
+                <div className="flex items-center justify-between mb-4 px-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/70">Activity</span>
+                    {unreadNotifs > 0 && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-red-500 text-white">{unreadNotifs}</span>}
+                  </div>
+                  {unreadNotifs > 0 && <button onClick={markAllRead} className="text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-all hover:bg-white/15" style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.8)' }}>Mark all read</button>}
                 </div>
                 {notifications.length === 0 ? (
-                  <p className="text-[12px] text-center py-8 text-white/70">No activity yet</p>
-                ) : notifications.map(n => (
-                  <button key={n.id} onClick={() => clickNotif(n)}
-                    className="w-full text-left px-3 py-2.5 rounded-xl mb-1 transition-all hover:bg-white/10"
-                    style={{ background: n.read ? 'transparent' : 'rgba(255,255,255,0.08)' }}>
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-md flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0" style={{ background: PEOPLE[n.from]?.gradient }}>{PEOPLE[n.from]?.avatar}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[12px] font-semibold truncate text-white">{PEOPLE[n.from]?.name}</p>
-                        <p className="text-[11px] truncate text-white/80">{n.preview}</p>
-                      </div>
-                      {!n.read && <span className="w-2 h-2 rounded-full flex-shrink-0 bg-white"></span>}
+                  <div className="text-center py-10">
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                      <span className="material-symbols-rounded text-white/30" style={{ fontSize: 28 }}>notifications_off</span>
                     </div>
-                    <p className="text-[10px] mt-1 pl-8 text-white/70">{formatTs(n.ts)}</p>
-                  </button>
-                ))}
+                    <p className="text-[12px] font-semibold text-white/50">All caught up</p>
+                    <p className="text-[10px] text-white/30 mt-1">No new activity</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {notifications.map(n => {
+                      const person = PEOPLE[n.from]
+                      const notifIcon = n.type === 'mention' ? 'alternate_email' : n.type === 'reaction' ? 'add_reaction' : n.type === 'dm' ? 'chat_bubble' : 'notifications'
+                      const notifColor = n.type === 'mention' ? '#3B82F6' : n.type === 'reaction' ? '#F59E0B' : n.type === 'dm' ? '#10B981' : '#8B5CF6'
+                      const agentPhoto = agents.find((a: any) => a.id === n.from)?.profilePhoto
+                      return (
+                        <button key={n.id} onClick={() => clickNotif(n)}
+                          className="w-full text-left px-3 py-3 rounded-xl transition-all hover:bg-white/10 relative"
+                          style={{ background: n.read ? 'transparent' : 'rgba(255,255,255,0.06)' }}>
+                          <div className="flex items-start gap-2.5">
+                            {/* Avatar with notification type badge */}
+                            <div className="relative flex-shrink-0">
+                              {agentPhoto ? (
+                                <img src={agentPhoto} className="w-9 h-9 rounded-xl object-cover" />
+                              ) : (
+                                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-[11px] font-bold" style={{ background: person?.gradient }}>{person?.avatar}</div>
+                              )}
+                              <div className="absolute -bottom-1 -right-1 w-4.5 h-4.5 rounded-md flex items-center justify-center" style={{ background: notifColor, width: 18, height: 18, borderRadius: 6, border: '2px solid #2A3A6B' }}>
+                                <span className="material-symbols-rounded text-white" style={{ fontSize: 10 }}>{notifIcon}</span>
+                              </div>
+                            </div>
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[12px] font-bold text-white">{person?.name}</span>
+                                <span className="text-[10px] text-white/40">{formatTs(n.ts)}</span>
+                              </div>
+                              <p className="text-[11px] mt-0.5 text-white/70 leading-relaxed">{n.preview}</p>
+                              {n.channelId && !n.channelId.startsWith('dm-') && (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <span className="material-symbols-rounded text-white/30" style={{ fontSize: 11 }}>tag</span>
+                                  <span className="text-[10px] text-white/30">{n.channelId}</span>
+                                </div>
+                              )}
+                            </div>
+                            {/* Unread dot */}
+                            {!n.read && <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5" style={{ background: notifColor, boxShadow: `0 0 6px ${notifColor}60` }}></span>}
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
@@ -702,10 +751,12 @@ export default function KayouChat() {
             {/* ── Channels + DMs ── */}
             {(railView === 'home' || railView === 'dms') && (<>
               {railView === 'home' && (<>
-                <div className="px-5 mb-2">
-                  <span className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/70">Channels</span>
-                </div>
-                {CHANNELS.map(ch => (
+                <button onClick={() => setChannelsCollapsed(!channelsCollapsed)} className="w-full px-5 mb-1 flex items-center gap-1.5 group">
+                  <span className="material-symbols-rounded text-white/40 transition-transform" style={{ fontSize: 14, transform: channelsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>expand_more</span>
+                  <span className="text-[9px] font-black uppercase text-white/50" style={{ letterSpacing: '0.14em' }}>Channels</span>
+                  <span className="text-[9px] font-bold text-white/30 ml-auto">{CHANNELS.length}</span>
+                </button>
+                {!channelsCollapsed && CHANNELS.map(ch => (
                   <button key={ch.id} onClick={() => switchChannel(ch.id)}
                     className={`ch-item w-[calc(100%-16px)] mx-2 flex items-center gap-2.5 px-3 py-[7px] text-left ${activeChannel === ch.id ? 'active' : ''}`}>
                     <span className="material-symbols-rounded" style={{ fontSize: 17, color: activeChannel === ch.id ? '#FFFFFF' : 'rgba(255,255,255,0.8)' }}>{ch.icon}</span>
@@ -714,10 +765,12 @@ export default function KayouChat() {
                 ))}
               </>)}
 
-              <div className="px-5 mt-5 mb-2">
-                <span className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/70">Direct Messages</span>
-              </div>
-              {DM_CHANNELS.map(dm => {
+              <button onClick={() => setDmsCollapsed(!dmsCollapsed)} className="w-full px-5 mt-4 mb-1 flex items-center gap-1.5 group">
+                <span className="material-symbols-rounded text-white/40 transition-transform" style={{ fontSize: 14, transform: dmsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>expand_more</span>
+                <span className="text-[9px] font-black uppercase text-white/50" style={{ letterSpacing: '0.14em' }}>Direct Messages</span>
+                <span className="text-[9px] font-bold text-white/30 ml-auto">{DM_CHANNELS.length}</span>
+              </button>
+              {!dmsCollapsed && DM_CHANNELS.map(dm => {
                 const p = PEOPLE[dm.personId]
                 return (
                   <button key={dm.id} onClick={() => switchChannel(dm.id)}
@@ -735,21 +788,8 @@ export default function KayouChat() {
             </>)}
           </div>
 
-          {/* Chill mode toggle */}
-          <div className="px-4 py-2" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-            <button onClick={() => setChillMode(!chillMode)}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all"
-              style={{ background: chillMode ? 'rgba(255,255,255,0.15)' : 'transparent' }}>
-              <span className="text-[16px]">{chillMode ? '🌴' : '💼'}</span>
-              <span className="text-[12px] font-medium text-white/90">{chillMode ? 'Chill Mode' : 'Work Mode'}</span>
-              <div className="ml-auto w-9 h-5 rounded-full transition-colors" style={{ background: chillMode ? '#4CAF50' : 'rgba(255,255,255,0.2)' }}>
-                <div className="w-4 h-4 bg-white rounded-full mt-0.5 transition-transform" style={{ transform: chillMode ? 'translateX(18px)' : 'translateX(2px)' }}></div>
-              </div>
-            </button>
-          </div>
-
           {/* Bottom user */}
-          <div className="px-4 py-3 flex items-center gap-3">
+          <div className="px-4 py-2.5 flex items-center gap-3 flex-shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
             <div className="relative cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
               {myAvatar ? (
                 <img src={myAvatar} className="w-9 h-9 rounded-xl object-cover" />
@@ -763,6 +803,22 @@ export default function KayouChat() {
               <p className="text-[10px] truncate text-white/80 flex items-center gap-1"><span className="material-symbols-rounded" style={{ fontSize: 12 }}>{myStatus.emoji}</span> {myStatus.text}</p>
             </div>
           </div>
+
+          {/* Mode toggles */}
+          <div className="px-4 py-2 flex gap-2 flex-shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <button onClick={() => setDarkMode(!darkMode)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl transition-all"
+              style={{ background: darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)' }}>
+              <span className="material-symbols-rounded text-white/90" style={{ fontSize: 14 }}>{darkMode ? 'dark_mode' : 'light_mode'}</span>
+              <span className="text-[11px] font-bold text-white/80">{darkMode ? 'Night' : 'Day'}</span>
+            </button>
+            <button onClick={() => setChillMode(!chillMode)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl transition-all"
+              style={{ background: chillMode ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)' }}>
+              <span className="text-[12px]">{chillMode ? '🌴' : '💼'}</span>
+              <span className="text-[11px] font-bold text-white/80">{chillMode ? 'Chill' : 'Work'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -770,38 +826,38 @@ export default function KayouChat() {
       <div className="flex-1 flex flex-col min-w-0 glass-chat relative" style={isMobile ? { paddingBottom: '120px' } : {}}>
         {/* Mobile Header */}
         {isMobile && (
-          <div className="mobile-header h-[56px] flex items-center px-4 gap-3" style={{ borderBottom: '1px solid #E8EDF2' }}>
-            <button onClick={() => setMobileSidebar(true)} className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: '#F7F9FC' }}>
+          <div className="mobile-header h-[56px] flex items-center px-4 gap-3" style={{ borderBottom: `1px solid ${darkMode ? '#2C2C2E' : '#E8EDF2'}` }}>
+            <button onClick={() => setMobileSidebar(true)} className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: darkMode ? '#1C1C1E' : '#F7F9FC' }}>
               <span className="material-symbols-rounded" style={{ fontSize: 20, color: '#3563C9' }}>menu</span>
             </button>
             <div className="flex items-center gap-2 flex-1 min-w-0">
               {isDM && dmPerson ? (<>
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-[13px] font-bold" style={{ background: dmPerson.gradient }}>{dmPerson.avatar}</div>
-                <span className="font-extrabold text-[16px] truncate" style={{ color: '#1A1A1A' }}>{dmPerson.name}</span>
+                <span className="font-extrabold text-[16px] truncate" style={{ color: darkMode ? '#FFFFFF' : '#1A1A1A' }}>{dmPerson.name}</span>
               </>) : channel ? (<>
                 <span className="material-symbols-rounded" style={{ fontSize: 26, color: '#3563C9' }}>{channel.icon}</span>
-                <span className="font-bold text-[15px] truncate" style={{ color: '#1A2332' }}>{channel.name}</span>
+                <span className="font-bold text-[15px] truncate" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>{channel.name}</span>
               </>) : null}
             </div>
             <button onClick={() => { setShowSettings(true); loadAgents(); loadWebhook(); loadRules(); loadProjects(); loadMcps(); loadServices(); loadGithub() }}
-              className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: '#F7F9FC' }}>
-              <span className="material-symbols-rounded" style={{ fontSize: 18, color: '#94A3B8' }}>settings</span>
+              className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: darkMode ? '#1C1C1E' : '#F7F9FC' }}>
+              <span className="material-symbols-rounded" style={{ fontSize: 18, color: darkMode ? '#8E8E93' : '#94A3B8' }}>settings</span>
             </button>
           </div>
         )}
 
         {/* Desktop Header */}
-        <div className="desktop-only h-[52px] flex items-center px-5 flex-shrink-0 glass-header relative z-10" style={{ borderBottom: '1px solid #E8EDF2' }}>
+        <div className="desktop-only h-[52px] flex items-center px-5 flex-shrink-0 glass-header relative z-10" style={{ borderBottom: `1px solid ${darkMode ? '#1C1C1E' : '#E8EDF2'}`, background: darkMode ? '#141418' : undefined }}>
           <div className="flex items-center gap-3 flex-1 min-w-0">
             {isDM && dmPerson ? (<>
               <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-[13px] font-bold" style={{ background: dmPerson.gradient }}>{dmPerson.avatar}</div>
-              <span className="font-bold text-[14px]" style={{ color: '#1A2332' }}>{dmPerson.name}</span>
+              <span className="font-bold text-[14px]" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>{dmPerson.name}</span>
               {dmPerson.isBot && <span className="text-[9px] font-bold px-1.5 py-[2px] rounded-md uppercase" style={{ background: '#EBF5FF', color: '#2B7DD6' }}>ai</span>}
-              <span className="text-[11px] flex items-center gap-1" style={{ color: '#94A3B8' }}><span className="material-symbols-rounded" style={{ fontSize: 13 }}>{dmPerson.statusEmoji}</span> {dmPerson.statusText}</span>
+              <span className="text-[11px] flex items-center gap-1" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}><span className="material-symbols-rounded" style={{ fontSize: 13 }}>{dmPerson.statusEmoji}</span> {dmPerson.statusText}</span>
             </>) : channel ? (<>
               <span className="material-symbols-rounded" style={{ fontSize: 26, color: '#3563C9' }}>{channel.icon}</span>
-              <span className="font-extrabold text-[16px] uppercase tracking-wide" style={{ color: '#1A1A1A' }}>{channel.name}</span>
-              <span className="text-[11px] ml-1 hidden sm:inline" style={{ color: '#94A3B8' }}>{channel.description}</span>
+              <span className="text-[16px] uppercase" style={{ fontWeight: 900, letterSpacing: '-0.01em', color: darkMode ? '#FFFFFF' : '#1A1A1A' }}>{channel.name}</span>
+              <span className="text-[13px] font-medium ml-2 hidden sm:inline" style={{ color: darkMode ? '#A1A1A6' : '#64748B' }}>{channel.description}</span>
             </>) : null}
           </div>
           <div className="flex items-center gap-1">
@@ -822,18 +878,18 @@ export default function KayouChat() {
 
         {/* Pinned messages banner */}
         {showPins && pinnedMsgs.length > 0 && (
-          <div className="px-4 py-2 flex-shrink-0" style={{ background: '#FFFBEB', borderBottom: '1px solid #FDE68A' }}>
+          <div className="px-4 py-2 flex-shrink-0" style={{ background: darkMode ? '#2C2A0A' : '#FFFBEB', borderBottom: `1px solid ${darkMode ? '#5C4D1A' : '#FDE68A'}` }}>
             <div className="flex items-center gap-2 mb-1.5">
               <span className="material-symbols-rounded" style={{ fontSize: 16, color: '#D97706' }}>push_pin</span>
               <span className="text-[12px] font-bold" style={{ color: '#D97706' }}>Pinned Messages</span>
-              <button onClick={() => setShowPins(false)} className="ml-auto text-[11px] font-medium" style={{ color: '#94A3B8' }}>Hide</button>
+              <button onClick={() => setShowPins(false)} className="ml-auto text-[11px] font-medium" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>Hide</button>
             </div>
             {pinnedMsgs.map(m => (
               <div key={m.id} className="flex items-start gap-2 py-1.5" style={{ borderTop: '1px solid #FEF3C7' }}>
                 <div className="w-5 h-5 rounded flex items-center justify-center text-white text-[8px] font-bold flex-shrink-0 mt-0.5" style={{ background: PEOPLE[m.senderId]?.gradient }}>{PEOPLE[m.senderId]?.avatar}</div>
                 <div className="flex-1 min-w-0">
-                  <span className="text-[11px] font-semibold" style={{ color: '#92400E' }}>{PEOPLE[m.senderId]?.name}: </span>
-                  <span className="text-[11px]" style={{ color: '#78350F' }}>{m.content.replace(/\*\*/g, '').replace(/\*/g, '').slice(0, 120)}</span>
+                  <span className="text-[11px] font-semibold" style={{ color: darkMode ? '#FBBF24' : '#92400E' }}>{PEOPLE[m.senderId]?.name}: </span>
+                  <span className="text-[11px]" style={{ color: darkMode ? '#FDE68A' : '#78350F' }}>{m.content.replace(/\*\*/g, '').replace(/\*/g, '').slice(0, 120)}</span>
                 </div>
                 <button onClick={() => togglePin(m.id)} className="flex-shrink-0">
                   <span className="material-symbols-rounded" style={{ fontSize: 14, color: '#D97706' }}>close</span>
@@ -853,19 +909,41 @@ export default function KayouChat() {
               const prev = msgs[idx - 1]
               const grouped = prev && prev.senderId === msg.senderId && (new Date(msg.ts).getTime() - new Date(prev.ts).getTime()) < 300000
 
+              // Date separator
+              const msgDate = new Date(msg.ts)
+              const prevDate = prev ? new Date(prev.ts) : null
+              const showDateSep = !prevDate || msgDate.toDateString() !== prevDate.toDateString()
+              const today = new Date()
+              const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1)
+              const dateLabel = msgDate.toDateString() === today.toDateString() ? 'Today' : msgDate.toDateString() === yesterday.toDateString() ? 'Yesterday' : msgDate.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })
+
               return (
-                <div key={msg.id} className={`msg-enter group relative ${grouped ? 'bubble-grouped' : 'mt-4 first:mt-0'}`}>
+                <React.Fragment key={msg.id}>
+                {showDateSep && (
+                  <div className="flex items-center gap-3 my-5">
+                    <div className="flex-1 h-px" style={{ background: darkMode ? '#2C2C2E' : '#E8EDF2' }}></div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full" style={{ background: darkMode ? '#2C2C2E' : '#F1F5F9', color: darkMode ? '#8E8E93' : '#94A3B8' }}>{dateLabel}</span>
+                    <div className="flex-1 h-px" style={{ background: darkMode ? '#2C2C2E' : '#E8EDF2' }}></div>
+                  </div>
+                )}
+                <div className={`msg-enter group relative ${grouped ? 'bubble-grouped' : 'mt-4 first:mt-0'}`}>
                   <div className={`bubble-row ${isOwn ? 'bubble-row-self' : ''}`}>
                     {/* Avatar */}
                     {isOwn && myAvatar ? (
                       <img src={myAvatar} className="bubble-avatar cursor-pointer object-cover" style={{ background: sender.gradient }}
                         onClick={() => avatarInputRef.current?.click()} />
-                    ) : (
-                      <div className="bubble-avatar cursor-pointer" style={{ background: sender.gradient }}
-                        onClick={() => { if (isOwn) avatarInputRef.current?.click(); else { setShowProfile(showProfile === sender.id ? null : sender.id); setShowPins(false); setShowMembers(false); setShowSearch(false); setThreadMsg(null) } }}>
-                        {sender.avatar}
-                      </div>
-                    )}
+                    ) : (() => {
+                      const agentPhoto = agents.find((a: any) => a.id === sender.id)?.profilePhoto
+                      return agentPhoto ? (
+                        <img src={agentPhoto} className="bubble-avatar cursor-pointer object-cover" style={{ background: sender.gradient }}
+                          onClick={() => { setShowProfile(showProfile === sender.id ? null : sender.id); setShowPins(false); setShowMembers(false); setShowSearch(false); setThreadMsg(null) }} />
+                      ) : (
+                        <div className="bubble-avatar cursor-pointer" style={{ background: sender.gradient }}
+                          onClick={() => { if (isOwn) avatarInputRef.current?.click(); else { setShowProfile(showProfile === sender.id ? null : sender.id); setShowPins(false); setShowMembers(false); setShowSearch(false); setThreadMsg(null) } }}>
+                          {sender.avatar}
+                        </div>
+                      )
+                    })()}
 
                     {/* Bubble */}
                     <div className={`chat-bubble ${isOwn ? 'chat-bubble-self' : 'chat-bubble-other'}`}>
@@ -886,7 +964,7 @@ export default function KayouChat() {
                       {editingMsg === msg.id ? (
                         <div className="flex items-center gap-2">
                           <input value={editText} onChange={e => setEditText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') saveEdit(msg.id); if (e.key === 'Escape') { setEditingMsg(null); setEditText('') } }}
-                            className="flex-1 text-[13px] px-3 py-1.5 rounded-lg border border-blue-300 bg-white" style={{ color: '#1E293B' }} autoFocus />
+                            className="flex-1 text-[13px] px-3 py-1.5 rounded-lg border border-blue-300 bg-white" style={{ color: darkMode ? '#E5E5EA' : '#1E293B' }} autoFocus />
                           <button onClick={() => saveEdit(msg.id)} className="text-[11px] font-semibold" style={{ color: isOwn ? '#FFFFFF' : '#3563C9' }}>Save</button>
                         </div>
                       ) : (
@@ -922,12 +1000,12 @@ export default function KayouChat() {
 
                   {/* Hover toolbar */}
                   <div className={`absolute ${isOwn ? 'left-2' : 'right-2'} top-0 -translate-y-1/2 rounded-full flex items-center opacity-0 group-hover:opacity-100 transition-opacity`}
-                    style={{ background: '#FFFFFF', border: '1px solid #E8EDF2', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
+                    style={{ background: darkMode ? '#1C1C1E' : '#FFFFFF', border: `1px solid ${darkMode ? '#2C2C2E' : '#E8EDF2'}`, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
                     {['👍','❤️','🚀'].map(e => (
                       <button key={e} onClick={() => addReaction(msg.id, e)} className="w-7 h-7 flex items-center justify-center text-xs hover:bg-gray-50 first:rounded-l-full last:rounded-r-full transition-colors">{e}</button>
                     ))}
                     <button onClick={() => { setReplyTo(msg); inputRef.current?.focus() }} className="w-7 h-7 flex items-center justify-center hover:bg-gray-50 transition-colors" title="Reply">
-                      <span className="material-symbols-rounded" style={{ fontSize: 13, color: '#94A3B8' }}>reply</span>
+                      <span className="material-symbols-rounded" style={{ fontSize: 13, color: darkMode ? '#8E8E93' : '#94A3B8' }}>reply</span>
                     </button>
                     {isOwn && (
                       <button onClick={() => deleteMsg(msg.id)} className="w-7 h-7 flex items-center justify-center hover:bg-red-50 rounded-r-full transition-colors">
@@ -936,6 +1014,7 @@ export default function KayouChat() {
                     )}
                   </div>
                 </div>
+              </React.Fragment>
               )
             })}
 
@@ -944,7 +1023,7 @@ export default function KayouChat() {
               <div className="bubble-row mt-4 msg-enter">
                 <div className="bubble-avatar" style={{ background: PEOPLE[typing].gradient }}>{PEOPLE[typing].avatar}</div>
                 <div>
-                  <div className="bubble-name" style={{ color: '#94A3B8', marginBottom: 4 }}>{PEOPLE[typing].name}</div>
+                  <div className="bubble-name" style={{ color: darkMode ? '#8E8E93' : '#94A3B8', marginBottom: 4 }}>{PEOPLE[typing].name}</div>
                   <div className="typing-bubble">
                     <div className="typing-dot w-[7px] h-[7px] rounded-full" style={{ background: '#8E8E93' }}></div>
                     <div className="typing-dot w-[7px] h-[7px] rounded-full" style={{ background: '#8E8E93' }}></div>
@@ -962,7 +1041,7 @@ export default function KayouChat() {
         <div className="px-5 pb-5 pt-2 relative z-10">
           {/* Reply preview bar */}
           {replyTo && (
-            <div className="flex items-center gap-2 px-4 py-2 mb-1 rounded-t-xl" style={{ background: '#F2F2F7', borderLeft: '3px solid #007AFF' }}>
+            <div className="flex items-center gap-2 px-4 py-2 mb-1 rounded-t-xl" style={{ background: darkMode ? '#2C2C2E' : '#F2F2F7', borderLeft: '3px solid #007AFF' }}>
               <span className="material-symbols-rounded" style={{ fontSize: 16, color: '#007AFF' }}>reply</span>
               <div className="flex-1 min-w-0">
                 <span className="text-[11px] font-semibold" style={{ color: '#007AFF' }}>{PEOPLE[replyTo.senderId]?.name}</span>
@@ -976,12 +1055,12 @@ export default function KayouChat() {
 
           {/* Mention dropdown */}
           {showMention && (
-            <div className="absolute bottom-full left-5 mb-2 w-[240px] bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden pop-in z-50">
+            <div className="absolute bottom-full left-5 mb-2 w-[240px] rounded-xl shadow-lg overflow-hidden pop-in z-50" style={{ background: darkMode ? '#1C1C1E' : '#FFFFFF', border: `1px solid ${darkMode ? '#2C2C2E' : '#E5E7EB'}` }}>
               {Object.values(PEOPLE).map(p => (
-                <button key={p.id} onClick={() => insertMention(p.name)} className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50 transition-colors">
+                <button key={p.id} onClick={() => insertMention(p.name)} className="w-full flex items-center gap-2.5 px-3 py-2.5 transition-colors" style={{ borderTop: `1px solid ${darkMode ? '#2C2C2E' : '#F3F4F6'}` }}>
                   <div className="w-6 h-6 rounded-md flex items-center justify-center text-white text-[9px] font-bold" style={{ background: p.gradient }}>{p.avatar}</div>
-                  <span className="text-[13px] font-medium" style={{ color: '#1E293B' }}>{p.name}</span>
-                  <span className="text-[11px] ml-auto" style={{ color: '#94A3B8' }}>{p.role}</span>
+                  <span className="text-[13px] font-medium" style={{ color: darkMode ? '#E5E5EA' : '#1E293B' }}>{p.name}</span>
+                  <span className="text-[11px] ml-auto" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>{p.role}</span>
                 </button>
               ))}
             </div>
@@ -989,7 +1068,7 @@ export default function KayouChat() {
 
           {/* Emoji picker */}
           {showEmoji && (
-            <div ref={emojiRef} className="absolute bottom-full left-5 mb-2 w-[340px] bg-white border border-gray-200 rounded-xl shadow-lg p-3 pop-in z-50">
+            <div ref={emojiRef} className="absolute bottom-full left-5 mb-2 w-[340px] rounded-xl shadow-lg p-3 pop-in z-50" style={{ background: darkMode ? '#1C1C1E' : '#FFFFFF', border: `1px solid ${darkMode ? '#2C2C2E' : '#E5E7EB'}` }}>
               <div className="emoji-grid">
                 {ALL_EMOJIS.map(e => (
                   <button key={e} onClick={() => insertEmoji(e)}>{e}</button>
@@ -998,8 +1077,8 @@ export default function KayouChat() {
             </div>
           )}
 
-          <div className="rounded-xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            <div className="flex items-center gap-0.5 px-3 py-1.5" style={{ borderBottom: '1px solid #F1F5F9' }}>
+          <div className="rounded-xl overflow-hidden" style={{ background: darkMode ? '#1C1C1E' : '#FFFFFF', border: `1px solid ${darkMode ? '#2C2C2E' : '#E2E8F0'}`, boxShadow: darkMode ? 'none' : '0 1px 3px rgba(0,0,0,0.04)' }}>
+            <div className="flex items-center gap-0.5 px-3 py-1.5" style={{ borderBottom: `1px solid ${darkMode ? '#2C2C2E' : '#F1F5F9'}` }}>
               {([
                 { icon: 'format_bold', fn: () => insertFormat('**', '**') },
                 { icon: 'format_italic', fn: () => insertFormat('*', '*') },
@@ -1007,7 +1086,7 @@ export default function KayouChat() {
                 { icon: 'link', fn: () => insertFormat('[', '](url)') },
                 { icon: 'code', fn: () => insertFormat('`', '`') },
               ]).map(item => (
-                <button key={item.icon} onClick={item.fn} className="toolbar-btn-light w-7 h-7 rounded-md flex items-center justify-center" style={{ color: '#CBD5E1' }}>
+                <button key={item.icon} onClick={item.fn} className="toolbar-btn-light w-7 h-7 rounded-md flex items-center justify-center" style={{ color: darkMode ? '#636366' : '#CBD5E1' }}>
                   <span className="material-symbols-rounded" style={{ fontSize: 15 }}>{item.icon}</span>
                 </button>
               ))}
@@ -1018,10 +1097,10 @@ export default function KayouChat() {
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
                 placeholder={isDM ? `Message ${dmPerson?.name || ''}` : activeChannel === 'general' ? 'Talk to the team — all agents are here...' : activeChannel === 'ideas' ? 'Pitch an idea — all agents will respond...' : `Message #${channel?.name || ''}`}
                 className="w-full text-[14px] resize-none rich-input-light leading-[1.5] py-0.5"
-                style={{ color: '#1E293B', minHeight: '22px', maxHeight: '140px', background: 'transparent' }}
+                style={{ color: darkMode ? '#E5E5EA' : '#1E293B', minHeight: '22px', maxHeight: '140px', background: 'transparent' }}
                 rows={1} />
             </div>
-            <div className="flex items-center justify-between px-3 py-1.5" style={{ borderTop: '1px solid #F1F5F9' }}>
+            <div className="flex items-center justify-between px-3 py-1.5" style={{ borderTop: `1px solid ${darkMode ? '#2C2C2E' : '#F1F5F9'}` }}>
               <div className="flex items-center gap-0.5">
                 <button onClick={() => setShowEmoji(!showEmoji)} className={`toolbar-btn-light w-8 h-8 rounded-md flex items-center justify-center ${showEmoji ? 'bg-sky-50' : ''}`} style={{ color: showEmoji ? '#4A9EE8' : '#CBD5E1' }}>
                   <span className="material-symbols-rounded" style={{ fontSize: 18 }}>emoji_emotions</span>
@@ -1029,10 +1108,10 @@ export default function KayouChat() {
                 <button onClick={() => setShowMention(!showMention)} className={`toolbar-btn-light w-8 h-8 rounded-md flex items-center justify-center ${showMention ? 'bg-sky-50' : ''}`} style={{ color: showMention ? '#4A9EE8' : '#CBD5E1' }}>
                   <span className="material-symbols-rounded" style={{ fontSize: 18 }}>alternate_email</span>
                 </button>
-                <button onClick={() => fileInputRef.current?.click()} className="toolbar-btn-light w-8 h-8 rounded-md flex items-center justify-center" style={{ color: '#CBD5E1' }} title="Upload image">
+                <button onClick={() => fileInputRef.current?.click()} className="toolbar-btn-light w-8 h-8 rounded-md flex items-center justify-center" style={{ color: darkMode ? '#636366' : '#CBD5E1' }} title="Upload image">
                   <span className="material-symbols-rounded" style={{ fontSize: 18 }}>image</span>
                 </button>
-                <button onClick={takeScreenshot} className="toolbar-btn-light w-8 h-8 rounded-md flex items-center justify-center" style={{ color: '#CBD5E1' }} title="Take screenshot">
+                <button onClick={takeScreenshot} className="toolbar-btn-light w-8 h-8 rounded-md flex items-center justify-center" style={{ color: darkMode ? '#636366' : '#CBD5E1' }} title="Take screenshot">
                   <span className="material-symbols-rounded" style={{ fontSize: 18 }}>screenshot_monitor</span>
                 </button>
               </div>
@@ -1063,7 +1142,7 @@ export default function KayouChat() {
               </div>
             )}
             <div className="mobile-input-row">
-              <button onClick={() => fileInputRef.current?.click()} className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ color: '#94A3B8' }}>
+              <button onClick={() => fileInputRef.current?.click()} className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>
                 <span className="material-symbols-rounded" style={{ fontSize: 20 }}>image</span>
               </button>
               <textarea
@@ -1111,22 +1190,22 @@ export default function KayouChat() {
       {/* ── Thread panel ── */}
       {threadMsg && PEOPLE[threadMsg.senderId] && (
         <div className={`${isMobile ? 'fixed inset-0 z-50 w-full' : 'w-[360px] flex-shrink-0'} flex flex-col bg-white slide-in thread-panel`}>
-          <div className="h-[52px] flex items-center justify-between px-4" style={{ borderBottom: '1px solid #E8EDF2' }}>
-            <span className="font-bold text-[14px]" style={{ color: '#1A2332' }}>Thread</span>
+          <div className="h-[52px] flex items-center justify-between px-4" style={{ borderBottom: `1px solid ${darkMode ? '#2C2C2E' : '#E8EDF2'}` }}>
+            <span className="font-bold text-[14px]" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>Thread</span>
             <button onClick={() => setThreadMsg(null)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-gray-100">
-              <span className="material-symbols-rounded" style={{ fontSize: 16, color: '#94A3B8' }}>close</span>
+              <span className="material-symbols-rounded" style={{ fontSize: 16, color: darkMode ? '#8E8E93' : '#94A3B8' }}>close</span>
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-4 chat-scroll">
             {/* Original message */}
-            <div className="flex items-start gap-3 pb-4 mb-4" style={{ borderBottom: '1px solid #F1F5F9' }}>
+            <div className="flex items-start gap-3 pb-4 mb-4" style={{ borderBottom: `1px solid ${darkMode ? '#2C2C2E' : '#F1F5F9'}` }}>
               <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-[13px] font-bold" style={{ background: PEOPLE[threadMsg.senderId].gradient }}>{PEOPLE[threadMsg.senderId].avatar}</div>
               <div>
                 <div className="flex items-baseline gap-2">
-                  <span className="font-bold text-[13px]" style={{ color: '#1A2332' }}>{PEOPLE[threadMsg.senderId].name}</span>
-                  <span className="text-[10px]" style={{ color: '#94A3B8' }}>{formatTs(threadMsg.ts)}</span>
+                  <span className="font-bold text-[13px]" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>{PEOPLE[threadMsg.senderId].name}</span>
+                  <span className="text-[10px]" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>{formatTs(threadMsg.ts)}</span>
                 </div>
-                <p className="formatted text-[14px] leading-[1.5] mt-0.5" style={{ color: '#1E293B' }} dangerouslySetInnerHTML={{ __html: formatText(threadMsg.content) }} />
+                <p className="formatted text-[14px] leading-[1.5] mt-0.5" style={{ color: darkMode ? '#E5E5EA' : '#1E293B' }} dangerouslySetInnerHTML={{ __html: formatText(threadMsg.content) }} />
               </div>
             </div>
             {/* Replies */}
@@ -1138,10 +1217,10 @@ export default function KayouChat() {
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[10px] font-bold" style={{ background: rSender.gradient }}>{rSender.avatar}</div>
                   <div>
                     <div className="flex items-baseline gap-2">
-                      <span className="font-semibold text-[12px]" style={{ color: '#1A2332' }}>{rSender.name}</span>
-                      <span className="text-[10px]" style={{ color: '#94A3B8' }}>{formatTs(r.ts)}</span>
+                      <span className="font-semibold text-[12px]" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>{rSender.name}</span>
+                      <span className="text-[10px]" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>{formatTs(r.ts)}</span>
                     </div>
-                    <p className="formatted text-[13.5px] leading-[1.5] mt-0.5" style={{ color: '#1E293B' }} dangerouslySetInnerHTML={{ __html: formatText(r.content) }} />
+                    <p className="formatted text-[13.5px] leading-[1.5] mt-0.5" style={{ color: darkMode ? '#E5E5EA' : '#1E293B' }} dangerouslySetInnerHTML={{ __html: formatText(r.content) }} />
                   </div>
                 </div>
               )
@@ -1152,7 +1231,7 @@ export default function KayouChat() {
             <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2">
               <textarea value={threadInput} onChange={e => setThreadInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendThreadReply() } }}
-                placeholder="Reply..." className="flex-1 text-[13px] resize-none bg-transparent rich-input-light" style={{ color: '#1E293B', minHeight: '20px', maxHeight: '80px' }} rows={1} />
+                placeholder="Reply..." className="flex-1 text-[13px] resize-none bg-transparent rich-input-light" style={{ color: darkMode ? '#E5E5EA' : '#1E293B', minHeight: '20px', maxHeight: '80px' }} rows={1} />
               <button onClick={sendThreadReply} disabled={!threadInput.trim()}
                 className="send-btn-light w-8 h-8 rounded-lg flex items-center justify-center text-white disabled:opacity-20"
                 style={{ background: threadInput.trim() ? '#007AFF' : '#E2E8F0' }}>
@@ -1168,10 +1247,10 @@ export default function KayouChat() {
       {/* ── Members panel ── */}
       {showMembers && (
         <div className={`${isMobile ? 'fixed inset-0 z-50 w-full' : 'w-[280px] flex-shrink-0'} flex flex-col bg-white slide-in`} style={{ borderLeft: isMobile ? 'none' : '1px solid #E8EDF2' }}>
-          <div className="h-[52px] flex items-center justify-between px-4" style={{ borderBottom: '1px solid #E8EDF2' }}>
-            <span className="font-bold text-[14px]" style={{ color: '#1A2332' }}>Members · 3</span>
+          <div className="h-[52px] flex items-center justify-between px-4" style={{ borderBottom: `1px solid ${darkMode ? '#2C2C2E' : '#E8EDF2'}` }}>
+            <span className="font-bold text-[14px]" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>Members · 3</span>
             <button onClick={() => setShowMembers(false)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-gray-100">
-              <span className="material-symbols-rounded" style={{ fontSize: 16, color: '#94A3B8' }}>close</span>
+              <span className="material-symbols-rounded" style={{ fontSize: 16, color: darkMode ? '#8E8E93' : '#94A3B8' }}>close</span>
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-3">
@@ -1183,10 +1262,10 @@ export default function KayouChat() {
                   <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white" style={{ background: '#4CAF50' }}></span>
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="text-[13px] font-semibold flex items-center gap-1.5" style={{ color: '#1A2332' }}>
+                  <p className="text-[13px] font-semibold flex items-center gap-1.5" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>
                     {p.name} {p.isBot && <span className="text-[8px] font-bold px-1 py-[1px] rounded bg-indigo-50 text-indigo-400 uppercase">ai</span>}
                   </p>
-                  <p className="text-[11px] flex items-center gap-1" style={{ color: '#94A3B8' }}><span className="material-symbols-rounded" style={{ fontSize: 13 }}>{p.statusEmoji}</span> {p.statusText}</p>
+                  <p className="text-[11px] flex items-center gap-1" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}><span className="material-symbols-rounded" style={{ fontSize: 13 }}>{p.statusEmoji}</span> {p.statusText}</p>
                 </div>
               </button>
             ))}
@@ -1197,17 +1276,17 @@ export default function KayouChat() {
       {/* ── Search panel ── */}
       {showSearch && (
         <div className={`${isMobile ? 'fixed inset-0 z-50 w-full' : 'w-[340px] flex-shrink-0'} flex flex-col bg-white slide-in`} style={{ borderLeft: isMobile ? 'none' : '1px solid #E8EDF2' }}>
-          <div className="h-[52px] flex items-center gap-2 px-4" style={{ borderBottom: '1px solid #E8EDF2' }}>
-            <span className="material-symbols-rounded" style={{ fontSize: 18, color: '#94A3B8' }}>search</span>
+          <div className="h-[52px] flex items-center gap-2 px-4" style={{ borderBottom: `1px solid ${darkMode ? '#2C2C2E' : '#E8EDF2'}` }}>
+            <span className="material-symbols-rounded" style={{ fontSize: 18, color: darkMode ? '#8E8E93' : '#94A3B8' }}>search</span>
             <input ref={searchRef} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search messages..."
-              className="flex-1 text-[14px] bg-transparent" style={{ color: '#1E293B' }} />
+              className="flex-1 text-[14px] bg-transparent" style={{ color: darkMode ? '#E5E5EA' : '#1E293B' }} />
             <button onClick={() => { setShowSearch(false); setSearchQuery('') }} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-gray-100">
-              <span className="material-symbols-rounded" style={{ fontSize: 16, color: '#94A3B8' }}>close</span>
+              <span className="material-symbols-rounded" style={{ fontSize: 16, color: darkMode ? '#8E8E93' : '#94A3B8' }}>close</span>
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-3">
             {searchQuery && searchResults.length === 0 && (
-              <p className="text-center text-[13px] py-8" style={{ color: '#94A3B8' }}>No results for "{searchQuery}"</p>
+              <p className="text-center text-[13px] py-8" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>No results for "{searchQuery}"</p>
             )}
             {searchResults.map(m => {
               const chName = CHANNELS.find(c => c.id === m.channelId)?.name || m.channelId.replace('dm-', 'DM: ')
@@ -1216,10 +1295,10 @@ export default function KayouChat() {
                   className="w-full text-left p-3 rounded-lg mb-1 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-5 h-5 rounded flex items-center justify-center text-white text-[8px] font-bold" style={{ background: PEOPLE[m.senderId]?.gradient }}>{PEOPLE[m.senderId]?.avatar}</div>
-                    <span className="text-[12px] font-semibold" style={{ color: '#1A2332' }}>{PEOPLE[m.senderId]?.name}</span>
-                    <span className="text-[10px]" style={{ color: '#94A3B8' }}>in #{chName}</span>
+                    <span className="text-[12px] font-semibold" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>{PEOPLE[m.senderId]?.name}</span>
+                    <span className="text-[10px]" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>in #{chName}</span>
                   </div>
-                  <p className="text-[12px] leading-[1.5]" style={{ color: '#475569' }}
+                  <p className="text-[12px] leading-[1.5]" style={{ color: darkMode ? '#A1A1A6' : '#475569' }}
                     dangerouslySetInnerHTML={{ __html: m.content.replace(/\*\*/g, '').replace(/\*/g, '').replace(new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'), '<mark>$1</mark>') }} />
                 </button>
               )
@@ -1232,7 +1311,7 @@ export default function KayouChat() {
       {showProfile && PEOPLE[showProfile] && (() => {
         const p = PEOPLE[showProfile]
         return (
-        <div className={`${isMobile ? 'fixed inset-0 z-50 w-full' : 'w-[320px] flex-shrink-0'} flex flex-col slide-in`} style={{ background: '#F7F8FA', borderLeft: isMobile ? 'none' : '1px solid #E8EDF2' }}>
+        <div className={`${isMobile ? 'fixed inset-0 z-50 w-full' : 'w-[320px] flex-shrink-0'} flex flex-col slide-in`} style={{ background: darkMode ? '#0D0D0F' : '#F7F8FA', borderLeft: isMobile ? 'none' : `1px solid ${darkMode ? '#2C2C2E' : '#E8EDF2'}` }}>
           {/* Header with gradient banner */}
           <div className="relative">
             <div className="h-[100px]" style={{ background: p.gradient }}></div>
@@ -1240,21 +1319,59 @@ export default function KayouChat() {
               <span className="material-symbols-rounded text-white" style={{ fontSize: 16 }}>close</span>
             </button>
             {/* Avatar floating on banner edge */}
-            <div className="absolute -bottom-10 left-1/2 -translate-x-1/2">
-              <div className="w-[80px] h-[80px] rounded-full flex items-center justify-center text-white text-2xl font-bold border-4 border-[#F7F8FA] transition-transform hover:scale-105" style={{ background: p.gradient, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
-                {p.avatar}
+            <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center">
+              <input type="file" accept="image/*" id={`profile-photo-${showProfile}`} className="hidden" onChange={(e) => {
+                const file = e.target.files?.[0]; if (!file) return
+                const reader = new FileReader()
+                reader.onload = () => {
+                  setPendingPhoto({ preview: reader.result as string, base64: reader.result as string, filename: file.name })
+                }
+                reader.readAsDataURL(file)
+              }} />
+              <div onClick={() => document.getElementById(`profile-photo-${showProfile}`)?.click()}
+                className="w-[80px] h-[80px] rounded-full flex items-center justify-center text-white text-2xl font-bold transition-transform hover:scale-105 cursor-pointer relative group"
+                style={{ background: p.gradient, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', border: `4px solid ${pendingPhoto ? '#007AFF' : (darkMode ? '#0D0D0F' : '#F7F8FA')}`, overflow: 'hidden' }}>
+                {pendingPhoto ? (
+                  <img src={pendingPhoto.preview} alt="" className="w-full h-full object-cover" />
+                ) : agents.find((a: any) => a.id === showProfile)?.profilePhoto ? (
+                  <img src={agents.find((a: any) => a.id === showProfile)?.profilePhoto} alt="" className="w-full h-full object-cover" />
+                ) : p.avatar}
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="material-symbols-rounded text-white" style={{ fontSize: 20 }}>photo_camera</span>
+                </div>
               </div>
+              {pendingPhoto && (
+                <div className="flex gap-2 mt-2">
+                  <button onClick={async () => {
+                    const res = await fetch('/api/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: pendingPhoto.base64, filename: pendingPhoto.filename }) })
+                    const data = await res.json()
+                    if (data.url) {
+                      await fetch(`/api/config/agents/${showProfile}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profilePhoto: data.url }) })
+                      loadAgents()
+                    }
+                    setPendingPhoto(null)
+                  }} className="px-4 py-1.5 rounded-full text-[11px] font-bold text-white shadow-lg transition-all hover:scale-105 active:scale-95"
+                    style={{ background: '#007AFF' }}>
+                    Save
+                  </button>
+                  <button onClick={() => setPendingPhoto(null)}
+                    className="px-3 py-1.5 rounded-full text-[11px] font-bold transition-all hover:scale-105 active:scale-95"
+                    style={{ background: darkMode ? '#2C2C2E' : '#E5E5EA', color: darkMode ? '#E5E5EA' : '#1A2332' }}>
+                    Cancel
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto">
             {/* Name + role */}
             <div className="text-center pt-14 pb-4 px-5">
-              <h3 className="text-[18px] font-bold flex items-center justify-center gap-2" style={{ color: '#1A2332' }}>
+              <h3 className="text-[18px] font-bold flex items-center justify-center gap-2" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>
                 {p.name}
-                {p.isBot && <span className="text-[9px] font-bold px-2 py-[3px] rounded-full uppercase tracking-wide" style={{ background: '#EBF4FC', color: '#3563C9' }}>ai</span>}
+                {p.isBot && <span className="text-[9px] font-bold px-2 py-[3px] rounded-full uppercase tracking-wide" style={{ background: darkMode ? '#1C2D4D' : '#EBF4FC', color: '#3563C9' }}>ai</span>}
               </h3>
-              <p className="text-[13px] mt-1" style={{ color: '#64748B' }}>{p.role}</p>
+              <p className="text-[13px] mt-1" style={{ color: darkMode ? '#8E8E93' : '#64748B' }}>{p.role}</p>
               <div className="flex items-center justify-center gap-1.5 mt-2">
                 <span className="w-2 h-2 rounded-full" style={{ background: '#4CAF50' }}></span>
                 <span className="text-[12px] font-medium" style={{ color: '#4CAF50' }}>Online</span>
@@ -1270,8 +1387,8 @@ export default function KayouChat() {
                   <span className="material-symbols-rounded" style={{ fontSize: 16 }}>chat</span>
                   Message
                 </button>
-                <button className="w-11 h-11 rounded-xl flex items-center justify-center transition-all hover:scale-105" style={{ background: '#FFFFFF', border: '1px solid #E2E8F0' }}>
-                  <span className="material-symbols-rounded" style={{ fontSize: 18, color: '#64748B' }}>call</span>
+                <button className="w-11 h-11 rounded-xl flex items-center justify-center transition-all hover:scale-105" style={{ background: darkMode ? '#1C1C1E' : '#FFFFFF', border: `1px solid ${darkMode ? '#2C2C2E' : '#E2E8F0'}` }}>
+                  <span className="material-symbols-rounded" style={{ fontSize: 18, color: darkMode ? '#8E8E93' : '#64748B' }}>call</span>
                 </button>
               </div>
             )}
@@ -1279,32 +1396,32 @@ export default function KayouChat() {
             {/* Info cards */}
             <div className="px-5 space-y-3 pb-6">
               {/* Status card */}
-              <div className="bg-white rounded-2xl p-4" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: '1px solid #F0F0F2' }}>
+              <div className="rounded-2xl p-4" style={{ background: darkMode ? '#1C1C1E' : '#FFFFFF', boxShadow: darkMode ? 'none' : '0 1px 3px rgba(0,0,0,0.04)', border: `1px solid ${darkMode ? '#2C2C2E' : '#F0F0F2'}` }}>
                 <div className="flex items-center gap-2.5 mb-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#F0F4FF' }}>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: darkMode ? '#1C2D4D' : '#F0F4FF' }}>
                     <span className="material-symbols-rounded" style={{ fontSize: 16, color: '#3563C9' }}>{p.statusEmoji}</span>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#94A3B8' }}>Status</p>
-                    <p className="text-[13px] font-medium" style={{ color: '#1A2332' }}>{p.statusText}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>Status</p>
+                    <p className="text-[13px] font-medium" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>{p.statusText}</p>
                   </div>
                 </div>
               </div>
 
               {/* Details card */}
-              <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: '1px solid #F0F0F2' }}>
+              <div className="rounded-2xl overflow-hidden" style={{ background: darkMode ? '#1C1C1E' : '#FFFFFF', boxShadow: darkMode ? 'none' : '0 1px 3px rgba(0,0,0,0.04)', border: `1px solid ${darkMode ? '#2C2C2E' : '#F0F0F2'}` }}>
                 {([
                   { icon: 'badge', label: 'Role', value: p.role },
                   { icon: 'schedule', label: 'Local Time', value: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }) },
                   { icon: 'memory', label: 'Provider', value: p.isBot ? (p.id === 'claude' ? 'Anthropic (Haiku)' : p.id === 'kayou-code' ? 'Ollama (gemma3)' : p.id === 'kayou-kilo' ? 'Ollama (gemma3)' : 'Unknown') : 'Human' },
                 ]).map((item, i) => (
-                  <div key={i} className="flex items-center gap-3 px-4 py-3" style={{ borderTop: i > 0 ? '1px solid #F5F5F7' : 'none' }}>
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#F7F8FA' }}>
-                      <span className="material-symbols-rounded" style={{ fontSize: 16, color: '#94A3B8' }}>{item.icon}</span>
+                  <div key={i} className="flex items-center gap-3 px-4 py-3" style={{ borderTop: i > 0 ? `1px solid ${darkMode ? '#2C2C2E' : '#F5F5F7'}` : 'none' }}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: darkMode ? '#2C2C2E' : '#F7F8FA' }}>
+                      <span className="material-symbols-rounded" style={{ fontSize: 16, color: darkMode ? '#8E8E93' : '#94A3B8' }}>{item.icon}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#B0BEC5' }}>{item.label}</p>
-                      <p className="text-[13px] font-medium truncate" style={{ color: '#1A2332' }}>{item.value}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: darkMode ? '#636366' : '#B0BEC5' }}>{item.label}</p>
+                      <p className="text-[13px] font-medium truncate" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>{item.value}</p>
                     </div>
                   </div>
                 ))}
@@ -1312,15 +1429,15 @@ export default function KayouChat() {
 
               {/* Permissions card (for bots) */}
               {p.isBot && (
-                <div className="bg-white rounded-2xl p-4" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: '1px solid #F0F0F2' }}>
-                  <p className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: '#94A3B8' }}>Permissions</p>
+                <div className="rounded-2xl p-4" style={{ background: darkMode ? '#1C1C1E' : '#FFFFFF', boxShadow: darkMode ? 'none' : '0 1px 3px rgba(0,0,0,0.04)', border: `1px solid ${darkMode ? '#2C2C2E' : '#F0F0F2'}` }}>
+                  <p className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>Permissions</p>
                   <div className="flex flex-wrap gap-1.5">
                     {['projects', 'mcps', 'finances', 'github', 'webhooks'].map(perm => {
                       const agent = agents.find((a: any) => a.id === p.id)
                       const has = (agent?.permissions || []).includes(perm)
                       return (
                         <span key={perm} className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold"
-                          style={{ background: has ? '#DCFCE7' : '#F1F5F9', color: has ? '#16A34A' : '#94A3B8' }}>
+                          style={{ background: has ? (darkMode ? '#0A2C1A' : '#DCFCE7') : (darkMode ? '#2C2C2E' : '#F1F5F9'), color: has ? (darkMode ? '#6EE7B7' : '#16A34A') : (darkMode ? '#636366' : '#94A3B8') }}>
                           <span className="material-symbols-rounded" style={{ fontSize: 11 }}>{has ? 'check' : 'close'}</span>
                           {perm}
                         </span>
@@ -1332,23 +1449,23 @@ export default function KayouChat() {
 
               {/* Cost indicator for Claude */}
               {p.id === 'claude' && (
-                <div className="rounded-2xl p-4" style={{ background: '#FFF7ED', border: '1px solid #FED7AA' }}>
+                <div className="rounded-2xl p-4" style={{ background: darkMode ? '#2C1A0A' : '#FFF7ED', border: `1px solid ${darkMode ? '#5C3D1A' : '#FED7AA'}` }}>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="material-symbols-rounded" style={{ fontSize: 16, color: '#D97706' }}>payments</span>
                     <p className="text-[12px] font-bold" style={{ color: '#D97706' }}>Cost per message</p>
                   </div>
-                  <p className="text-[11px]" style={{ color: '#92400E' }}>~$0.001 (Haiku). Use @Claude in chat to call him only when needed.</p>
+                  <p className="text-[11px]" style={{ color: darkMode ? '#FBBF24' : '#92400E' }}>~$0.001 (Haiku). Use @Claude in chat to call him only when needed.</p>
                 </div>
               )}
 
               {/* Free badge for Kayou agents */}
               {(p.id === 'kayou-code' || p.id === 'kayou-kilo') && (
-                <div className="rounded-2xl p-4" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+                <div className="rounded-2xl p-4" style={{ background: darkMode ? '#0A2C1A' : '#F0FDF4', border: `1px solid ${darkMode ? '#1A5C3D' : '#BBF7D0'}` }}>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="material-symbols-rounded" style={{ fontSize: 16, color: '#16A34A' }}>savings</span>
                     <p className="text-[12px] font-bold" style={{ color: '#16A34A' }}>Free — runs locally</p>
                   </div>
-                  <p className="text-[11px]" style={{ color: '#166534' }}>Ollama on your Mac. No API costs, no limits, fully private.</p>
+                  <p className="text-[11px]" style={{ color: darkMode ? '#6EE7B7' : '#166534' }}>Ollama on your Mac. No API costs, no limits, fully private.</p>
                 </div>
               )}
             </div>
@@ -1361,8 +1478,8 @@ export default function KayouChat() {
       {statusModal && (
         <div className="overlay flex items-center justify-center" onClick={() => setStatusModal(false)}>
           <div className={`${isMobile ? 'w-[90vw]' : 'w-[360px]'} bg-white rounded-2xl shadow-2xl overflow-hidden pop-in`} onClick={e => e.stopPropagation()}>
-            <div className="p-5 pb-3" style={{ borderBottom: '1px solid #F1F5F9' }}>
-              <h3 className="text-[15px] font-bold" style={{ color: '#1A2332' }}>Set your status</h3>
+            <div className="p-5 pb-3" style={{ borderBottom: `1px solid ${darkMode ? '#2C2C2E' : '#F1F5F9'}` }}>
+              <h3 className="text-[15px] font-bold" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>Set your status</h3>
             </div>
             <div className="p-5 space-y-3">
               <div className="flex items-center gap-3">
@@ -1377,8 +1494,8 @@ export default function KayouChat() {
                   </div>
                 </div>
                 <div>
-                  <p className="font-bold text-[14px]" style={{ color: '#1A2332' }}>Aimar</p>
-                  <p className="text-[12px]" style={{ color: '#94A3B8' }}>CEO & Founder</p>
+                  <p className="font-bold text-[14px]" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>Aimar</p>
+                  <p className="text-[12px]" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>CEO & Founder</p>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -1390,7 +1507,7 @@ export default function KayouChat() {
                 ))}
               </div>
               <input value={myStatus.text} onChange={e => setMyStatus(s => ({ ...s, text: e.target.value }))}
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-[13px]" style={{ color: '#1E293B' }} placeholder="What's your status?" />
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-[13px]" style={{ color: darkMode ? '#E5E5EA' : '#1E293B' }} placeholder="What's your status?" />
               <button onClick={() => { PEOPLE.aimar.statusEmoji = myStatus.emoji; PEOPLE.aimar.statusText = myStatus.text; setStatusModal(false) }}
                 className="w-full py-2.5 rounded-xl text-[13px] font-semibold text-white" style={{ background: '#007AFF', boxShadow: '0 4px 14px rgba(74,158,232,0.25)' }}>
                 Save Status
@@ -1401,62 +1518,148 @@ export default function KayouChat() {
       )}
 
       {/* ═══ PROJECTS BOARD (right panel) ═══ */}
-      {showProjects && (
-        <div className={`${isMobile ? 'fixed inset-0 z-50 w-full' : 'w-[380px] flex-shrink-0'} flex flex-col bg-white slide-in`} style={{ borderLeft: isMobile ? 'none' : '1px solid #E8EDF2' }}>
-          <div className="h-[52px] flex items-center justify-between px-4" style={{ borderBottom: '1px solid #E8EDF2' }}>
-            <span className="font-bold text-[14px]" style={{ color: '#1A2332' }}>Project Board</span>
-            <div className="flex gap-1">
-              <button onClick={() => { setShowSettings(true); setSettingsTab('projects'); loadProjects() }} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-gray-100" title="Manage">
-                <span className="material-symbols-rounded" style={{ fontSize: 15, color: '#94A3B8' }}>add</span>
+      {showProjects && (() => {
+        const stages = [
+          { id: 'idea', label: 'Ideas', icon: 'lightbulb', color: '#F59E0B', bg: darkMode ? '#2C2A0A' : '#FFFBEB' },
+          { id: 'research', label: 'Research', icon: 'search', color: '#8B5CF6', bg: darkMode ? '#1C1A2E' : '#F5F3FF' },
+          { id: 'build', label: 'Building', icon: 'construction', color: '#3563C9', bg: darkMode ? '#0A1A2C' : '#EFF6FF' },
+          { id: 'testing', label: 'Testing', icon: 'bug_report', color: '#EC4899', bg: darkMode ? '#2C0A1A' : '#FDF2F8' },
+          { id: 'release', label: 'Live', icon: 'rocket_launch', color: '#10B981', bg: darkMode ? '#0A2C1A' : '#ECFDF5' },
+        ]
+        return (
+        <div className={`${isMobile ? 'fixed inset-0 z-50 w-full' : 'w-[420px] flex-shrink-0'} flex flex-col slide-in`} style={{ background: darkMode ? '#0D0D0F' : '#F7F8FA', borderLeft: isMobile ? 'none' : `1px solid ${darkMode ? '#2C2C2E' : '#E8EDF2'}` }}>
+          {/* Header */}
+          <div className="h-[52px] flex items-center justify-between px-5 flex-shrink-0" style={{ borderBottom: `1px solid ${darkMode ? '#1C1C1E' : '#E8EDF2'}` }}>
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #3563C9, #2A4FAF)' }}>
+                <span className="material-symbols-rounded text-white" style={{ fontSize: 15 }}>dashboard</span>
+              </div>
+              <span className="font-bold text-[15px]" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>Projects</span>
+              {projects.length > 0 && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: darkMode ? '#2C2C2E' : '#E8EDF2', color: darkMode ? '#8E8E93' : '#64748B' }}>{projects.length}</span>}
+            </div>
+            <div className="flex gap-1.5">
+              <button onClick={() => { setShowSettings(true); setSettingsTab('projects'); loadProjects() }} className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors" style={{ background: darkMode ? '#1C1C1E' : '#FFFFFF', border: `1px solid ${darkMode ? '#2C2C2E' : '#E2E8F0'}` }} title="Add project">
+                <span className="material-symbols-rounded" style={{ fontSize: 16, color: '#8B5CF6' }}>add</span>
               </button>
-              <button onClick={() => setShowProjects(false)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-gray-100">
-                <span className="material-symbols-rounded" style={{ fontSize: 16, color: '#94A3B8' }}>close</span>
+              <button onClick={() => setShowProjects(false)} className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors" style={{ background: darkMode ? '#1C1C1E' : '#FFFFFF', border: `1px solid ${darkMode ? '#2C2C2E' : '#E2E8F0'}` }}>
+                <span className="material-symbols-rounded" style={{ fontSize: 16, color: darkMode ? '#8E8E93' : '#94A3B8' }}>close</span>
               </button>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+
+          <div className="flex-1 overflow-y-auto">
             {projects.length === 0 ? (
-              <div className="text-center py-12">
-                <span className="material-symbols-rounded block mb-2" style={{ fontSize: 32, color: '#CBD5E1' }}>dashboard</span>
-                <p className="text-[13px]" style={{ color: '#94A3B8' }}>No projects yet</p>
-                <button onClick={() => { setShowSettings(true); setSettingsTab('projects') }} className="mt-3 text-[12px] font-semibold" style={{ color: '#4A9EE8' }}>Add Project</button>
-              </div>
-            ) : projects.map((p: any) => (
-              <div key={p.id} className="border rounded-xl p-4" style={{ borderColor: '#E8EDF2' }}>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm" style={{ background: p.color || '#3563C9' }}>{(p.name || '?').charAt(0)}</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-[13px] truncate" style={{ color: '#1A2332' }}>{p.name}</p>
-                    <p className="text-[11px] truncate" style={{ color: '#94A3B8' }}>{p.stage || 'idea'} · {p.repo || 'No repo'}</p>
+              /* ── Empty state ── */
+              <div className="flex flex-col items-center justify-center h-full px-8 text-center">
+                <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-5" style={{ background: 'linear-gradient(135deg, #3563C9, #2A4FAF)', boxShadow: '0 8px 32px rgba(53,99,201,0.3)' }}>
+                  <span className="material-symbols-rounded text-white" style={{ fontSize: 36 }}>rocket_launch</span>
+                </div>
+                <h3 className="text-[18px] font-bold mb-2" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>No projects yet</h3>
+                <p className="text-[13px] mb-6 leading-relaxed" style={{ color: darkMode ? '#8E8E93' : '#64748B' }}>Track your ideas from concept to launch. Your agents with project permissions can see and discuss these.</p>
+                <button onClick={() => { setShowSettings(true); setSettingsTab('projects'); loadProjects() }}
+                  className="px-6 py-3 rounded-xl text-[13px] font-bold text-white transition-all hover:scale-105 active:scale-95"
+                  style={{ background: 'linear-gradient(135deg, #3563C9, #2A4FAF)', boxShadow: '0 4px 16px rgba(53,99,201,0.3)' }}>
+                  <span className="flex items-center gap-2">
+                    <span className="material-symbols-rounded" style={{ fontSize: 16 }}>add</span>
+                    Create First Project
+                  </span>
+                </button>
+                {/* Stage preview */}
+                <div className="mt-8 w-full">
+                  <p className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: darkMode ? '#636366' : '#94A3B8' }}>Project Stages</p>
+                  <div className="flex gap-2 justify-center flex-wrap">
+                    {stages.map(s => (
+                      <div key={s.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold" style={{ background: s.bg, color: s.color }}>
+                        <span className="material-symbols-rounded" style={{ fontSize: 13 }}>{s.icon}</span>
+                        {s.label}
+                      </div>
+                    ))}
                   </div>
-                  <span className="text-[13px] font-bold" style={{ color: (p.progress || 0) >= 80 ? '#16A34A' : '#4A9EE8' }}>{p.progress || 0}%</span>
-                </div>
-                {p.description && <p className="text-[12px] mb-3" style={{ color: '#64748B' }}>{p.description}</p>}
-                <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: '#F1F5F9' }}>
-                  <div className="h-full rounded-full transition-all" style={{ width: `${p.progress || 0}%`, background: (p.progress || 0) >= 80 ? '#16A34A' : (p.progress || 0) >= 50 ? '#4A9EE8' : '#F59E0B' }}></div>
                 </div>
               </div>
-            ))}
+            ) : (
+              /* ── Project list by stage ── */
+              <div className="p-4 space-y-5">
+                {/* Stats bar */}
+                <div className="flex gap-2">
+                  {stages.map(s => {
+                    const count = projects.filter((p: any) => (p.stage || 'idea') === s.id).length
+                    return (
+                      <div key={s.id} className="flex-1 rounded-xl p-2.5 text-center" style={{ background: s.bg }}>
+                        <p className="text-[16px] font-bold" style={{ color: s.color }}>{count}</p>
+                        <p className="text-[9px] font-bold uppercase tracking-wider mt-0.5" style={{ color: s.color, opacity: 0.7 }}>{s.label}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Projects grouped by stage */}
+                {stages.map(stage => {
+                  const stageProjects = projects.filter((p: any) => (p.stage || 'idea') === stage.id)
+                  if (stageProjects.length === 0) return null
+                  return (
+                    <div key={stage.id}>
+                      <div className="flex items-center gap-2 mb-2.5">
+                        <span className="material-symbols-rounded" style={{ fontSize: 14, color: stage.color }}>{stage.icon}</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: stage.color }}>{stage.label}</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: stage.bg, color: stage.color }}>{stageProjects.length}</span>
+                        <div className="flex-1 h-px" style={{ background: darkMode ? '#2C2C2E' : '#E8EDF2' }}></div>
+                      </div>
+                      <div className="space-y-2">
+                        {stageProjects.map((p: any) => (
+                          <div key={p.id} className="rounded-xl p-4 transition-all hover:scale-[1.01]" style={{ background: darkMode ? '#1C1C1E' : '#FFFFFF', border: `1px solid ${darkMode ? '#2C2C2E' : '#E8EDF2'}`, boxShadow: darkMode ? 'none' : '0 1px 3px rgba(0,0,0,0.04)' }}>
+                            <div className="flex items-start gap-3">
+                              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style={{ background: p.color || stage.color }}>{(p.name || '?').charAt(0)}</div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-bold text-[13px] truncate" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>{p.name}</p>
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: stage.bg, color: stage.color }}>{stage.label}</span>
+                                </div>
+                                {p.description && <p className="text-[12px] mt-1 line-clamp-2" style={{ color: darkMode ? '#8E8E93' : '#64748B' }}>{p.description}</p>}
+                                {p.repo && (
+                                  <div className="flex items-center gap-1 mt-1.5">
+                                    <span className="material-symbols-rounded" style={{ fontSize: 12, color: darkMode ? '#636366' : '#94A3B8' }}>code</span>
+                                    <span className="text-[10px] font-mono" style={{ color: darkMode ? '#636366' : '#94A3B8' }}>{p.repo}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            {/* Progress bar */}
+                            <div className="mt-3 flex items-center gap-3">
+                              <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: darkMode ? '#2C2C2E' : '#F1F5F9' }}>
+                                <div className="h-full rounded-full transition-all" style={{ width: `${p.progress || 0}%`, background: stage.color }}></div>
+                              </div>
+                              <span className="text-[11px] font-bold flex-shrink-0" style={{ color: stage.color }}>{p.progress || 0}%</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
-      )}
+        )
+      })()}
 
       {/* ═══ SETTINGS — FULL PAGE ═══ */}
       {showSettings && (
-        <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#F5F5F7' }}>
-            {/* Top bar — Apple style */}
-            <div className="flex items-center px-5 h-[48px] flex-shrink-0" style={{ background: 'rgba(245,245,247,0.9)', borderBottom: '0.5px solid #D1D1D6' }}>
-              <button onClick={() => { setShowSettings(false); setMobileSettingsPage(null) }} className="flex items-center gap-1 transition-opacity hover:opacity-70">
-                <span className="material-symbols-rounded" style={{ fontSize: 20, color: '#007AFF' }}>chevron_left</span>
-                <span className="text-[15px]" style={{ color: '#007AFF' }}>Chat</span>
+        <div className="settings-page fixed inset-0 z-50 flex flex-col" style={{ background: darkMode ? '#0D0D0F' : '#F7F8FA' }}>
+            {/* Top bar */}
+            <div className="settings-topbar flex items-center px-5 h-[56px] flex-shrink-0" style={{ background: darkMode ? '#0D0D0F' : '#FFFFFF', borderBottom: `1px solid ${darkMode ? '#1C1C1E' : '#F0F0F2'}` }}>
+              <button onClick={() => { setShowSettings(false); setMobileSettingsPage(null) }} className="flex items-center gap-1 transition-all hover:opacity-70 active:scale-95">
+                <span className="material-symbols-rounded" style={{ fontSize: 20, color: '#3563C9' }}>chevron_left</span>
+                <span className="text-[14px] font-bold" style={{ color: '#3563C9', letterSpacing: '-0.02em' }}>Chat</span>
               </button>
-              <h2 className="flex-1 text-center text-[15px] font-semibold" style={{ color: '#1A2332' }}>Settings</h2>
+              <h2 className="flex-1 text-center text-[17px]" style={{ color: darkMode ? '#FFFFFF' : '#1A2332', fontWeight: 900, letterSpacing: '-0.04em' }}>Settings</h2>
               <div className="w-[60px]"></div>
             </div>
 
             <div className="flex flex-1 overflow-hidden">
               {/* Settings sidebar — Apple style with colored icons */}
-              <div className={`${isMobile ? 'hidden' : 'w-[220px]'} flex-shrink-0 py-3 px-3 overflow-y-auto`} style={{ background: '#F5F5F7' }}>
+              <div className={`${isMobile ? 'hidden' : 'w-[220px]'} settings-sidebar flex-shrink-0 py-3 px-3 overflow-y-auto`} style={{ background: darkMode ? '#0D0D0F' : '#F7F8FA' }}>
                 {([
                   { group: 'General', items: [
                     { id: 'agents' as const, icon: 'smart_toy', label: 'AI Agents', color: '#3563C9' },
@@ -1470,21 +1673,26 @@ export default function KayouChat() {
                     { id: 'finances' as const, icon: 'account_balance', label: 'Finances', color: '#10B981' },
                   ]},
                   { group: 'Integrations', items: [
-                    { id: 'github' as const, icon: 'code', label: 'GitHub', color: '#1A2332' },
+                    { id: 'github' as const, icon: 'code', label: 'GitHub', color: darkMode ? '#FFFFFF' : '#1A2332' },
                     { id: 'webhook' as const, icon: 'webhook', label: 'Webhooks', color: '#EF4444' },
                   ]},
                 ]).map(section => (
-                  <div key={section.group} className="mb-4">
-                    <p className="text-[10px] font-bold uppercase tracking-wider px-3 mb-1.5" style={{ color: '#86868B' }}>{section.group}</p>
-                    <div className="bg-white rounded-xl overflow-hidden" style={{ boxShadow: '0 0.5px 1px rgba(0,0,0,0.04)' }}>
+                  <div key={section.group} className="mb-5">
+                    <p className="text-[9px] font-black uppercase px-3 mb-2" style={{ letterSpacing: '0.14em', color: darkMode ? '#48484A' : '#AEAEB2' }}>{section.group}</p>
+                    <div className="rounded-2xl overflow-hidden" style={{ background: darkMode ? '#1C1C1E' : '#FFFFFF', boxShadow: darkMode ? 'none' : '0 1px 4px rgba(0,0,0,0.04)' }}>
                       {section.items.map((item, i) => (
                         <button key={item.id} onClick={() => setSettingsTab(item.id)}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 text-left transition-all"
-                          style={{ background: settingsTab === item.id ? '#E8EAED' : 'transparent', borderTop: i > 0 ? '0.5px solid #E5E5EA' : 'none' }}>
-                          <div className="w-[26px] h-[26px] rounded-md flex items-center justify-center flex-shrink-0" style={{ background: item.color }}>
-                            <span className="material-symbols-rounded text-white" style={{ fontSize: 15 }}>{item.icon}</span>
+                          className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left transition-all"
+                          style={{ background: settingsTab === item.id ? (darkMode ? '#2C2C2E' : '#F0F1F5') : 'transparent', borderTop: i > 0 ? `0.5px solid ${darkMode ? '#2C2C2E' : '#F0F0F2'}` : 'none' }}>
+                          <div className="w-[28px] h-[28px] rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: item.id === 'github' ? 'transparent' : item.color }}>
+                            {item.id === 'github' ? (
+                              <img src="/github-icon.png" alt="GitHub" className="w-[28px] h-[28px] rounded-lg" style={{ filter: darkMode ? 'invert(1)' : 'none' }} />
+                            ) : (
+                              <span className="material-symbols-rounded text-white" style={{ fontSize: 15 }}>{item.icon}</span>
+                            )}
                           </div>
-                          <span className="text-[13px] font-medium" style={{ color: settingsTab === item.id ? '#1A2332' : '#3C3C43' }}>{item.label}</span>
+                          <span className="text-[13px]" style={{ fontWeight: settingsTab === item.id ? 800 : 600, color: darkMode ? '#E5E5EA' : (settingsTab === item.id ? '#1A2332' : '#3C3C43'), letterSpacing: '-0.01em' }}>{item.label}</span>
+                          {settingsTab === item.id && <div className="ml-auto w-1 h-4 rounded-full" style={{ background: item.id === 'github' ? '#3563C9' : item.color }}></div>}
                         </button>
                       ))}
                     </div>
@@ -1494,7 +1702,7 @@ export default function KayouChat() {
 
               {/* Mobile settings menu — iOS style list */}
               {isMobile && !mobileSettingsPage && (
-                <div className="flex-1 overflow-y-auto" style={{ background: '#F5F5F7' }}>
+                <div className="settings-content flex-1 overflow-y-auto" style={{ background: darkMode ? '#0D0D0F' : '#F7F8FA' }}>
                   <div className="p-4 space-y-6">
                     {([
                       { label: 'General', items: [
@@ -1509,23 +1717,27 @@ export default function KayouChat() {
                         { id: 'finances', icon: 'account_balance', title: 'Finances', subtitle: 'Akili Money integration', color: '#10B981' },
                       ]},
                       { label: 'Integrations', items: [
-                        { id: 'github', icon: 'code', title: 'GitHub', subtitle: githubConfig.hasToken ? `Connected as ${githubConfig.username}` : 'Not connected', color: '#1A2332' },
+                        { id: 'github', icon: 'code', title: 'GitHub', subtitle: githubConfig.hasToken ? `Connected as ${githubConfig.username}` : 'Not connected', color: darkMode ? '#FFFFFF' : '#1A2332' },
                         { id: 'webhook', icon: 'webhook', title: 'Webhooks', subtitle: 'External agent endpoints', color: '#EF4444' },
                       ]},
                     ]).map(group => (
                       <div key={group.label}>
-                        <p className="text-[11px] font-bold uppercase tracking-wider px-4 mb-2" style={{ color: '#86868B' }}>{group.label}</p>
-                        <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                        <p className="text-[9px] font-black uppercase px-4 mb-2" style={{ color: darkMode ? '#636366' : '#86868B' }}>{group.label}</p>
+                        <div className="rounded-2xl overflow-hidden" style={{ background: darkMode ? '#1C1C1E' : '#FFFFFF', boxShadow: darkMode ? 'none' : '0 1px 3px rgba(0,0,0,0.04)' }}>
                           {group.items.map((item, i) => (
                             <button key={item.id} onClick={() => { setSettingsTab(item.id as any); setMobileSettingsPage(item.id) }}
-                              className="w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-gray-50"
-                              style={{ borderTop: i > 0 ? '1px solid #F0F0F2' : 'none' }}>
-                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: item.color }}>
-                                <span className="material-symbols-rounded text-white" style={{ fontSize: 18 }}>{item.icon}</span>
+                              className="w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors"
+                              style={{ borderTop: i > 0 ? `1px solid ${darkMode ? '#2C2C2E' : '#F0F0F2'}` : 'none' }}>
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: item.id === 'github' ? 'transparent' : item.color }}>
+                                {item.id === 'github' ? (
+                                  <img src="/github-icon.png" alt="GitHub" className="w-8 h-8 rounded-lg" style={{ filter: darkMode ? 'invert(1)' : 'none' }} />
+                                ) : (
+                                  <span className="material-symbols-rounded text-white" style={{ fontSize: 18 }}>{item.icon}</span>
+                                )}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-[15px] font-medium" style={{ color: '#1A2332' }}>{item.title}</p>
-                                <p className="text-[12px]" style={{ color: '#86868B' }}>{item.subtitle}</p>
+                                <p className="text-[15px] font-bold" style={{ color: darkMode ? '#E5E5EA' : '#1A2332' }}>{item.title}</p>
+                                <p className="text-[12px]" style={{ color: darkMode ? '#636366' : '#86868B' }}>{item.subtitle}</p>
                               </div>
                               <span className="material-symbols-rounded" style={{ fontSize: 18, color: '#C7C7CC' }}>chevron_right</span>
                             </button>
@@ -1539,7 +1751,7 @@ export default function KayouChat() {
 
               {/* Settings content — Desktop: always show / Mobile: only when page selected */}
               {(!isMobile || mobileSettingsPage) && (
-              <div className="flex-1 overflow-y-auto" style={{ background: '#F5F5F7' }}>
+              <div className="settings-content flex-1 overflow-y-auto" style={{ background: darkMode ? '#0D0D0F' : '#F7F8FA' }}>
                 {/* Mobile back to settings menu */}
                 {isMobile && mobileSettingsPage && (
                   <button onClick={() => setMobileSettingsPage(null)} className="flex items-center gap-1.5 px-4 py-3 text-[14px] font-semibold" style={{ color: '#3563C9' }}>
@@ -1556,22 +1768,22 @@ export default function KayouChat() {
               {settingsTab === 'agents' && (
                 <div className="space-y-4">
                   {agents.length === 0 ? (
-                    <p className="text-center text-[13px] py-8" style={{ color: '#94A3B8' }}>No agents configured. Click "Add Agent" to get started.</p>
+                    <p className="text-center text-[13px] py-8" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>No agents configured. Click "Add Agent" to get started.</p>
                   ) : agents.map(agent => (
-                    <div key={agent.id} className="bg-white rounded-2xl p-5 transition-all" style={{ boxShadow: '0 0.5px 1px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.03)' }}>
+                    <div key={agent.id} className="agent-card rounded-2xl p-5 transition-all" style={{ background: darkMode ? '#1C1C1E' : '#FFFFFF', boxShadow: darkMode ? 'none' : '0 0.5px 1px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.03)' }}>
                       {editingAgent === agent.id ? (
                         /* Edit mode */
                         <div className="space-y-3">
                           <div className="flex gap-3">
                             <div className="flex-1">
-                              <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>Name</label>
+                              <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>Name</label>
                               <input value={agentForm.name || ''} onChange={e => setAgentForm((f: any) => ({ ...f, name: e.target.value }))}
-                                className="w-full mt-1 px-3 py-2 rounded-lg border text-[13px]" style={{ borderColor: '#E2E8F0', color: '#1E293B' }} />
+                                className="w-full mt-1 px-3 py-2 rounded-lg border text-[13px]" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }} />
                             </div>
                             <div className="w-[140px]">
-                              <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>Provider</label>
+                              <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>Provider</label>
                               <select value={agentForm.provider || 'anthropic'} onChange={e => setAgentForm((f: any) => ({ ...f, provider: e.target.value }))}
-                                className="w-full mt-1 px-3 py-2 rounded-lg border text-[13px]" style={{ borderColor: '#E2E8F0', color: '#1E293B' }}>
+                                className="w-full mt-1 px-3 py-2 rounded-lg border text-[13px]" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }}>
                                 <option value="anthropic">Anthropic</option>
                                 <option value="openai">OpenAI</option>
                                 <option value="ollama">Ollama (local)</option>
@@ -1580,23 +1792,23 @@ export default function KayouChat() {
                             </div>
                           </div>
                           <div>
-                            <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>
+                            <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>
                               {agentForm.provider === 'custom' ? 'Endpoint URL' : 'Model'}
                             </label>
                             <input value={agentForm.model || ''} onChange={e => setAgentForm((f: any) => ({ ...f, model: e.target.value }))}
-                              className="w-full mt-1 px-3 py-2 rounded-lg border text-[13px]" style={{ borderColor: '#E2E8F0', color: '#1E293B' }}
+                              className="w-full mt-1 px-3 py-2 rounded-lg border text-[13px]" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }}
                               placeholder={agentForm.provider === 'anthropic' ? 'claude-sonnet-4-20250514' : agentForm.provider === 'openai' ? 'gpt-4o' : agentForm.provider === 'ollama' ? 'llama3' : 'https://your-api.com/chat'} />
                           </div>
                           <div>
-                            <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>API Key</label>
+                            <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>API Key</label>
                             <input value={agentForm.apiKey || ''} onChange={e => setAgentForm((f: any) => ({ ...f, apiKey: e.target.value }))}
-                              className="w-full mt-1 px-3 py-2 rounded-lg border text-[13px] font-mono" style={{ borderColor: '#E2E8F0', color: '#1E293B' }}
+                              className="w-full mt-1 px-3 py-2 rounded-lg border text-[13px] font-mono" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }}
                               placeholder={agent.hasKey ? 'Leave blank to keep current key' : 'sk-...'} type="password" />
                           </div>
                           <div>
-                            <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>System Prompt</label>
+                            <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>System Prompt</label>
                             <textarea value={agentForm.systemPrompt || ''} onChange={e => setAgentForm((f: any) => ({ ...f, systemPrompt: e.target.value }))}
-                              className="w-full mt-1 px-3 py-2 rounded-lg border text-[13px] resize-none" style={{ borderColor: '#E2E8F0', color: '#1E293B' }} rows={3}
+                              className="w-full mt-1 px-3 py-2 rounded-lg border text-[13px] resize-none" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }} rows={3}
                               placeholder="You are an AI assistant at Kayou..." />
                           </div>
                           <div className="flex gap-2 pt-1">
@@ -1607,7 +1819,7 @@ export default function KayouChat() {
                               })
                               setEditingAgent(null); loadAgents()
                             }} className="px-4 py-2 rounded-lg text-[12px] font-semibold text-white" style={{ background: '#4A9EE8' }}>Save</button>
-                            <button onClick={() => setEditingAgent(null)} className="px-4 py-2 rounded-lg text-[12px] font-medium" style={{ color: '#64748B' }}>Cancel</button>
+                            <button onClick={() => setEditingAgent(null)} className="px-4 py-2 rounded-lg text-[12px] font-medium" style={{ color: darkMode ? '#8E8E93' : '#64748B' }}>Cancel</button>
                           </div>
                         </div>
                       ) : (
@@ -1617,12 +1829,12 @@ export default function KayouChat() {
                             <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xs" style={{ background: agent.color }}>{agent.name.split(' ').map((w:string) => w[0]).join('').slice(0,2)}</div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className="font-semibold text-[14px]" style={{ color: '#1A2332' }}>{agent.name}</span>
+                                <span className="font-semibold text-[14px]" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>{agent.name}</span>
                                 <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ background: agent.enabled ? '#DCFCE7' : '#FEE2E2', color: agent.enabled ? '#16A34A' : '#DC2626' }}>
                                   {agent.enabled ? 'Active' : 'Inactive'}
                                 </span>
                               </div>
-                              <p className="text-[12px]" style={{ color: '#94A3B8' }}>{agent.provider} · {agent.model?.split('/').pop()}</p>
+                              <p className="text-[12px]" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>{agent.provider} · {agent.model?.split('/').pop()}</p>
                             </div>
                           <div className="flex items-center gap-1">
                             <button onClick={async () => {
@@ -1638,7 +1850,7 @@ export default function KayouChat() {
                             </button>
                             <button onClick={() => { setEditingAgent(agent.id); setAgentForm({ name: agent.name, provider: agent.provider, model: agent.model, apiKey: '', systemPrompt: agent.systemPrompt || '' }) }}
                               className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100">
-                              <span className="material-symbols-rounded" style={{ fontSize: 16, color: '#94A3B8' }}>edit</span>
+                              <span className="material-symbols-rounded" style={{ fontSize: 16, color: darkMode ? '#8E8E93' : '#94A3B8' }}>edit</span>
                             </button>
                             <button onClick={async () => {
                               if (confirm(`Delete agent "${agent.name}"?`)) {
@@ -1651,19 +1863,19 @@ export default function KayouChat() {
                           </div>
                           </div>
                           {/* Tasks */}
-                          <div className="mt-4 pt-4" style={{ borderTop: '1px solid #F0F0F2' }}>
+                          <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${darkMode ? '#2C2C2E' : '#F0F0F2'}` }}>
                             <div className="flex items-center gap-2 mb-3">
-                              <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: '#F0F4FF' }}>
+                              <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: darkMode ? '#1C2D4D' : '#F0F4FF' }}>
                                 <span className="material-symbols-rounded" style={{ fontSize: 14, color: '#3563C9' }}>task_alt</span>
                               </div>
-                              <span className="text-[12px] font-semibold" style={{ color: '#1A2332' }}>Tasks</span>
+                              <span className="text-[12px] font-semibold" style={{ color: darkMode ? '#E5E5EA' : '#1A2332' }}>Tasks</span>
                             </div>
                             {(agent.tasks || []).length === 0 ? (
-                              <p className="text-[12px]" style={{ color: '#B0BEC5' }}>No tasks yet</p>
+                              <p className="text-[12px]" style={{ color: darkMode ? '#636366' : '#B0BEC5' }}>No tasks yet</p>
                             ) : (agent.tasks || []).map((task: string, ti: number) => (
-                              <div key={ti} className="flex items-center gap-2.5 py-2 px-3 rounded-lg mb-1" style={{ background: '#F8FAFC' }}>
+                              <div key={ti} className="flex items-center gap-2.5 py-2 px-3 rounded-lg mb-1" style={{ background: darkMode ? '#2C2C2E' : '#F8FAFC' }}>
                                 <span className="material-symbols-rounded" style={{ fontSize: 16, color: '#3563C9' }}>check_circle</span>
-                                <span className="text-[13px] flex-1" style={{ color: '#1A2332' }}>{task}</span>
+                                <span className="text-[13px] flex-1" style={{ color: darkMode ? '#E5E5EA' : '#1A2332' }}>{task}</span>
                                 <button onClick={async () => {
                                   const tasks = (agent.tasks || []).filter((_: string, j: number) => j !== ti)
                                   await fetch(`/api/config/agents/${agent.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tasks }) })
@@ -1672,7 +1884,7 @@ export default function KayouChat() {
                               </div>
                             ))}
                             <div className="flex gap-2 mt-3">
-                              <input id={`task-${agent.id}`} className="flex-1 px-3 py-2 rounded-xl border text-[13px]" style={{ borderColor: '#E2E8F0', color: '#1E293B', background: '#FFFFFF' }} placeholder="Add a task..." />
+                              <input id={`task-${agent.id}`} className="flex-1 px-3 py-2 rounded-xl border text-[13px]" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }} placeholder="Add a task..." />
                               <button onClick={async () => {
                                 const inp = document.getElementById(`task-${agent.id}`) as HTMLInputElement
                                 if (!inp.value.trim()) return
@@ -1693,16 +1905,16 @@ export default function KayouChat() {
               {settingsTab === 'webhook' && webhookInfo && (
                 <div className="space-y-5">
                   <div>
-                    <h3 className="text-[14px] font-semibold mb-1" style={{ color: '#1A2332' }}>Webhook Endpoint</h3>
-                    <p className="text-[12px] mb-3" style={{ color: '#94A3B8' }}>External agents can POST messages into Kayou Chat via this webhook.</p>
-                    <div className="bg-gray-50 rounded-xl p-4 font-mono text-[12px] space-y-2" style={{ color: '#1E293B' }}>
-                      <div><span style={{ color: '#94A3B8' }}>URL:</span> <span className="select-all">POST {typeof window !== 'undefined' ? window.location.origin : ''}/api/webhook/message</span></div>
-                      <div><span style={{ color: '#94A3B8' }}>Secret:</span> <span className="select-all">{webhookInfo.secret}</span></div>
+                    <h3 className="text-[14px] font-semibold mb-1" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>Webhook Endpoint</h3>
+                    <p className="text-[12px] mb-3" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>External agents can POST messages into Kayou Chat via this webhook.</p>
+                    <div className="rounded-xl p-4 font-mono text-[12px] space-y-2" style={{ background: darkMode ? '#2C2C2E' : '#F9FAFB', color: darkMode ? '#E5E5EA' : '#1E293B' }}>
+                      <div><span style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>URL:</span> <span className="select-all">POST {typeof window !== 'undefined' ? window.location.origin : ''}/api/webhook/message</span></div>
+                      <div><span style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>Secret:</span> <span className="select-all">{webhookInfo.secret}</span></div>
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-[14px] font-semibold mb-2" style={{ color: '#1A2332' }}>Example Request</h3>
-                    <pre className="bg-gray-50 rounded-xl p-4 text-[11.5px] overflow-x-auto" style={{ color: '#1E293B' }}>{`curl -X POST ${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001'}/api/webhook/message \\
+                    <h3 className="text-[14px] font-semibold mb-2" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>Example Request</h3>
+                    <pre className="rounded-xl p-4 text-[11.5px] overflow-x-auto" style={{ background: darkMode ? '#2C2C2E' : '#F9FAFB', color: darkMode ? '#E5E5EA' : '#1E293B' }}>{`curl -X POST ${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001'}/api/webhook/message \\
   -H "Content-Type: application/json" \\
   -d '{
     "secret": "${webhookInfo.secret}",
@@ -1712,12 +1924,12 @@ export default function KayouChat() {
   }'`}</pre>
                   </div>
                   <div>
-                    <h3 className="text-[14px] font-semibold mb-2" style={{ color: '#1A2332' }}>Required Fields</h3>
-                    <div className="space-y-1.5 text-[13px]" style={{ color: '#475569' }}>
-                      <p><code className="text-[12px] bg-gray-100 px-1.5 py-0.5 rounded font-mono" style={{ color: '#2B7DD6' }}>secret</code> — Your webhook secret (shown above)</p>
-                      <p><code className="text-[12px] bg-gray-100 px-1.5 py-0.5 rounded font-mono" style={{ color: '#2B7DD6' }}>agentId</code> — ID of the agent sending the message</p>
-                      <p><code className="text-[12px] bg-gray-100 px-1.5 py-0.5 rounded font-mono" style={{ color: '#2B7DD6' }}>channelId</code> — Target channel (general, engineering, etc.)</p>
-                      <p><code className="text-[12px] bg-gray-100 px-1.5 py-0.5 rounded font-mono" style={{ color: '#2B7DD6' }}>content</code> — Message text</p>
+                    <h3 className="text-[14px] font-semibold mb-2" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>Required Fields</h3>
+                    <div className="space-y-1.5 text-[13px]" style={{ color: darkMode ? '#A1A1A6' : '#475569' }}>
+                      <p><code className="text-[12px] px-1.5 py-0.5 rounded font-mono" style={{ background: darkMode ? '#3A3A3C' : '#F3F4F6', color: '#2B7DD6' }}>secret</code> — Your webhook secret (shown above)</p>
+                      <p><code className="text-[12px] px-1.5 py-0.5 rounded font-mono" style={{ background: darkMode ? '#3A3A3C' : '#F3F4F6', color: '#2B7DD6' }}>agentId</code> — ID of the agent sending the message</p>
+                      <p><code className="text-[12px] px-1.5 py-0.5 rounded font-mono" style={{ background: darkMode ? '#3A3A3C' : '#F3F4F6', color: '#2B7DD6' }}>channelId</code> — Target channel (general, engineering, etc.)</p>
+                      <p><code className="text-[12px] px-1.5 py-0.5 rounded font-mono" style={{ background: darkMode ? '#3A3A3C' : '#F3F4F6', color: '#2B7DD6' }}>content</code> — Message text</p>
                     </div>
                   </div>
                 </div>
@@ -1726,17 +1938,17 @@ export default function KayouChat() {
               {/* ── Add Agent Tab ── */}
               {settingsTab === 'add' && (
                 <div className="space-y-4">
-                  <p className="text-[13px]" style={{ color: '#64748B' }}>Add a new AI agent to Kayou Chat. You can connect Anthropic (Claude), OpenAI, local Ollama models, or any custom API.</p>
+                  <p className="text-[13px]" style={{ color: darkMode ? '#8E8E93' : '#64748B' }}>Add a new AI agent to Kayou Chat. You can connect Anthropic (Claude), OpenAI, local Ollama models, or any custom API.</p>
                   <div className="flex gap-3">
                     <div className="flex-1">
-                      <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>Agent Name</label>
+                      <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>Agent Name</label>
                       <input value={newAgent.name} onChange={e => setNewAgent(a => ({ ...a, name: e.target.value }))}
-                        className="w-full mt-1 px-3 py-2.5 rounded-lg border text-[13px]" style={{ borderColor: '#E2E8F0', color: '#1E293B' }} placeholder="e.g. Nova" />
+                        className="w-full mt-1 px-3 py-2.5 rounded-lg border text-[13px]" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }} placeholder="e.g. Nova" />
                     </div>
                     <div className="w-[160px]">
-                      <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>Provider</label>
+                      <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>Provider</label>
                       <select value={newAgent.provider} onChange={e => setNewAgent(a => ({ ...a, provider: e.target.value }))}
-                        className="w-full mt-1 px-3 py-2.5 rounded-lg border text-[13px]" style={{ borderColor: '#E2E8F0', color: '#1E293B' }}>
+                        className="w-full mt-1 px-3 py-2.5 rounded-lg border text-[13px]" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }}>
                         <option value="anthropic">Anthropic</option>
                         <option value="openai">OpenAI</option>
                         <option value="ollama">Ollama</option>
@@ -1746,29 +1958,29 @@ export default function KayouChat() {
                   </div>
                   <div className="flex gap-3">
                     <div className="flex-1">
-                      <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>
+                      <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>
                         {newAgent.provider === 'custom' ? 'Endpoint URL' : 'Model'}
                       </label>
                       <input value={newAgent.model} onChange={e => setNewAgent(a => ({ ...a, model: e.target.value }))}
-                        className="w-full mt-1 px-3 py-2.5 rounded-lg border text-[13px]" style={{ borderColor: '#E2E8F0', color: '#1E293B' }}
+                        className="w-full mt-1 px-3 py-2.5 rounded-lg border text-[13px]" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }}
                         placeholder={newAgent.provider === 'anthropic' ? 'claude-sonnet-4-20250514' : newAgent.provider === 'openai' ? 'gpt-4o' : newAgent.provider === 'ollama' ? 'llama3' : 'https://api.example.com/chat'} />
                     </div>
                     <div className="w-[100px]">
-                      <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>Color</label>
+                      <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>Color</label>
                       <input type="color" value={newAgent.color} onChange={e => setNewAgent(a => ({ ...a, color: e.target.value }))}
-                        className="w-full mt-1 h-[42px] rounded-lg border cursor-pointer" style={{ borderColor: '#E2E8F0' }} />
+                        className="w-full mt-1 h-[42px] rounded-lg border cursor-pointer" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0' }} />
                     </div>
                   </div>
                   <div>
-                    <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>API Key</label>
+                    <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>API Key</label>
                     <input value={newAgent.apiKey} onChange={e => setNewAgent(a => ({ ...a, apiKey: e.target.value }))}
-                      className="w-full mt-1 px-3 py-2.5 rounded-lg border text-[13px] font-mono" style={{ borderColor: '#E2E8F0', color: '#1E293B' }}
+                      className="w-full mt-1 px-3 py-2.5 rounded-lg border text-[13px] font-mono" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }}
                       placeholder="sk-..." type="password" />
                   </div>
                   <div>
-                    <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>System Prompt</label>
+                    <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>System Prompt</label>
                     <textarea value={newAgent.systemPrompt} onChange={e => setNewAgent(a => ({ ...a, systemPrompt: e.target.value }))}
-                      className="w-full mt-1 px-3 py-2.5 rounded-lg border text-[13px] resize-none" style={{ borderColor: '#E2E8F0', color: '#1E293B' }} rows={3}
+                      className="w-full mt-1 px-3 py-2.5 rounded-lg border text-[13px] resize-none" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }} rows={3}
                       placeholder="You are Nova, a creative AI assistant at Kayou. Be helpful and concise." />
                   </div>
                   <button onClick={async () => {
@@ -1791,12 +2003,12 @@ export default function KayouChat() {
               {/* ── Rules Tab ── */}
               {settingsTab === 'rules' && (
                 <div className="space-y-4">
-                  <p className="text-[13px]" style={{ color: '#64748B' }}>Company rules injected into every agent's system prompt. They must follow these.</p>
+                  <p className="text-[13px]" style={{ color: darkMode ? '#8E8E93' : '#64748B' }}>Company rules injected into every agent's system prompt. They must follow these.</p>
                   <div className="space-y-2">
                     {rules.map((rule, i) => (
-                      <div key={i} className="flex items-center gap-2 p-3 rounded-lg" style={{ background: '#F8FAFC', border: '1px solid #E8EDF2' }}>
-                        <span className="text-[12px] font-bold w-6 text-center" style={{ color: '#94A3B8' }}>{i + 1}</span>
-                        <span className="flex-1 text-[13px]" style={{ color: '#1E293B' }}>{rule}</span>
+                      <div key={i} className="flex items-center gap-2 p-3 rounded-lg" style={{ background: darkMode ? '#1C1C1E' : '#F8FAFC', border: `1px solid ${darkMode ? '#2C2C2E' : '#E8EDF2'}` }}>
+                        <span className="text-[12px] font-bold w-6 text-center" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>{i + 1}</span>
+                        <span className="flex-1 text-[13px]" style={{ color: darkMode ? '#E5E5EA' : '#1E293B' }}>{rule}</span>
                         <button onClick={async () => { const r = rules.filter((_, j) => j !== i); setRules(r); await fetch('/api/config/rules', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rules: r }) }) }}
                           className="w-7 h-7 rounded flex items-center justify-center hover:bg-red-50">
                           <span className="material-symbols-rounded" style={{ fontSize: 14, color: '#EF4444' }}>close</span>
@@ -1806,7 +2018,7 @@ export default function KayouChat() {
                   </div>
                   <div className="flex gap-2">
                     <input value={newRule} onChange={e => setNewRule(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && newRule.trim()) { const r = [...rules, newRule.trim()]; setRules(r); setNewRule(''); fetch('/api/config/rules', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rules: r }) }) } }}
-                      className="flex-1 px-3 py-2.5 rounded-lg border text-[13px]" style={{ borderColor: '#E2E8F0', color: '#1E293B' }} placeholder="Add a new rule..." />
+                      className="flex-1 px-3 py-2.5 rounded-lg border text-[13px]" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }} placeholder="Add a new rule..." />
                     <button onClick={async () => { if (!newRule.trim()) return; const r = [...rules, newRule.trim()]; setRules(r); setNewRule(''); await fetch('/api/config/rules', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rules: r }) }) }}
                       className="px-4 py-2.5 rounded-lg text-[12px] font-semibold text-white" style={{ background: '#4A9EE8' }}>Add</button>
                   </div>
@@ -1814,58 +2026,141 @@ export default function KayouChat() {
               )}
 
               {/* ── Projects Tab ── */}
-              {settingsTab === 'projects' && (
-                <div className="space-y-4">
-                  <p className="text-[13px]" style={{ color: '#64748B' }}>Track projects from idea to release. Agents with "projects" permission can see these.</p>
-                  {projects.map((p: any) => (
-                    <div key={p.id} className="border rounded-xl p-4" style={{ borderColor: '#E8EDF2' }}>
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs" style={{ background: p.color || '#3563C9' }}>{(p.name||'?').charAt(0)}</div>
-                        <span className="font-semibold text-[14px] flex-1" style={{ color: '#1A2332' }}>{p.name}</span>
-                        <select value={p.stage || 'idea'} onChange={async (e) => { await fetch(`/api/projects/${p.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stage: e.target.value }) }); loadProjects() }}
-                          className="text-[11px] px-2 py-1 rounded-lg border" style={{ borderColor: '#E2E8F0', color: '#1E293B' }}>
-                          <option value="idea">Idea</option><option value="research">Research</option><option value="build">Build</option><option value="testing">Testing</option><option value="release">Release</option>
-                        </select>
+              {settingsTab === 'projects' && (() => {
+                const pStages = [
+                  { id: 'idea', label: 'Idea', icon: 'lightbulb', color: '#F59E0B', bg: darkMode ? '#2C2A0A' : '#FFFBEB' },
+                  { id: 'research', label: 'Research', icon: 'search', color: '#8B5CF6', bg: darkMode ? '#1C1A2E' : '#F5F3FF' },
+                  { id: 'build', label: 'Build', icon: 'construction', color: '#3563C9', bg: darkMode ? '#0A1A2C' : '#EFF6FF' },
+                  { id: 'testing', label: 'Testing', icon: 'bug_report', color: '#EC4899', bg: darkMode ? '#2C0A1A' : '#FDF2F8' },
+                  { id: 'release', label: 'Live', icon: 'rocket_launch', color: '#10B981', bg: darkMode ? '#0A2C1A' : '#ECFDF5' },
+                ]
+                return (
+                <div className="space-y-6">
+                  {/* Header with stage pipeline */}
+                  <div className="rounded-2xl p-5" style={{ background: darkMode ? '#1C1C1E' : '#FFFFFF', border: `1px solid ${darkMode ? '#2C2C2E' : '#E8EDF2'}`, boxShadow: darkMode ? 'none' : '0 1px 3px rgba(0,0,0,0.04)' }}>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #3563C9, #2A4FAF)' }}>
+                        <span className="material-symbols-rounded text-white" style={{ fontSize: 20 }}>dashboard</span>
                       </div>
-                      <input value={p.progress || 0} type="range" min="0" max="100" onChange={async (e) => { await fetch(`/api/projects/${p.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ progress: Number(e.target.value) }) }); loadProjects() }}
-                        className="w-full h-2 rounded-full appearance-none cursor-pointer" style={{ accentColor: '#4A9EE8' }} />
-                      <div className="flex justify-between mt-1">
-                        <span className="text-[11px]" style={{ color: '#94A3B8' }}>{p.repo || 'No repo'}</span>
-                        <span className="text-[11px] font-bold" style={{ color: '#4A9EE8' }}>{p.progress || 0}%</span>
+                      <div>
+                        <h3 className="text-[15px] font-bold" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>Project Pipeline</h3>
+                        <p className="text-[12px]" style={{ color: darkMode ? '#8E8E93' : '#64748B' }}>Track projects from idea to launch. Agents with "projects" permission can see these.</p>
                       </div>
-                      <button onClick={async () => { await fetch(`/api/projects/${p.id}`, { method: 'DELETE' }); loadProjects() }}
-                        className="mt-2 text-[11px] font-medium" style={{ color: '#EF4444' }}>Delete</button>
                     </div>
-                  ))}
-                  <div className="border-2 border-dashed rounded-xl p-4 space-y-3" style={{ borderColor: '#E2E8F0' }}>
-                    <div className="flex gap-3">
-                      <input id="pname" className="flex-1 px-3 py-2 rounded-lg border text-[13px]" style={{ borderColor: '#E2E8F0', color: '#1E293B' }} placeholder="Project name" />
-                      <input id="pcolor" type="color" defaultValue="#3563C9" className="w-10 h-10 rounded-lg border cursor-pointer" style={{ borderColor: '#E2E8F0' }} />
+                    {/* Stage pipeline visual */}
+                    <div className="flex gap-1">
+                      {pStages.map((s, i) => {
+                        const count = projects.filter((p: any) => (p.stage || 'idea') === s.id).length
+                        return (
+                          <div key={s.id} className="flex-1 text-center py-2.5 relative" style={{ background: s.bg, borderRadius: i === 0 ? '10px 0 0 10px' : i === pStages.length - 1 ? '0 10px 10px 0' : '0' }}>
+                            <span className="material-symbols-rounded block mx-auto mb-0.5" style={{ fontSize: 16, color: s.color }}>{s.icon}</span>
+                            <p className="text-[10px] font-bold" style={{ color: s.color }}>{s.label}</p>
+                            <p className="text-[14px] font-extrabold" style={{ color: s.color }}>{count}</p>
+                          </div>
+                        )
+                      })}
                     </div>
-                    <input id="pdesc" className="w-full px-3 py-2 rounded-lg border text-[13px]" style={{ borderColor: '#E2E8F0', color: '#1E293B' }} placeholder="Description" />
-                    <input id="prepo" className="w-full px-3 py-2 rounded-lg border text-[13px]" style={{ borderColor: '#E2E8F0', color: '#1E293B' }} placeholder="GitHub repo (e.g. amsecurity95/kayou-chat)" />
-                    <button onClick={async () => {
-                      const name = (document.getElementById('pname') as HTMLInputElement).value; if (!name) return
-                      await fetch('/api/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, description: (document.getElementById('pdesc') as HTMLInputElement).value, repo: (document.getElementById('prepo') as HTMLInputElement).value, color: (document.getElementById('pcolor') as HTMLInputElement).value, stage: 'idea', progress: 0 }) })
-                      loadProjects(); ;(document.getElementById('pname') as HTMLInputElement).value = ''
-                    }} className="w-full py-2.5 rounded-lg text-[12px] font-semibold text-white" style={{ background: '#4A9EE8' }}>Add Project</button>
+                  </div>
+
+                  {/* Existing projects */}
+                  {projects.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: darkMode ? '#636366' : '#94A3B8' }}>Your Projects</p>
+                      {projects.map((p: any) => {
+                        const stg = pStages.find(s => s.id === (p.stage || 'idea')) || pStages[0]
+                        return (
+                          <div key={p.id} className="rounded-2xl p-4" style={{ background: darkMode ? '#1C1C1E' : '#FFFFFF', border: `1px solid ${darkMode ? '#2C2C2E' : '#E8EDF2'}`, boxShadow: darkMode ? 'none' : '0 1px 3px rgba(0,0,0,0.04)' }}>
+                            <div className="flex items-start gap-3 mb-3">
+                              <div className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style={{ background: p.color || stg.color }}>{(p.name||'?').charAt(0)}</div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                  <p className="font-bold text-[14px] truncate" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>{p.name}</p>
+                                </div>
+                                {p.description && <p className="text-[12px]" style={{ color: darkMode ? '#8E8E93' : '#64748B' }}>{p.description}</p>}
+                                {p.repo && (
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <span className="material-symbols-rounded" style={{ fontSize: 12, color: darkMode ? '#636366' : '#94A3B8' }}>code</span>
+                                    <span className="text-[10px] font-mono" style={{ color: darkMode ? '#636366' : '#94A3B8' }}>{p.repo}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <button onClick={async () => { await fetch(`/api/projects/${p.id}`, { method: 'DELETE' }); loadProjects() }}
+                                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors" style={{ background: darkMode ? '#2C2C2E' : '#FEF2F2' }}>
+                                <span className="material-symbols-rounded" style={{ fontSize: 14, color: '#EF4444' }}>delete</span>
+                              </button>
+                            </div>
+
+                            {/* Stage selector */}
+                            <div className="flex gap-1 mb-3">
+                              {pStages.map(s => (
+                                <button key={s.id} onClick={async () => { await fetch(`/api/projects/${p.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stage: s.id }) }); loadProjects() }}
+                                  className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-bold transition-all"
+                                  style={{ background: (p.stage || 'idea') === s.id ? s.bg : 'transparent', color: (p.stage || 'idea') === s.id ? s.color : (darkMode ? '#636366' : '#94A3B8'), border: `1px solid ${(p.stage || 'idea') === s.id ? s.color + '40' : 'transparent'}` }}>
+                                  <span className="material-symbols-rounded" style={{ fontSize: 12 }}>{s.icon}</span>
+                                  <span className="hidden sm:inline">{s.label}</span>
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Progress slider */}
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 relative">
+                                <input value={p.progress || 0} type="range" min="0" max="100" onChange={async (e) => { await fetch(`/api/projects/${p.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ progress: Number(e.target.value) }) }); loadProjects() }}
+                                  className="w-full h-2 rounded-full appearance-none cursor-pointer" style={{ accentColor: stg.color }} />
+                              </div>
+                              <span className="text-[13px] font-extrabold w-10 text-right" style={{ color: stg.color }}>{p.progress || 0}%</span>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  {/* Add new project */}
+                  <div className="rounded-2xl p-5" style={{ background: darkMode ? '#1C1C1E' : '#FFFFFF', border: `2px dashed ${darkMode ? '#3A3A3C' : '#D1D5DB'}` }}>
+                    <div className="flex items-center gap-2.5 mb-4">
+                      <span className="material-symbols-rounded" style={{ fontSize: 20, color: '#8B5CF6' }}>add_circle</span>
+                      <span className="text-[13px] font-bold" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>New Project</span>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex gap-3">
+                        <input id="pname" className="flex-1 px-3 py-2.5 rounded-xl border text-[13px]" style={{ background: darkMode ? '#2C2C2E' : '#F9FAFB', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }} placeholder="Project name" />
+                        <div className="flex items-center gap-2">
+                          <input id="pcolor" type="color" defaultValue="#3563C9" className="w-10 h-10 rounded-xl border-0 cursor-pointer" />
+                        </div>
+                      </div>
+                      <input id="pdesc" className="w-full px-3 py-2.5 rounded-xl border text-[13px]" style={{ background: darkMode ? '#2C2C2E' : '#F9FAFB', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }} placeholder="Description (optional)" />
+                      <input id="prepo" className="w-full px-3 py-2.5 rounded-xl border text-[13px] font-mono" style={{ background: darkMode ? '#2C2C2E' : '#F9FAFB', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }} placeholder="GitHub repo (e.g. amsecurity95/kayou-chat)" />
+                      <button onClick={async () => {
+                        const name = (document.getElementById('pname') as HTMLInputElement).value; if (!name) return
+                        await fetch('/api/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, description: (document.getElementById('pdesc') as HTMLInputElement).value, repo: (document.getElementById('prepo') as HTMLInputElement).value, color: (document.getElementById('pcolor') as HTMLInputElement).value, stage: 'idea', progress: 0 }) })
+                        loadProjects(); ;(document.getElementById('pname') as HTMLInputElement).value = '';(document.getElementById('pdesc') as HTMLInputElement).value = '';(document.getElementById('prepo') as HTMLInputElement).value = ''
+                      }} className="w-full py-3 rounded-xl text-[13px] font-bold text-white transition-all hover:scale-[1.01] active:scale-[0.99]"
+                        style={{ background: 'linear-gradient(135deg, #3563C9, #2A4FAF)', boxShadow: '0 4px 14px rgba(53,99,201,0.25)' }}>
+                        <span className="flex items-center justify-center gap-2">
+                          <span className="material-symbols-rounded" style={{ fontSize: 16 }}>add</span>
+                          Add Project
+                        </span>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              )}
+                )
+              })()}
 
               {/* ── MCPs Tab ── */}
               {settingsTab === 'mcps' && (
                 <div className="space-y-4">
-                  <p className="text-[13px]" style={{ color: '#64748B' }}>MCP servers connected to your workspace. Control visibility per agent.</p>
+                  <p className="text-[13px]" style={{ color: darkMode ? '#8E8E93' : '#64748B' }}>MCP servers connected to your workspace. Control visibility per agent.</p>
                   {mcps.map((m: any) => (
-                    <div key={m.id} className="border rounded-xl p-4" style={{ borderColor: '#E8EDF2' }}>
+                    <div key={m.id} className="border rounded-xl p-4" style={{ borderColor: darkMode ? '#2C2C2E' : '#E8EDF2' }}>
                       <div className="flex items-center gap-3 mb-2">
                         <span className="material-symbols-rounded" style={{ fontSize: 20, color: '#4A9EE8' }}>hub</span>
-                        <span className="font-semibold text-[14px] flex-1" style={{ color: '#1A2332' }}>{m.name}</span>
+                        <span className="font-semibold text-[14px] flex-1" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>{m.name}</span>
                         <button onClick={async () => { await fetch(`/api/config/mcps/${m.id}`, { method: 'DELETE' }); loadMcps() }}
                           className="text-[11px] font-medium" style={{ color: '#EF4444' }}>Remove</button>
                       </div>
-                      <p className="text-[12px] mb-2" style={{ color: '#94A3B8' }}>{m.description} · {m.url || 'No URL'}</p>
+                      <p className="text-[12px] mb-2" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>{m.description} · {m.url || 'No URL'}</p>
                       <div className="flex gap-2 flex-wrap">
                         {agents.map((a: any) => {
                           const hidden = (m.hiddenFrom || []).includes(a.id)
@@ -1874,7 +2169,7 @@ export default function KayouChat() {
                               const hf = hidden ? (m.hiddenFrom || []).filter((x: string) => x !== a.id) : [...(m.hiddenFrom || []), a.id]
                               await fetch(`/api/config/mcps/${m.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hiddenFrom: hf }) }); loadMcps()
                             }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all"
-                              style={{ background: hidden ? '#FEE2E2' : '#DCFCE7', color: hidden ? '#DC2626' : '#16A34A' }}>
+                              style={{ background: hidden ? (darkMode ? '#3B1515' : '#FEE2E2') : (darkMode ? '#0A2C1A' : '#DCFCE7'), color: hidden ? (darkMode ? '#FCA5A5' : '#DC2626') : (darkMode ? '#6EE7B7' : '#16A34A') }}>
                               <span className="material-symbols-rounded" style={{ fontSize: 13 }}>{hidden ? 'visibility_off' : 'visibility'}</span>
                               {a.name}
                             </button>
@@ -1883,10 +2178,10 @@ export default function KayouChat() {
                       </div>
                     </div>
                   ))}
-                  <div className="border-2 border-dashed rounded-xl p-4 space-y-3" style={{ borderColor: '#E2E8F0' }}>
-                    <input id="mcpname" className="w-full px-3 py-2 rounded-lg border text-[13px]" style={{ borderColor: '#E2E8F0', color: '#1E293B' }} placeholder="MCP name (e.g. Roblox Studio)" />
-                    <input id="mcpdesc" className="w-full px-3 py-2 rounded-lg border text-[13px]" style={{ borderColor: '#E2E8F0', color: '#1E293B' }} placeholder="Description" />
-                    <input id="mcpurl" className="w-full px-3 py-2 rounded-lg border text-[13px]" style={{ borderColor: '#E2E8F0', color: '#1E293B' }} placeholder="MCP server URL (e.g. http://localhost:3000)" />
+                  <div className="border-2 border-dashed rounded-xl p-4 space-y-3" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0' }}>
+                    <input id="mcpname" className="w-full px-3 py-2 rounded-lg border text-[13px]" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }} placeholder="MCP name (e.g. Roblox Studio)" />
+                    <input id="mcpdesc" className="w-full px-3 py-2 rounded-lg border text-[13px]" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }} placeholder="Description" />
+                    <input id="mcpurl" className="w-full px-3 py-2 rounded-lg border text-[13px]" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }} placeholder="MCP server URL (e.g. http://localhost:3000)" />
                     <button onClick={async () => {
                       const name = (document.getElementById('mcpname') as HTMLInputElement).value; if (!name) return
                       await fetch('/api/config/mcps', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, description: (document.getElementById('mcpdesc') as HTMLInputElement).value, url: (document.getElementById('mcpurl') as HTMLInputElement).value, hiddenFrom: [] }) })
@@ -1899,29 +2194,29 @@ export default function KayouChat() {
               {/* ── Services Tab ── */}
               {settingsTab === 'services' && (
                 <div className="space-y-4">
-                  <p className="text-[13px]" style={{ color: '#64748B' }}>External services and webhooks. Give agents access to Hostinger, Vercel, Railway, or any platform.</p>
+                  <p className="text-[13px]" style={{ color: darkMode ? '#8E8E93' : '#64748B' }}>External services and webhooks. Give agents access to Hostinger, Vercel, Railway, or any platform.</p>
                   {services.map((s: any) => (
-                    <div key={s.id} className="border rounded-xl p-3 flex items-center gap-3" style={{ borderColor: '#E8EDF2' }}>
+                    <div key={s.id} className="border rounded-xl p-3 flex items-center gap-3" style={{ borderColor: darkMode ? '#2C2C2E' : '#E8EDF2' }}>
                       <span className="material-symbols-rounded" style={{ fontSize: 20, color: '#4A9EE8' }}>
                         {s.type === 'hosting' ? 'dns' : s.type === 'ci' ? 'precision_manufacturing' : s.type === 'database' ? 'database' : 'link'}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <span className="font-semibold text-[13px]" style={{ color: '#1A2332' }}>{s.name}</span>
-                        <p className="text-[11px]" style={{ color: '#94A3B8' }}>{s.type} · {s.url || 'N/A'}</p>
+                        <span className="font-semibold text-[13px]" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>{s.name}</span>
+                        <p className="text-[11px]" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>{s.type} · {s.url || 'N/A'}</p>
                       </div>
                       <button onClick={async () => { await fetch(`/api/config/services/${s.id}`, { method: 'DELETE' }); loadServices() }}
                         className="text-[11px] font-medium" style={{ color: '#EF4444' }}>Remove</button>
                     </div>
                   ))}
-                  <div className="border-2 border-dashed rounded-xl p-4 space-y-3" style={{ borderColor: '#E2E8F0' }}>
+                  <div className="border-2 border-dashed rounded-xl p-4 space-y-3" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0' }}>
                     <div className="flex gap-3">
-                      <input id="svcname" className="flex-1 px-3 py-2 rounded-lg border text-[13px]" style={{ borderColor: '#E2E8F0', color: '#1E293B' }} placeholder="Service name (e.g. Hostinger)" />
-                      <select id="svctype" className="w-[130px] px-3 py-2 rounded-lg border text-[13px]" style={{ borderColor: '#E2E8F0', color: '#1E293B' }}>
+                      <input id="svcname" className="flex-1 px-3 py-2 rounded-lg border text-[13px]" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }} placeholder="Service name (e.g. Hostinger)" />
+                      <select id="svctype" className="w-[130px] px-3 py-2 rounded-lg border text-[13px]" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }}>
                         <option value="hosting">Hosting</option><option value="ci">CI/CD</option><option value="database">Database</option><option value="api">API</option><option value="other">Other</option>
                       </select>
                     </div>
-                    <input id="svcurl" className="w-full px-3 py-2 rounded-lg border text-[13px]" style={{ borderColor: '#E2E8F0', color: '#1E293B' }} placeholder="URL or endpoint" />
-                    <input id="svckey" className="w-full px-3 py-2 rounded-lg border text-[13px] font-mono" style={{ borderColor: '#E2E8F0', color: '#1E293B' }} placeholder="API key or token (optional)" type="password" />
+                    <input id="svcurl" className="w-full px-3 py-2 rounded-lg border text-[13px]" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }} placeholder="URL or endpoint" />
+                    <input id="svckey" className="w-full px-3 py-2 rounded-lg border text-[13px] font-mono" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }} placeholder="API key or token (optional)" type="password" />
                     <button onClick={async () => {
                       const name = (document.getElementById('svcname') as HTMLInputElement).value; if (!name) return
                       await fetch('/api/config/services', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, type: (document.getElementById('svctype') as HTMLSelectElement).value, url: (document.getElementById('svcurl') as HTMLInputElement).value, apiKey: (document.getElementById('svckey') as HTMLInputElement).value }) })
@@ -1934,28 +2229,28 @@ export default function KayouChat() {
               {/* ── Finances Tab ── */}
               {settingsTab === 'finances' && (
                 <div className="space-y-4">
-                  <p className="text-[13px]" style={{ color: '#64748B' }}>Connect your Akili Money account so agents can see your financial overview and help optimize revenue.</p>
+                  <p className="text-[13px]" style={{ color: darkMode ? '#8E8E93' : '#64748B' }}>Connect your Akili Money account so agents can see your financial overview and help optimize revenue.</p>
 
-                  <div className="rounded-xl p-4" style={{ background: '#F9FAFB', border: '1px solid #F0F0F2' }}>
+                  <div className="rounded-xl p-4" style={{ background: darkMode ? '#1C1C1E' : '#F9FAFB', border: `1px solid ${darkMode ? '#2C2C2E' : '#F0F0F2'}` }}>
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
                         <span className="material-symbols-rounded text-white" style={{ fontSize: 20 }}>account_balance</span>
                       </div>
                       <div>
-                        <p className="font-semibold text-[14px]" style={{ color: '#1A2332' }}>Akili Money</p>
-                        <p className="text-[12px]" style={{ color: '#94A3B8' }}>Financial dashboard integration</p>
+                        <p className="font-semibold text-[14px]" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>Akili Money</p>
+                        <p className="text-[12px]" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>Financial dashboard integration</p>
                       </div>
                     </div>
 
                     <div className="space-y-3">
                       <div>
-                        <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>Akili Money API URL</label>
-                        <input id="akili-url" className="w-full mt-1 px-3 py-2.5 rounded-lg border text-[13px]" style={{ borderColor: '#E2E8F0', color: '#1E293B' }}
+                        <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>Akili Money API URL</label>
+                        <input id="akili-url" className="w-full mt-1 px-3 py-2.5 rounded-lg border text-[13px]" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }}
                           placeholder="https://api.akilimoney.com/v1" />
                       </div>
                       <div>
-                        <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>API Key or Token</label>
-                        <input id="akili-key" className="w-full mt-1 px-3 py-2.5 rounded-lg border text-[13px] font-mono" style={{ borderColor: '#E2E8F0', color: '#1E293B' }}
+                        <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>API Key or Token</label>
+                        <input id="akili-key" className="w-full mt-1 px-3 py-2.5 rounded-lg border text-[13px] font-mono" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }}
                           placeholder="ak_..." type="password" />
                       </div>
                       <button className="w-full py-2.5 rounded-xl text-[13px] font-semibold text-white" style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
@@ -1964,9 +2259,9 @@ export default function KayouChat() {
                     </div>
                   </div>
 
-                  <div className="rounded-xl p-4" style={{ background: '#F9FAFB', border: '1px solid #F0F0F2' }}>
-                    <p className="font-semibold text-[13px] mb-3" style={{ color: '#1A2332' }}>What agents see when connected:</p>
-                    <div className="space-y-2 text-[12px]" style={{ color: '#64748B' }}>
+                  <div className="rounded-xl p-4" style={{ background: darkMode ? '#1C1C1E' : '#F9FAFB', border: `1px solid ${darkMode ? '#2C2C2E' : '#F0F0F2'}` }}>
+                    <p className="font-semibold text-[13px] mb-3" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>What agents see when connected:</p>
+                    <div className="space-y-2 text-[12px]" style={{ color: darkMode ? '#8E8E93' : '#64748B' }}>
                       <div className="flex items-center gap-2"><span className="material-symbols-rounded" style={{ fontSize: 16, color: '#10B981' }}>check_circle</span> Monthly revenue & expenses overview</div>
                       <div className="flex items-center gap-2"><span className="material-symbols-rounded" style={{ fontSize: 16, color: '#10B981' }}>check_circle</span> Project-level earnings breakdown</div>
                       <div className="flex items-center gap-2"><span className="material-symbols-rounded" style={{ fontSize: 16, color: '#10B981' }}>check_circle</span> Subscription & recurring income tracking</div>
@@ -1975,12 +2270,12 @@ export default function KayouChat() {
                     </div>
                   </div>
 
-                  <div className="rounded-xl p-4" style={{ background: '#F9FAFB', border: '1px solid #F0F0F2' }}>
-                    <p className="font-semibold text-[13px] mb-2" style={{ color: '#1A2332' }}>Agent access</p>
-                    <p className="text-[12px] mb-3" style={{ color: '#94A3B8' }}>Only agents with "finances" permission can see your financial data.</p>
+                  <div className="rounded-xl p-4" style={{ background: darkMode ? '#1C1C1E' : '#F9FAFB', border: `1px solid ${darkMode ? '#2C2C2E' : '#F0F0F2'}` }}>
+                    <p className="font-semibold text-[13px] mb-2" style={{ color: darkMode ? '#FFFFFF' : '#1A2332' }}>Agent access</p>
+                    <p className="text-[12px] mb-3" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>Only agents with "finances" permission can see your financial data.</p>
                     <div className="flex gap-2 flex-wrap">
                       {agents.filter((a: any) => (a.permissions || []).includes('finances')).map((a: any) => (
-                        <div key={a.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium" style={{ background: '#DCFCE7', color: '#16A34A' }}>
+                        <div key={a.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium" style={{ background: darkMode ? '#0A2C1A' : '#DCFCE7', color: darkMode ? '#6EE7B7' : '#16A34A' }}>
                           <span className="material-symbols-rounded" style={{ fontSize: 13 }}>visibility</span>
                           {a.name}
                         </div>
@@ -1993,15 +2288,15 @@ export default function KayouChat() {
               {/* ── GitHub Tab ── */}
               {settingsTab === 'github' && (
                 <div className="space-y-4">
-                  <p className="text-[13px]" style={{ color: '#64748B' }}>Connect your GitHub account. Agents with "github" permission can see repo info.</p>
+                  <p className="text-[13px]" style={{ color: darkMode ? '#8E8E93' : '#64748B' }}>Connect your GitHub account. Agents with "github" permission can see repo info.</p>
                   <div>
-                    <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>GitHub Username</label>
+                    <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>GitHub Username</label>
                     <input value={githubConfig.username || ''} onChange={e => setGithubConfig((g: any) => ({ ...g, username: e.target.value }))}
-                      className="w-full mt-1 px-3 py-2.5 rounded-lg border text-[13px]" style={{ borderColor: '#E2E8F0', color: '#1E293B' }} placeholder="amsecurity95" />
+                      className="w-full mt-1 px-3 py-2.5 rounded-lg border text-[13px]" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }} placeholder="amsecurity95" />
                   </div>
                   <div>
-                    <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: '#94A3B8' }}>Personal Access Token</label>
-                    <input id="ghtoken" className="w-full mt-1 px-3 py-2.5 rounded-lg border text-[13px] font-mono" style={{ borderColor: '#E2E8F0', color: '#1E293B' }}
+                    <label className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}>Personal Access Token</label>
+                    <input id="ghtoken" className="w-full mt-1 px-3 py-2.5 rounded-lg border text-[13px] font-mono" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }}
                       placeholder={githubConfig.hasToken ? '••••••••• (token set)' : 'ghp_...'} type="password" />
                   </div>
                   <button onClick={async () => {
