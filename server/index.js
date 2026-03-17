@@ -3,7 +3,7 @@ const fs = require('fs')
 const fastify = require('fastify')({ logger: true })
 const cors = require('@fastify/cors')
 const fastifyStatic = require('@fastify/static')
-const { Server } = require('socket.io')
+let Server; try { Server = require('socket.io').Server } catch(e) { /* socket.io optional */ }
 
 const { execSync } = require('child_process')
 
@@ -43,7 +43,7 @@ function loadConfig() {
 function saveConfig(config) { fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2)) }
 
 fastify.register(cors, { origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE'] })
-fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'out'), prefix: '/' })
+fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'public'), prefix: '/' })
 fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'uploads'), prefix: '/uploads/', decorateReply: false })
 fastify.get('/health', async () => ({ status: 'ok' }))
 
@@ -284,11 +284,13 @@ const start = async () => {
   try {
     const port = process.env.PORT || 3001
     await fastify.listen({ port: Number(port), host: '0.0.0.0' })
-    io = new Server(fastify.server, { cors: { origin: '*', methods: ['GET', 'POST'] } })
-    io.on('connection', (socket) => {
-      console.log('Client connected:', socket.id)
-      socket.on('disconnect', () => console.log('Client disconnected:', socket.id))
-    })
+    if (Server) {
+      io = new Server(fastify.server, { cors: { origin: '*', methods: ['GET', 'POST'] } })
+      io.on('connection', (socket) => {
+        console.log('Client connected:', socket.id)
+        socket.on('disconnect', () => console.log('Client disconnected:', socket.id))
+      })
+    }
     const c = loadConfig()
     console.log(`Server running on http://localhost:${port}`)
     console.log(`Agents: ${c.agents.length} | Projects: ${(c.projects||[]).length} | MCPs: ${(c.mcps||[]).length}`)
