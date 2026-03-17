@@ -62,7 +62,7 @@ html,body{height:100%;font-family:'Inter',-apple-system,system-ui,sans-serif;-we
 .home-head .acts button:hover{border-color:#B0B0C0;color:#1A1A2E}
 
 /* ═══ INTEGRATION CARDS ═══ */
-.int-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.int-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px}
 .int-card{background:#fff;border:1px solid #EAEAF0;border-radius:14px;padding:20px;transition:all .15s}
 .int-card:hover{border-color:#D0D0E0;box-shadow:0 2px 12px rgba(0,0,0,.04)}
 .int-card .card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
@@ -78,7 +78,7 @@ html,body{height:100%;font-family:'Inter',-apple-system,system-ui,sans-serif;-we
 .int-card .card-stat-change{font-size:12px;color:#B0B0C0;margin-left:4px}
 
 /* ═══ METRIC CARDS ═══ */
-.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
 .metric-card{background:#fff;border:1px solid #EAEAF0;border-radius:14px;padding:24px 24px;position:relative;overflow:hidden}
 .metric-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:0 4px 4px 0}
 .metric-card.green::before{background:#10B981}
@@ -88,8 +88,8 @@ html,body{height:100%;font-family:'Inter',-apple-system,system-ui,sans-serif;-we
 .metric-card .m-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
 .metric-card .m-top h4{font-size:15px;font-weight:500;color:#6B6B80}
 .metric-card .m-top .material-symbols-rounded{font-size:22px;color:#B0B0C0}
-.metric-card .m-val{font-size:38px;font-weight:800;letter-spacing:-.03em;color:#1A1A2E}
-.metric-card .m-ring{position:absolute;right:20px;bottom:24px;width:68px;height:68px}
+.metric-card .m-val{font-size:32px;font-weight:800;letter-spacing:-.03em;color:#1A1A2E}
+.metric-card .m-ring{position:absolute;right:18px;bottom:22px;width:60px;height:60px}
 .metric-card .m-bottom{display:flex;align-items:center;gap:6px;margin-top:8px}
 .metric-card .m-pct{font-size:13px;font-weight:600}
 .metric-card .m-pct.up{color:#10B981}
