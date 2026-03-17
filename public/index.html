@@ -2,181 +2,182 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<meta name="theme-color" content="#0A0A0A">
-<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
 <title>Kayou — AI Agent Platform</title>
 <link rel="icon" href="/kayou-logo.png">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#F8F9FA;--bg2:#FFFFFF;--text:#111111;--text2:#6B7280;--text3:#9CA3AF;--border:#E5E7EB;--border2:#F3F4F6;--accent:#6366F1;--accent2:#818CF8;--green:#10B981;--red:#EF4444;--orange:#F59E0B;--radius:12px}
-html,body{height:100%;overflow:hidden;position:fixed;width:100%;font-family:'Inter',-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;background:var(--bg);color:var(--text);font-size:14px;font-weight:400;letter-spacing:-0.006em}
+html,body{height:100%;font-family:'Inter',-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;background:#ECEEF3;color:#1A1A2E;font-size:14px;display:flex;align-items:center;justify-content:center}
 .material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}
-::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(0,0,0,.08);border-radius:3px}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(0,0,0,.1);border-radius:3px}
 
-/* ═══ LAYOUT ═══ */
-#app{display:flex;height:100vh;flex-direction:column}
+/* ═══ SHELL ═══ */
+#shell{width:100%;max-width:1440px;height:96vh;max-height:900px;background:#FFFFFF;border-radius:20px;box-shadow:0 8px 40px rgba(0,0,0,.08);display:flex;flex-direction:column;overflow:hidden}
 
-/* Top Bar */
-.topbar{height:56px;display:flex;align-items:center;padding:0 24px;gap:16px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;z-index:10}
-.topbar .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;letter-spacing:-0.02em;color:var(--text);flex-shrink:0}
-.topbar .logo img{width:28px;height:28px;border-radius:8px}
-.topbar .search{flex:1;max-width:420px;margin:0 auto}
-.topbar .search input{width:100%;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--bg);padding:0 12px 0 36px;font-size:13px;color:var(--text);font-family:inherit}
-.topbar .search input::placeholder{color:var(--text3)}
-.topbar .search input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(99,102,241,.1)}
-.topbar .search{position:relative}
-.topbar .search .icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:18px}
-.topbar .actions{display:flex;gap:4px;flex-shrink:0}
-.topbar .actions button{width:36px;height:36px;border-radius:8px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .1s}
-.topbar .actions button:hover{background:var(--bg);color:var(--text)}
-.topbar .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#6366F1,#8B5CF6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:12px;cursor:pointer;flex-shrink:0}
+/* ═══ TOP BAR ═══ */
+.topbar{height:60px;display:flex;align-items:center;padding:0 24px;gap:20px;border-bottom:1px solid #F0F0F5;flex-shrink:0}
+.topbar .logo{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.topbar .logo img{width:32px;height:32px}
+.topbar .logo span{font-size:16px;font-weight:800;letter-spacing:-.02em;color:#1A1A2E}
+.topbar .search{flex:1;max-width:440px;margin:0 auto;position:relative}
+.topbar .search input{width:100%;height:38px;border-radius:10px;border:1px solid #E8E8EF;background:#F8F8FB;padding:0 14px 0 38px;font-size:13px;color:#1A1A2E;font-family:inherit;transition:all .15s}
+.topbar .search input::placeholder{color:#B0B0C0}
+.topbar .search input:focus{outline:none;border-color:#7B8CDE;background:#fff;box-shadow:0 0 0 3px rgba(123,140,222,.12)}
+.topbar .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:18px;color:#B0B0C0}
+.topbar .top-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.topbar .top-actions button{width:38px;height:38px;border-radius:10px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#8B8BA0;transition:all .12s}
+.topbar .top-actions button:hover{background:#F5F5FA;color:#1A1A2E}
+.topbar .top-avatar{width:36px;height:36px;border-radius:50%;overflow:hidden;cursor:pointer;flex-shrink:0;background:linear-gradient(135deg,#6366F1,#8B5CF6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px}
 
-/* Body */
+/* ═══ BODY ═══ */
 .body{display:flex;flex:1;overflow:hidden}
 
-/* Sidebar */
-.sidebar{width:220px;flex-shrink:0;display:flex;flex-direction:column;background:var(--bg2);border-right:1px solid var(--border);padding:16px 12px;overflow:hidden}
-.sidebar .nav{flex:1}
-.sidebar .nav-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;color:var(--text2);transition:all .1s;border:none;background:none;width:100%;text-align:left;font-family:inherit}
-.sidebar .nav-item:hover{background:var(--bg);color:var(--text)}
-.sidebar .nav-item.active{background:var(--accent);color:#fff}
-.sidebar .nav-item.active .material-symbols-rounded{color:#fff}
-.sidebar .nav-item .material-symbols-rounded{font-size:20px;color:var(--text3)}
-.sidebar .nav-item.active .material-symbols-rounded{color:#fff}
-.sidebar .nav-item .badge{margin-left:auto;font-size:11px;font-weight:600;padding:1px 6px;border-radius:10px;background:#FEE2E2;color:#DC2626}
-.sidebar .user{padding:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;margin-top:auto}
-.sidebar .user .user-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#6366F1,#8B5CF6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:11px;flex-shrink:0;position:relative}
-.sidebar .user .user-av .dot{position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;border-radius:50%;background:var(--green);border:2px solid var(--bg2)}
-.sidebar .user .user-name{font-size:13px;font-weight:600;color:var(--text)}
-.sidebar .user .user-role{font-size:11px;color:var(--text3)}
+/* ═══ SIDEBAR ═══ */
+.sidebar{width:200px;flex-shrink:0;padding:20px 12px;display:flex;flex-direction:column;border-right:1px solid #F0F0F5}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:500;color:#6B6B80;transition:all .12s;border:none;background:none;width:100%;text-align:left;font-family:inherit;margin-bottom:2px}
+.nav-item:hover{background:#F5F5FA;color:#1A1A2E}
+.nav-item.active{background:#E8F4F8;color:#0D9488;font-weight:600}
+.nav-item .material-symbols-rounded{font-size:20px}
+.nav-item.active .material-symbols-rounded{color:#0D9488}
 
-/* Main */
-.main{flex:1;overflow-y:auto;padding:24px 32px;display:flex;gap:24px}
-.main-content{flex:1;min-width:0}
-.main-right{width:320px;flex-shrink:0}
+.sidebar-user{margin-top:auto;padding:12px 8px;display:flex;align-items:center;gap:10px;border-top:1px solid #F0F0F5}
+.sidebar-user .av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#6366F1,#8B5CF6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:12px;position:relative;flex-shrink:0;overflow:hidden}
+.sidebar-user .av img{width:100%;height:100%;object-fit:cover}
+.sidebar-user .av .dot{position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#10B981;border:2px solid #fff}
+.sidebar-user .uname{font-size:13px;font-weight:600;color:#1A1A2E}
 
-/* ═══ HOME VIEW ═══ */
-.home-header{margin-bottom:28px;display:flex;align-items:flex-start;justify-content:space-between}
-.home-header h1{font-size:24px;font-weight:700;letter-spacing:-0.03em;margin-bottom:4px}
-.home-header p{font-size:14px;color:var(--text2)}
-.home-header .actions{display:flex;gap:6px}
-.home-header .actions button{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .1s}
-.home-header .actions button:hover{border-color:var(--text3);color:var(--text)}
+/* ═══ MAIN ═══ */
+.main-area{flex:1;overflow-y:auto;padding:28px 32px;display:flex;gap:24px}
+.main-left{flex:1;min-width:0}
+.main-right{width:300px;flex-shrink:0}
 
-/* Integration Cards */
-.int-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:28px}
-.int-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:all .15s}
-.int-card:hover{border-color:var(--text3);box-shadow:0 2px 8px rgba(0,0,0,.04)}
-.int-card .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.int-card .top .icon-wrap{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center}
-.int-card .top .status{font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px}
-.int-card .top .status.active{background:#D1FAE5;color:#065F46}
-.int-card .top .status.inactive{background:#F3F4F6;color:#6B7280}
-.int-card h3{font-size:15px;font-weight:600;margin-bottom:4px}
-.int-card .desc{font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.4}
-.int-card .stats{display:flex;gap:16px}
-.int-card .stat{flex:1}
-.int-card .stat .label{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;margin-bottom:2px}
-.int-card .stat .label .dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
-.int-card .stat .value{font-size:20px;font-weight:700;letter-spacing:-0.02em}
-.int-card .stat .change{font-size:11px;color:var(--text3);margin-left:4px}
+/* Header */
+.home-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px}
+.home-head h1{font-size:26px;font-weight:700;letter-spacing:-.03em;color:#1A1A2E;margin-bottom:2px}
+.home-head p{font-size:14px;color:#8B8BA0;font-weight:400}
+.home-head .acts{display:flex;gap:8px}
+.home-head .acts button{width:32px;height:32px;border-radius:8px;border:1px solid #E8E8EF;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#8B8BA0;transition:all .1s}
+.home-head .acts button:hover{border-color:#B0B0C0;color:#1A1A2E}
 
-/* Metric Cards */
-.metric-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}
-.metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative}
-.metric-card .metric-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.metric-card .metric-top h4{font-size:13px;font-weight:500;color:var(--text2)}
-.metric-card .metric-top .material-symbols-rounded{font-size:18px;color:var(--text3)}
-.metric-card .metric-value{font-size:28px;font-weight:700;letter-spacing:-0.03em;margin-bottom:8px}
-.metric-card .metric-ring{width:52px;height:52px;position:absolute;right:16px;top:50%;transform:translateY(-50%)}
-.metric-card .metric-change{font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px}
-.metric-card .metric-change.up{color:var(--green)}
-.metric-card .metric-change.down{color:var(--red)}
+/* ═══ INTEGRATION CARDS ═══ */
+.int-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.int-card{background:#fff;border:1px solid #EAEAF0;border-radius:14px;padding:20px;transition:all .15s}
+.int-card:hover{border-color:#D0D0E0;box-shadow:0 2px 12px rgba(0,0,0,.04)}
+.int-card .card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.int-card .card-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center}
+.int-card .card-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:8px;background:#D1FAE5;color:#065F46}
+.int-card h3{font-size:16px;font-weight:700;color:#1A1A2E;margin-bottom:6px;letter-spacing:-.01em}
+.int-card .card-desc{font-size:12px;color:#8B8BA0;margin-bottom:16px;line-height:1.5}
+.int-card .card-stats{display:flex;flex-direction:column;gap:10px}
+.int-card .card-stat{display:flex;align-items:center;gap:6px}
+.int-card .card-stat .dot{width:7px;height:7px;border-radius:50%;background:#10B981;flex-shrink:0}
+.int-card .card-stat .stat-label{font-size:12px;color:#8B8BA0;flex:1}
+.int-card .card-stat-val{font-size:22px;font-weight:800;color:#1A1A2E;letter-spacing:-.02em}
+.int-card .card-stat-change{font-size:12px;color:#B0B0C0;margin-left:4px}
 
-/* Activity Panel */
-.activity-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;height:fit-content;position:sticky;top:0}
-.activity-panel h3{font-size:15px;font-weight:600;margin-bottom:16px}
-.activity-item{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--border2)}
-.activity-item:first-of-type{border-top:none}
-.activity-item .act-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--bg)}
-.activity-item .act-text{font-size:13px;font-weight:500;color:var(--text)}
-.activity-item .act-text .time{font-size:11px;font-weight:400;color:var(--text3);margin-left:6px}
-.activity-item .act-sub{font-size:11px;color:var(--text3);margin-top:2px;display:flex;align-items:center;gap:4px}
+/* ═══ METRIC CARDS ═══ */
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.metric-card{background:#fff;border:1px solid #EAEAF0;border-radius:14px;padding:18px 20px;position:relative;overflow:hidden}
+.metric-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:0 4px 4px 0}
+.metric-card.green::before{background:#10B981}
+.metric-card.blue::before{background:#6366F1}
+.metric-card.pink::before{background:#EC4899}
+.metric-card.purple::before{background:#8B5CF6}
+.metric-card .m-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.metric-card .m-top h4{font-size:14px;font-weight:500;color:#6B6B80}
+.metric-card .m-top .material-symbols-rounded{font-size:20px;color:#B0B0C0}
+.metric-card .m-val{font-size:32px;font-weight:800;letter-spacing:-.03em;color:#1A1A2E}
+.metric-card .m-ring{position:absolute;right:16px;bottom:20px;width:56px;height:56px}
+.metric-card .m-bottom{display:flex;align-items:center;gap:6px;margin-top:8px}
+.metric-card .m-pct{font-size:12px;font-weight:600}
+.metric-card .m-pct.up{color:#10B981}
+.metric-card .m-pct.down{color:#EF4444}
+.metric-card .m-check{width:18px;height:18px;border-radius:50%;border:1.5px solid #D0D0E0;display:flex;align-items:center;justify-content:center;margin-left:auto;color:#B0B0C0}
+
+/* ═══ ACTIVITY PANEL ═══ */
+.activity{background:#1A1A2E;border-radius:14px;padding:20px;color:#fff;position:sticky;top:0}
+.activity h3{font-size:15px;font-weight:700;margin-bottom:16px;color:#fff}
+.act-item{display:flex;gap:10px;padding:12px 0;border-top:1px solid rgba(255,255,255,.08)}
+.act-item:first-of-type{border:none;padding-top:0}
+.act-item .act-av{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
+.act-item .act-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.act-item .act-av .material-symbols-rounded{font-size:16px;color:rgba(255,255,255,.7)}
+.act-item .act-body{flex:1;min-width:0}
+.act-item .act-title{font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:6px}
+.act-item .act-title .time-badge{font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.6)}
+.act-item .act-sub{font-size:11px;color:rgba(255,255,255,.4);margin-top:3px;display:flex;align-items:center;gap:4px}
 
 /* ═══ CHAT VIEW ═══ */
-.chat-layout{display:flex;height:100%;gap:0}
-.chat-channels{width:240px;flex-shrink:0;border-right:1px solid var(--border);padding:16px;overflow-y:auto}
-.chat-channels h4{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:8px;padding:0 8px}
-.chat-channels .ch{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--text2);font-weight:500;transition:all .1s}
-.chat-channels .ch:hover{background:var(--bg);color:var(--text)}
-.chat-channels .ch.active{background:var(--accent);color:#fff}
-.chat-channels .ch .material-symbols-rounded{font-size:18px}
+.chat-layout{display:flex;height:100%;margin:-28px -32px;width:calc(100% + 64px)}
+.chat-channels{width:240px;flex-shrink:0;border-right:1px solid #F0F0F5;padding:20px 12px;overflow-y:auto}
+.chat-channels h4{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#B0B0C0;margin-bottom:8px;padding:0 10px}
+.chat-ch{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:#6B6B80;font-weight:500;transition:all .1s;margin-bottom:1px}
+.chat-ch:hover{background:#F5F5FA;color:#1A1A2E}
+.chat-ch.active{background:#E8F4F8;color:#0D9488;font-weight:600}
 .chat-main{flex:1;display:flex;flex-direction:column}
-.chat-header-bar{height:48px;display:flex;align-items:center;padding:0 20px;border-bottom:1px solid var(--border);font-weight:600;gap:8px}
-.chat-messages{flex:1;overflow-y:auto;padding:16px 20px}
-.chat-input-wrap{padding:12px 20px;border-top:1px solid var(--border)}
-.chat-input-wrap textarea{width:100%;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;font-family:inherit;resize:none;min-height:40px;max-height:120px;background:var(--bg);color:var(--text)}
-.chat-input-wrap textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(99,102,241,.1)}
-.chat-input-wrap textarea::placeholder{color:var(--text3)}
-
-/* Message styling */
-.msg{display:flex;gap:10px;margin-bottom:16px}
-.msg.own{flex-direction:row-reverse}
-.msg .msg-av{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:11px;overflow:hidden}
-.msg .msg-av img{width:100%;height:100%;object-fit:cover}
-.msg .msg-body{max-width:65%}
-.msg .msg-meta{display:flex;align-items:center;gap:6px;margin-bottom:4px}
-.msg .msg-name{font-size:12px;font-weight:600;color:var(--text2)}
-.msg .msg-time{font-size:11px;color:var(--text3)}
-.msg .msg-bubble{padding:8px 14px;border-radius:12px;font-size:14px;line-height:1.5;border-bottom-left-radius:4px}
-.msg.own .msg-bubble{background:var(--accent);color:#fff;border-bottom-left-radius:12px;border-bottom-right-radius:4px}
-.msg:not(.own) .msg-bubble{background:var(--bg);border:1px solid var(--border)}
-.msg .msg-bubble b{font-weight:600}
-.msg .msg-bubble code{background:rgba(0,0,0,.06);padding:1px 5px;border-radius:3px;font-size:12px;font-family:'SF Mono',monospace}
+.chat-hdr{height:52px;display:flex;align-items:center;padding:0 24px;border-bottom:1px solid #F0F0F5;font-weight:600;font-size:15px;gap:8px;color:#1A1A2E;flex-shrink:0}
+.chat-msgs{flex:1;overflow-y:auto;padding:20px 24px}
+.chat-empty{text-align:center;padding:80px 0;color:#B0B0C0}
+.chat-empty .material-symbols-rounded{font-size:48px;display:block;margin-bottom:8px;opacity:.3}
+.msg-row{display:flex;gap:10px;margin-bottom:16px}
+.msg-row.own{flex-direction:row-reverse}
+.msg-av{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:11px;overflow:hidden}
+.msg-av img{width:100%;height:100%;object-fit:cover}
+.msg-body{max-width:65%}
+.msg-meta{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.msg-meta .name{font-size:12px;font-weight:600;color:#6B6B80}
+.msg-meta .time{font-size:11px;color:#B0B0C0}
+.msg-bubble{padding:10px 16px;border-radius:14px;font-size:14px;line-height:1.55;border-bottom-left-radius:4px}
+.msg-row.own .msg-bubble{background:#6366F1;color:#fff;border-radius:14px;border-bottom-right-radius:4px}
+.msg-row:not(.own) .msg-bubble{background:#F5F5FA;color:#1A1A2E;border:1px solid #EAEAF0}
+.msg-bubble b{font-weight:600}
+.msg-bubble code{background:rgba(0,0,0,.06);padding:1px 5px;border-radius:3px;font-size:12px;font-family:'SF Mono',monospace}
+.chat-input{padding:12px 24px;border-top:1px solid #F0F0F5;flex-shrink:0}
+.chat-input textarea{width:100%;border:1px solid #E8E8EF;border-radius:10px;padding:10px 14px;font-size:14px;font-family:inherit;resize:none;min-height:40px;max-height:120px;background:#F8F8FB;color:#1A1A2E;transition:all .15s}
+.chat-input textarea:focus{outline:none;border-color:#7B8CDE;background:#fff;box-shadow:0 0 0 3px rgba(123,140,222,.1)}
+.chat-input textarea::placeholder{color:#B0B0C0}
 
 /* Typing */
-.typing-row{display:flex;gap:10px;align-items:center;margin-top:8px}
-.typing-dots{display:flex;gap:3px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:12px;border-bottom-left-radius:4px}
-.typing-dots span{width:6px;height:6px;border-radius:50%;background:var(--text3)}
+@keyframes bounce{0%,100%{transform:translateY(0);opacity:.3}50%{transform:translateY(-3px);opacity:1}}
+.typing-dots{display:inline-flex;gap:3px;padding:10px 16px;background:#F5F5FA;border:1px solid #EAEAF0;border-radius:14px;border-bottom-left-radius:4px}
+.typing-dots span{width:6px;height:6px;border-radius:50%;background:#B0B0C0}
+.typing-dots span:nth-child(1){animation:bounce 1.2s infinite}
+.typing-dots span:nth-child(2){animation:bounce 1.2s .2s infinite}
+.typing-dots span:nth-child(3){animation:bounce 1.2s .4s infinite}
 
-/* ═══ SETTINGS VIEW ═══ */
-.settings-layout{max-width:800px}
-.settings-layout h2{font-size:20px;font-weight:600;margin-bottom:4px}
-.settings-layout .subtitle{color:var(--text2);margin-bottom:24px}
-.agent-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);margin-bottom:10px;transition:all .1s}
-.agent-row:hover{border-color:var(--text3)}
-.agent-row .agent-av{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:12px;flex-shrink:0;overflow:hidden}
-.agent-row .agent-av img{width:100%;height:100%;object-fit:cover}
-.agent-row .agent-info{flex:1}
-.agent-row .agent-name{font-weight:600;font-size:14px}
-.agent-row .agent-detail{font-size:12px;color:var(--text2)}
-.agent-row .agent-status{font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px}
-.agent-row .agent-status.on{background:#D1FAE5;color:#065F46}
-.agent-row .agent-status.off{background:#F3F4F6;color:#6B7280}
+/* ═══ SETTINGS ═══ */
+.settings-wrap{max-width:800px}
+.settings-wrap h2{font-size:22px;font-weight:700;margin-bottom:4px}
+.settings-wrap .sub{color:#8B8BA0;margin-bottom:24px}
+.settings-wrap h4{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#B0B0C0;margin-bottom:10px}
+.agent-card{display:flex;align-items:center;gap:14px;padding:14px 18px;border:1px solid #EAEAF0;border-radius:12px;background:#fff;margin-bottom:8px;transition:all .1s}
+.agent-card:hover{border-color:#D0D0E0}
+.agent-card .a-av{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:13px;flex-shrink:0;overflow:hidden}
+.agent-card .a-av img{width:100%;height:100%;object-fit:cover}
+.agent-card .a-info{flex:1}
+.agent-card .a-name{font-weight:600;font-size:14px;color:#1A1A2E}
+.agent-card .a-meta{font-size:12px;color:#8B8BA0}
+.agent-card .a-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px}
+.agent-card .a-badge.on{background:#D1FAE5;color:#065F46}
+.agent-card .a-badge.off{background:#F3F4F6;color:#8B8BA0}
 
 /* ═══ SPLASH ═══ */
 #splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;z-index:9999;transition:opacity .4s}
 #splash.hide{opacity:0;pointer-events:none}
 #splash img{width:48px;height:48px;border-radius:12px;margin-bottom:16px}
-#splash h1{font-size:18px;font-weight:600;letter-spacing:-0.02em;margin-bottom:4px}
-#splash p{font-size:13px;color:var(--text3)}
-#splash .bar{width:120px;height:3px;border-radius:2px;background:var(--border);margin-top:20px;overflow:hidden}
-#splash .bar div{height:100%;border-radius:2px;background:var(--accent);animation:loadBar 1.4s ease-in-out forwards}
+#splash h1{font-size:18px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px}
+#splash p{font-size:13px;color:#B0B0C0}
+#splash .bar{width:120px;height:3px;border-radius:2px;background:#EAEAF0;margin-top:20px;overflow:hidden}
+#splash .bar div{height:100%;border-radius:2px;background:#6366F1;animation:loadBar 1.4s ease-in-out forwards}
 @keyframes loadBar{0%{width:0}60%{width:70%}100%{width:100%}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 
 /* ═══ RESPONSIVE ═══ */
-@media(max-width:900px){.main-right{display:none}.int-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:768px){
-  .sidebar{display:none}.main{padding:16px}
-  .int-grid{grid-template-columns:1fr 1fr}
-  .metric-grid{grid-template-columns:1fr 1fr}
-  .chat-channels{display:none}
-  .topbar .search{display:none}
-}
+@media(max-width:1100px){.int-grid{grid-template-columns:repeat(2,1fr)}.metric-grid{grid-template-columns:repeat(2,1fr)}.main-right{width:260px}}
+@media(max-width:900px){.main-right{display:none}}
+@media(max-width:768px){.sidebar{display:none}#shell{border-radius:0;height:100vh;max-height:none}.main-area{padding:16px}.int-grid{grid-template-columns:1fr 1fr}.metric-grid{grid-template-columns:1fr 1fr}.chat-channels{display:none}.chat-layout{margin:0;width:100%}}
 @media(max-width:480px){.int-grid{grid-template-columns:1fr}.metric-grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -189,69 +190,37 @@ html,body{height:100%;overflow:hidden;position:fixed;width:100%;font-family:'Int
   <div class="bar"><div></div></div>
 </div>
 
-<div id="app">
+<div id="shell">
   <!-- Top Bar -->
   <div class="topbar">
-    <div class="logo">
-      <img src="/kayou-logo.png" alt="K">
-      <span>Kayou</span>
-    </div>
+    <div class="logo"><img src="/kayou-logo.png" alt="K"><span>KAYOU</span></div>
     <div class="search">
-      <span class="material-symbols-rounded icon">search</span>
-      <input type="text" placeholder="Search agents, tasks, projects...">
+      <span class="material-symbols-rounded search-icon">search</span>
+      <input type="text" placeholder="Search for tasks">
     </div>
-    <div class="actions">
-      <button title="Notifications"><span class="material-symbols-rounded" style="font-size:20px">notifications</span></button>
-      <button title="Chat" onclick="setView('chat')"><span class="material-symbols-rounded" style="font-size:20px">chat_bubble</span></button>
-      <button title="Settings" onclick="setView('settings')"><span class="material-symbols-rounded" style="font-size:20px">settings</span></button>
+    <div class="top-actions">
+      <button onclick="setView('home')"><span class="material-symbols-rounded" style="font-size:20px">notifications</span></button>
+      <button onclick="setView('chat')"><span class="material-symbols-rounded" style="font-size:20px">chat_bubble</span></button>
+      <button><span class="material-symbols-rounded" style="font-size:20px">lan</span></button>
+      <button onclick="setView('settings')"><span class="material-symbols-rounded" style="font-size:20px">chat</span></button>
     </div>
-    <div class="avatar" onclick="setView('settings')">A</div>
+    <div class="top-avatar" id="topAv">A</div>
   </div>
 
   <div class="body">
     <!-- Sidebar -->
     <div class="sidebar">
-      <div class="nav" id="sideNav"></div>
-      <div class="user">
-        <div class="user-av">A<div class="dot"></div></div>
-        <div>
-          <div class="user-name">Aimar</div>
-          <div class="user-role">CEO</div>
-        </div>
-      </div>
+      <div id="sideNav"></div>
+      <div class="sidebar-user" id="sideUser"></div>
     </div>
-
-    <!-- Main Content -->
-    <div class="main" id="mainArea"></div>
+    <!-- Main -->
+    <div class="main-area" id="mainArea"></div>
   </div>
 </div>
 
 <script>
-/* ═══════════════════════════════════════════════════
-   STATE
-   ═══════════════════════════════════════════════════ */
-const S = {
-  view: 'home',
-  agents: [],
-  channel: 'general',
-  messages: {},
-  typing: null,
-}
+const S = { view:'home', agents:[], channel:'general', messages:{} , typing:null }
 
-const CHANNELS = [
-  {id:'general',name:'general',icon:'forum'},
-  {id:'ideas',name:'ideas',icon:'lightbulb'},
-  {id:'research',name:'research',icon:'lab_research'},
-  {id:'build',name:'build',icon:'construction'},
-  {id:'testing',name:'testing',icon:'bug_report'},
-  {id:'release',name:'release',icon:'rocket_launch'},
-]
-const DM_IDS = ['kayou-code','kayou-kilo','claude','dev','ops','scout','analyst']
-const CHANNEL_AGENTS = {
-  general:['kayou-code','kayou-kilo'], ideas:['kayou-kilo','scout','analyst'],
-  research:['kayou-kilo','scout','analyst'], build:['kayou-code','dev','ops'],
-  testing:['kayou-code','dev'], release:['kayou-code','ops'],
-}
 const PEOPLE = {
   aimar:{name:'Aimar',avatar:'A',gradient:'linear-gradient(135deg,#6366F1,#8B5CF6)',role:'CEO'},
   'kayou-code':{name:'Kayou Code',avatar:'KC',gradient:'linear-gradient(135deg,#6366F1,#4F46E5)',role:'Build Lead',isBot:true},
@@ -262,317 +231,83 @@ const PEOPLE = {
   analyst:{name:'Analyst',avatar:'AN',gradient:'linear-gradient(135deg,#10B981,#059669)',role:'Numbers',isBot:true},
   claude:{name:'Claude',avatar:'C',gradient:'linear-gradient(135deg,#F97316,#EA580C)',role:'Security Lead',isBot:true},
 }
+const CHANNELS = [{id:'general',name:'general',icon:'forum'},{id:'ideas',name:'ideas',icon:'lightbulb'},{id:'research',name:'research',icon:'lab_research'},{id:'build',name:'build',icon:'construction'},{id:'testing',name:'testing',icon:'bug_report'},{id:'release',name:'release',icon:'rocket_launch'}]
+const DM_IDS = ['kayou-code','kayou-kilo','claude','dev','ops','scout','analyst']
+const CHANNEL_AGENTS = {general:['kayou-code','kayou-kilo'],ideas:['kayou-kilo','scout','analyst'],research:['kayou-kilo','scout','analyst'],build:['kayou-code','dev','ops'],testing:['kayou-code','dev'],release:['kayou-code','ops']}
 
-// Init empty messages
-CHANNELS.forEach(c => S.messages[c.id] = [])
-DM_IDS.forEach(id => S.messages['dm-'+id] = [])
+CHANNELS.forEach(c=>S.messages[c.id]=[]);DM_IDS.forEach(id=>S.messages['dm-'+id]=[])
 
-/* ═══════════════════════════════════════════════════
-   HELPERS
-   ═══════════════════════════════════════════════════ */
 const $ = id => document.getElementById(id)
+function formatTs(iso){const d=new Date(iso),m=(Date.now()-d.getTime())/60000;if(m<1)return'now';if(m<60)return Math.round(m)+'m';if(m<1440)return Math.round(m/60)+'h';return d.toLocaleDateString([],{month:'short',day:'numeric'})}
+function fmt(t){return t.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/@(\w[\w\s]*?\w)/g,'<span style="color:#6366F1;font-weight:600">@$1</span>')}
 
-function formatTs(iso) {
-  const d = new Date(iso), diff = (Date.now() - d.getTime()) / 60000
-  if (diff < 1) return 'now'
-  if (diff < 60) return Math.round(diff) + 'm'
-  if (diff < 1440) return Math.round(diff/60) + 'h'
-  return d.toLocaleDateString([],{month:'short',day:'numeric'})
+const NAV = [{id:'home',icon:'home',label:'Home'},{id:'dashboard',icon:'grid_view',label:'Dashboard'},{id:'tasks',icon:'task_alt',label:'Tasks'},{id:'chat',icon:'chat_bubble',label:'Chat'},{id:'analytics',icon:'bar_chart',label:'Analytics'},{id:'settings',icon:'settings',label:'Settings'}]
+
+function setView(v){S.view=v;render()}
+
+function render(){
+  $('sideNav').innerHTML=NAV.map(n=>`<button class="nav-item ${S.view===n.id?'active':''}" onclick="setView('${n.id}')"><span class="material-symbols-rounded">${n.icon}</span>${n.label}</button>`).join('')
+  $('sideUser').innerHTML=`<div class="av">A<div class="dot"></div></div><div class="uname">Aimar</div>`
+  const m=$('mainArea');if(S.view==='home')renderHome(m);else if(S.view==='chat')renderChat(m);else if(S.view==='settings')renderSettings(m);else m.innerHTML=`<div class="main-left"><h1 style="font-size:24px;font-weight:700;margin-bottom:4px">${NAV.find(n=>n.id===S.view)?.label||S.view}</h1><p style="color:#8B8BA0">Coming soon</p></div>`
 }
 
-function formatContent(t) {
-  return t.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/`([^`]+)`/g,'<code>$1</code>')
-    .replace(/@(\w[\w\s]*?\w)/g,'<span style="color:var(--accent);font-weight:600">@$1</span>')
-}
-
-/* ═══════════════════════════════════════════════════
-   RENDER
-   ═══════════════════════════════════════════════════ */
-const NAV = [
-  {id:'home',icon:'home',label:'Home'},
-  {id:'dashboard',icon:'grid_view',label:'Dashboard'},
-  {id:'tasks',icon:'task_alt',label:'Tasks'},
-  {id:'chat',icon:'chat_bubble',label:'Chat'},
-  {id:'analytics',icon:'bar_chart',label:'Analytics'},
-  {id:'settings',icon:'settings',label:'Settings'},
-]
-
-function setView(id) {
-  S.view = id
-  render()
-}
-
-function render() {
-  // Sidebar nav
-  $('sideNav').innerHTML = NAV.map(n =>
-    `<button class="nav-item ${S.view===n.id?'active':''}" onclick="setView('${n.id}')">
-      <span class="material-symbols-rounded">${n.icon}</span>
-      ${n.label}
-    </button>`
-  ).join('')
-
-  // Main content
-  const main = $('mainArea')
-  if (S.view === 'home') renderHome(main)
-  else if (S.view === 'chat') renderChat(main)
-  else if (S.view === 'settings') renderSettings(main)
-  else if (S.view === 'dashboard') renderDashboard(main)
-  else if (S.view === 'tasks') renderTasks(main)
-  else if (S.view === 'analytics') renderAnalytics(main)
-}
-
-function renderHome(el) {
-  const integrations = [
-    {name:'GitHub',desc:'Repository management and CI/CD automation.',icon:'code',color:'#1F2937',stats:[{label:'Commands',value:'135',change:'+48'},{label:'Tasks',value:'5,720',change:'+720'}]},
-    {name:'MCP',desc:'Model Context Protocol server connections.',icon:'hub',color:'#7C3AED',stats:[{label:'Commands',value:'287',change:'+43'},{label:'Tasks',value:'116',change:'+16'}]},
-    {name:'Webhook',desc:'External agent integrations and event hooks.',icon:'webhook',color:'#0891B2',stats:[{label:'Commands',value:'195',change:'+67'},{label:'Tasks',value:'4,261',change:'+261'}]},
-    {name:'API',desc:'Direct API connections to all agents.',icon:'api',color:'#6366F1',stats:[{label:'Commands',value:'223',change:'+94'},{label:'Connections',value:'6,102',change:'+102'}]},
+function renderHome(el){
+  const cards=[
+    {name:'GitHub',desc:'Integration with repository management and CI/CD.',icon:'code',color:'#1F2937',bg:'#F0F4F8',stats:[{l:'Commands',v:'135',c:'48'},{l:'Tasks',v:'5,720',c:'5,720'}]},
+    {name:'MCP',desc:'API agent integrations with model context protocol.',icon:'hub',color:'#7C3AED',bg:'#F3EEFF',stats:[{l:'Commands',v:'287',c:'43'},{l:'Tasks',v:'116',c:'3,910'}]},
+    {name:'Webhook',desc:'API agent integrations with external webhooks.',icon:'webhook',color:'#0891B2',bg:'#E8F8F5',stats:[{l:'Commands',v:'195',c:'67'},{l:'Tasks',v:'4,261',c:'4,261'}]},
+    {name:'API',desc:'All agent integrations with direct API connections.',icon:'api',color:'#6366F1',bg:'#EEF0FF',stats:[{l:'Commands',v:'223',c:'94'},{l:'Connections',v:'6,102',c:'6,102'}]},
   ]
-
-  const metrics = [
-    {label:'Projects',value:'4',pct:75,color:'var(--green)',icon:'folder'},
-    {label:'Messages',value:'1,247',pct:62,color:'var(--accent)',icon:'chat'},
-    {label:'Tasks',value:'38',pct:84,color:'var(--orange)',icon:'task_alt'},
-    {label:'Deploys',value:'12',pct:52,color:'#8B5CF6',icon:'rocket_launch'},
+  const metrics=[
+    {l:'Orders',v:'920',pct:75,cls:'green',color:'#10B981',icon:'shopping_bag'},
+    {l:'Visits',v:'995',pct:58,cls:'blue',color:'#6366F1',icon:'visibility'},
+    {l:'Profit',v:'1,025',pct:84,cls:'pink',color:'#EC4899',icon:'trending_up'},
+    {l:'Sales',v:'878',pct:52,cls:'purple',color:'#8B5CF6',icon:'point_of_sale'},
   ]
-
-  const activities = [
-    {text:'Webhook triggered',time:'15m',sub:'16 minutes ago',color:'#0891B2',icon:'webhook'},
-    {text:'MCP task completed',time:'26m',sub:'36 minutes ago',color:'#7C3AED',icon:'hub'},
-    {text:'GitHub command executed',time:'35m',sub:'35 minutes ago',color:'#1F2937',icon:'code'},
-    {text:'New API connection added',time:'42m',sub:'42 minutes ago',color:'#6366F1',icon:'api'},
-    {text:'Agent Kayou Code responded',time:'1h',sub:'1 hour ago',color:'#4F46E5',icon:'smart_toy'},
-    {text:'Deploy completed',time:'2h',sub:'2 hours ago',color:'#10B981',icon:'rocket_launch'},
+  const acts=[
+    {t:'Webhook triggered',tm:'15m',sub:'16 minutes ago',icon:'webhook'},
+    {t:'MCP task completed',tm:'26m',sub:'36 minutes ago',icon:'hub'},
+    {t:'GitHub command executed',tm:'35m',sub:'35 minutes ago',icon:'code'},
+    {t:'New API connection added',tm:'42m',sub:'32 minutes ago',icon:'api'},
+    {t:'MCP command executed',tm:'1h',sub:'1 hour ago',icon:'hub'},
+    {t:'GitHub command executed',tm:'1h',sub:'35 minutes ago',icon:'code'},
+    {t:'MCP command executed',tm:'1h',sub:'1 hour ago',icon:'hub'},
   ]
-
-  el.innerHTML = `
-    <div class="main-content">
-      <div class="home-header">
-        <div>
-          <h1>Hello Aimar</h1>
-          <p>here's your workspace overview</p>
-        </div>
-        <div class="actions">
-          <button><span class="material-symbols-rounded" style="font-size:18px">notifications</span></button>
-          <button><span class="material-symbols-rounded" style="font-size:18px">filter_list</span></button>
-          <button><span class="material-symbols-rounded" style="font-size:18px">more_horiz</span></button>
-        </div>
-      </div>
-
-      <div class="int-grid">
-        ${integrations.map(i => `
-          <div class="int-card">
-            <div class="top">
-              <div class="icon-wrap" style="background:${i.color}15">
-                <span class="material-symbols-rounded" style="font-size:22px;color:${i.color}">${i.icon}</span>
-              </div>
-              <span class="status active">Active</span>
-            </div>
-            <h3>${i.name}</h3>
-            <p class="desc">${i.desc}</p>
-            <div class="stats">
-              ${i.stats.map(s => `
-                <div class="stat">
-                  <div class="label"><span class="dot"></span>${s.label}</div>
-                  <div class="value">${s.value}<span class="change">▸${s.change}</span></div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        `).join('')}
-      </div>
-
-      <div class="metric-grid">
-        ${metrics.map(m => `
-          <div class="metric-card">
-            <div class="metric-top">
-              <h4>${m.label}</h4>
-              <span class="material-symbols-rounded">${m.icon}</span>
-            </div>
-            <div class="metric-value">${m.value}</div>
-            <svg class="metric-ring" viewBox="0 0 36 36">
-              <path d="M18 2.0845a15.9155 15.9155 0 0 1 0 31.831a15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#E5E7EB" stroke-width="3"/>
-              <path d="M18 2.0845a15.9155 15.9155 0 0 1 0 31.831a15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="${m.color}" stroke-width="3" stroke-dasharray="${m.pct}, 100" stroke-linecap="round"/>
-              <text x="18" y="21" text-anchor="middle" style="font-size:8px;font-weight:600;fill:var(--text)">${m.pct}%</text>
-            </svg>
-            <div class="metric-change up">▲ ${m.pct}%</div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-
-    <div class="main-right">
-      <div class="activity-panel">
-        <h3>Activity</h3>
-        ${activities.map(a => `
-          <div class="activity-item">
-            <div class="act-icon" style="background:${a.color}12">
-              <span class="material-symbols-rounded" style="font-size:16px;color:${a.color}">${a.icon}</span>
-            </div>
-            <div>
-              <div class="act-text">${a.text}<span class="time">${a.time}</span></div>
-              <div class="act-sub"><span class="material-symbols-rounded" style="font-size:12px">schedule</span>${a.sub}</div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `
+  el.innerHTML=`
+  <div class="main-left">
+    <div class="home-head"><div><h1>Hello Aimar</h1><p>here's your workspace overview</p></div><div class="acts"><button><span class="material-symbols-rounded" style="font-size:18px">notifications</span></button><button><span class="material-symbols-rounded" style="font-size:18px">filter_list</span></button><button><span class="material-symbols-rounded" style="font-size:18px">more_horiz</span></button></div></div>
+    <div class="int-grid">${cards.map(c=>`<div class="int-card"><div class="card-top"><div class="card-icon" style="background:${c.bg}"><span class="material-symbols-rounded" style="font-size:24px;color:${c.color}">${c.icon}</span></div><span class="card-badge">Active</span></div><h3>${c.name}</h3><p class="card-desc">${c.desc}</p><div class="card-stats">${c.stats.map(s=>`<div class="card-stat"><span class="dot"></span><span class="stat-label">${s.l}</span></div><div style="display:flex;align-items:baseline;gap:4px"><span class="card-stat-val">${s.v}</span><span class="card-stat-change">▸ ${s.c}</span></div>`).join('')}</div></div>`).join('')}</div>
+    <div class="metric-grid">${metrics.map(m=>`<div class="metric-card ${m.cls}"><div class="m-top"><h4>${m.l}</h4><span class="material-symbols-rounded">${m.icon}</span></div><div class="m-val">${m.v}</div><svg class="m-ring" viewBox="0 0 36 36"><path d="M18 2.0845a15.9155 15.9155 0 0 1 0 31.831a15.9155 15.9155 0 0 1 0-31.831" fill="none" stroke="#EAEAF0" stroke-width="3"/><path d="M18 2.0845a15.9155 15.9155 0 0 1 0 31.831a15.9155 15.9155 0 0 1 0-31.831" fill="none" stroke="${m.color}" stroke-width="3" stroke-dasharray="${m.pct},100" stroke-linecap="round"/><text x="18" y="21" text-anchor="middle" style="font-size:8px;font-weight:700;fill:#1A1A2E">${m.pct}%</text></svg><div class="m-bottom"><span class="m-pct up">▲ ${m.pct}%</span><div class="m-check"><span class="material-symbols-rounded" style="font-size:12px">check</span></div></div></div>`).join('')}</div>
+  </div>
+  <div class="main-right">
+    <div class="activity"><h3>Activity</h3>${acts.map(a=>`<div class="act-item"><div class="act-av"><span class="material-symbols-rounded">${a.icon}</span></div><div class="act-body"><div class="act-title">${a.t}<span class="time-badge">${a.tm}</span></div><div class="act-sub"><span class="material-symbols-rounded" style="font-size:12px">schedule</span>${a.sub}</div></div></div>`).join('')}</div>
+  </div>`
 }
 
-function renderChat(el) {
-  const isDM = S.channel.startsWith('dm-')
-  const msgs = S.messages[S.channel] || []
-  const chPerson = isDM ? PEOPLE[S.channel.replace('dm-','')] : null
-  const ch = CHANNELS.find(c => c.id === S.channel)
-
-  el.innerHTML = `
-    <div class="chat-layout" style="width:100%">
-      <div class="chat-channels">
-        <h4>Channels</h4>
-        ${CHANNELS.map(c => `
-          <div class="ch ${S.channel===c.id?'active':''}" onclick="S.channel='${c.id}';render()">
-            <span class="material-symbols-rounded">${c.icon}</span>${c.name}
-          </div>
-        `).join('')}
-        <h4 style="margin-top:20px">Direct Messages</h4>
-        ${DM_IDS.map(id => {
-          const p = PEOPLE[id]
-          const photo = S.agents.find(a=>a.id===id)?.profilePhoto
-          return `<div class="ch ${S.channel==='dm-'+id?'active':''}" onclick="S.channel='dm-${id}';render()">
-            <div style="width:20px;height:20px;border-radius:50%;background:${p.gradient};display:flex;align-items:center;justify-content:center;color:#fff;font-size:8px;font-weight:600;overflow:hidden;flex-shrink:0">
-              ${photo?`<img src="${photo}" style="width:100%;height:100%;object-fit:cover">`:''}
-            </div>
-            ${p.name}
-          </div>`
-        }).join('')}
-      </div>
-      <div class="chat-main">
-        <div class="chat-header-bar">
-          <span class="material-symbols-rounded" style="font-size:20px;color:var(--accent)">${isDM?(chPerson?.name?.[0]||'?'):(ch?.icon||'forum')}</span>
-          ${isDM ? chPerson?.name : '#'+(ch?.name||'')}
-        </div>
-        <div class="chat-messages" id="chatMsgs">
-          ${msgs.length === 0 ? `<div style="text-align:center;padding:60px 0;color:var(--text3)">
-            <span class="material-symbols-rounded" style="font-size:40px;display:block;margin-bottom:8px;opacity:.4">chat</span>
-            <p>No messages yet. Say something!</p>
-          </div>` : msgs.map(m => {
-            const p = PEOPLE[m.senderId]
-            const isOwn = m.senderId === 'aimar'
-            const photo = S.agents.find(a=>a.id===m.senderId)?.profilePhoto
-            return `<div class="msg ${isOwn?'own':''}" style="animation:fadeUp 150ms ease-out">
-              <div class="msg-av" style="background:${p?.gradient||'#ccc'}">${photo?`<img src="${photo}">`:p?.avatar||'?'}</div>
-              <div class="msg-body">
-                ${!isOwn?`<div class="msg-meta"><span class="msg-name">${p?.name}</span><span class="msg-time">${formatTs(m.ts)}</span></div>`:''}
-                <div class="msg-bubble">${formatContent(m.content)}${isOwn?`<div style="font-size:11px;text-align:right;margin-top:2px;opacity:.6">${formatTs(m.ts)}</div>`:''}</div>
-              </div>
-            </div>`
-          }).join('')}
-          ${S.typing && PEOPLE[S.typing] ? `<div class="typing-row"><div class="msg-av" style="background:${PEOPLE[S.typing].gradient}">${PEOPLE[S.typing].avatar}</div><div class="typing-dots"><span style="animation:typingBounce 1.2s infinite"></span><span style="animation:typingBounce 1.2s .2s infinite"></span><span style="animation:typingBounce 1.2s .4s infinite"></span></div></div>` : ''}
-        </div>
-        <div class="chat-input-wrap">
-          <textarea id="chatInput" rows="1" placeholder="${isDM?'Message '+chPerson?.name:'Message #'+(ch?.name||'')}" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"></textarea>
-        </div>
-      </div>
-    </div>
-  `
-  const msgArea = $('chatMsgs')
-  if (msgArea) msgArea.scrollTop = msgArea.scrollHeight
+function renderChat(el){
+  const isDM=S.channel.startsWith('dm-'),msgs=S.messages[S.channel]||[],p=isDM?PEOPLE[S.channel.replace('dm-','')]:null,ch=CHANNELS.find(c=>c.id===S.channel)
+  el.innerHTML=`<div class="chat-layout"><div class="chat-channels"><h4>Channels</h4>${CHANNELS.map(c=>`<div class="chat-ch ${S.channel===c.id?'active':''}" onclick="S.channel='${c.id}';render()"><span class="material-symbols-rounded" style="font-size:18px">${c.icon}</span>${c.name}</div>`).join('')}<h4 style="margin-top:20px">Direct Messages</h4>${DM_IDS.map(id=>{const pp=PEOPLE[id],ph=S.agents.find(a=>a.id===id)?.profilePhoto;return`<div class="chat-ch ${S.channel==='dm-'+id?'active':''}" onclick="S.channel='dm-${id}';render()"><div style="width:20px;height:20px;border-radius:50%;background:${pp.gradient};display:flex;align-items:center;justify-content:center;color:#fff;font-size:8px;font-weight:600;overflow:hidden;flex-shrink:0">${ph?`<img src="${ph}" style="width:100%;height:100%;object-fit:cover">`:''}</div>${pp.name}</div>`}).join('')}</div><div class="chat-main"><div class="chat-hdr"><span class="material-symbols-rounded" style="font-size:20px;color:#6366F1">${isDM?'person':ch?.icon||'forum'}</span>${isDM?p?.name:'# '+(ch?.name||'')}</div><div class="chat-msgs" id="chatMsgs">${msgs.length===0?'<div class="chat-empty"><span class="material-symbols-rounded">chat</span><p>No messages yet. Say something!</p></div>':msgs.map(m=>{const pp=PEOPLE[m.senderId],own=m.senderId==='aimar',ph=S.agents.find(a=>a.id===m.senderId)?.profilePhoto;return`<div class="msg-row ${own?'own':''}" style="animation:fadeUp 150ms ease-out"><div class="msg-av" style="background:${pp?.gradient||'#ccc'}">${ph?`<img src="${ph}">`:pp?.avatar||'?'}</div><div class="msg-body">${!own?`<div class="msg-meta"><span class="name">${pp?.name}</span><span class="time">${formatTs(m.ts)}</span></div>`:''}
+<div class="msg-bubble">${fmt(m.content)}${own?`<div style="font-size:11px;text-align:right;margin-top:2px;opacity:.5">${formatTs(m.ts)}</div>`:''}</div></div></div>`}).join('')}${S.typing&&PEOPLE[S.typing]?`<div class="msg-row" style="animation:fadeUp 150ms ease-out"><div class="msg-av" style="background:${PEOPLE[S.typing].gradient}">${PEOPLE[S.typing].avatar}</div><div class="typing-dots"><span></span><span></span><span></span></div></div>`:''}</div><div class="chat-input"><textarea id="chatInput" rows="1" placeholder="${isDM?'Message '+p?.name:'Message #'+(ch?.name||'')}" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"></textarea></div></div></div>`
+  const ma=document.getElementById('chatMsgs');if(ma)ma.scrollTop=ma.scrollHeight
 }
 
-function renderSettings(el) {
-  el.innerHTML = `
-    <div class="main-content">
-      <div class="settings-layout">
-        <h2>Settings</h2>
-        <p class="subtitle">Manage your AI agents and integrations</p>
-        <h3 style="margin-bottom:12px;font-size:14px;color:var(--text2)">AI Agents</h3>
-        ${S.agents.map(a => `
-          <div class="agent-row">
-            <div class="agent-av" style="background:${a.color||'#6366F1'}">
-              ${a.profilePhoto?`<img src="${a.profilePhoto}">`:(a.name||'?').charAt(0)}
-            </div>
-            <div class="agent-info">
-              <div class="agent-name">${a.name}</div>
-              <div class="agent-detail">${a.provider} · ${a.model||'webhook'}</div>
-            </div>
-            <span class="agent-status ${a.enabled?'on':'off'}">${a.enabled?'Active':'Off'}</span>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `
+function renderSettings(el){
+  el.innerHTML=`<div class="main-left"><div class="settings-wrap"><h2>Settings</h2><p class="sub">Manage your AI agents and platform integrations</p><h4>AI Agents</h4>${S.agents.map(a=>`<div class="agent-card"><div class="a-av" style="background:${a.color||'#6366F1'}">${a.profilePhoto?`<img src="${a.profilePhoto}">`:(a.name||'?').charAt(0)}</div><div class="a-info"><div class="a-name">${a.name}</div><div class="a-meta">${a.provider} · ${a.model||'webhook'}</div></div><span class="a-badge ${a.enabled?'on':'off'}">${a.enabled?'Active':'Off'}</span></div>`).join('')}</div></div>`
 }
 
-function renderDashboard(el) {
-  el.innerHTML = `<div class="main-content"><div class="home-header"><div><h1>Dashboard</h1><p>Performance metrics and analytics</p></div></div><p style="color:var(--text3);padding:40px 0;text-align:center"><span class="material-symbols-rounded" style="font-size:40px;display:block;margin-bottom:8px;opacity:.3">bar_chart</span>Dashboard analytics coming soon</p></div>`
-}
-function renderTasks(el) {
-  el.innerHTML = `<div class="main-content"><div class="home-header"><div><h1>Tasks</h1><p>Track project progress across agents</p></div></div><p style="color:var(--text3);padding:40px 0;text-align:center"><span class="material-symbols-rounded" style="font-size:40px;display:block;margin-bottom:8px;opacity:.3">task_alt</span>Task tracking coming soon</p></div>`
-}
-function renderAnalytics(el) {
-  el.innerHTML = `<div class="main-content"><div class="home-header"><div><h1>Analytics</h1><p>Agent performance and cost tracking</p></div></div><p style="color:var(--text3);padding:40px 0;text-align:center"><span class="material-symbols-rounded" style="font-size:40px;display:block;margin-bottom:8px;opacity:.3">insights</span>Analytics coming soon</p></div>`
-}
-
-/* ═══════════════════════════════════════════════════
-   CHAT LOGIC
-   ═══════════════════════════════════════════════════ */
-async function sendMsg() {
-  const inp = $('chatInput')
-  const text = inp.value.trim()
-  if (!text) return
-  inp.value = ''
-
-  const msg = {id:Date.now()+'',channelId:S.channel,senderId:'aimar',content:text,ts:new Date().toISOString()}
-  S.messages[S.channel].push(msg)
-  render()
-
-  const isDM = S.channel.startsWith('dm-')
-  let responders
-  if (isDM) {
-    responders = [S.channel.replace('dm-','')]
-  } else {
-    const ca = CHANNEL_AGENTS[S.channel]||['kayou-code','kayou-kilo']
-    const lead = ca[0], members = ca.slice(1)
-    const picked = members.filter(()=>Math.random()>.5).slice(0,2)
-    if (!picked.length && members.length) picked.push(members[0])
-    responders = [...picked, lead]
-  }
-
-  for (let i = 0; i < responders.length; i++) {
-    const rid = responders[i]
-    S.typing = rid; render()
-    try {
-      const history = S.messages[S.channel].slice(-12).map(m=>({
-        role:m.senderId==='aimar'?'user':'assistant',
-        content:m.senderId==='aimar'?m.content:(m.senderId===rid?m.content:`[${PEOPLE[m.senderId]?.name}]: ${m.content}`)
-      }))
-      const res = await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agentId:rid,message:text,history,channelId:S.channel})})
-      const data = await res.json()
-      S.typing = null
-      S.messages[S.channel].push({id:(Date.now()+i+1)+'',channelId:S.channel,senderId:rid,content:data.response||data.error||'No response',ts:new Date().toISOString()})
-    } catch(e) {
-      S.typing = null
-      S.messages[S.channel].push({id:(Date.now()+i+1)+'',channelId:S.channel,senderId:rid,content:'Connection error. Try again.',ts:new Date().toISOString()})
-    }
-    render()
-  }
+async function sendMsg(){
+  const inp=document.getElementById('chatInput'),text=inp.value.trim();if(!text)return;inp.value=''
+  S.messages[S.channel].push({id:Date.now()+'',channelId:S.channel,senderId:'aimar',content:text,ts:new Date().toISOString()});render()
+  const isDM=S.channel.startsWith('dm-')
+  let resp;if(isDM){resp=[S.channel.replace('dm-','')]}else{const ca=CHANNEL_AGENTS[S.channel]||['kayou-code','kayou-kilo'],lead=ca[0],mem=ca.slice(1),picked=mem.filter(()=>Math.random()>.5).slice(0,2);if(!picked.length&&mem.length)picked.push(mem[0]);resp=[...picked,lead]}
+  for(let i=0;i<resp.length;i++){const rid=resp[i];S.typing=rid;render()
+    try{const hist=S.messages[S.channel].slice(-12).map(m=>({role:m.senderId==='aimar'?'user':'assistant',content:m.senderId==='aimar'?m.content:(m.senderId===rid?m.content:`[${PEOPLE[m.senderId]?.name}]: ${m.content}`)}));const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agentId:rid,message:text,history:hist,channelId:S.channel})});const d=await r.json();S.typing=null;S.messages[S.channel].push({id:(Date.now()+i+1)+'',channelId:S.channel,senderId:rid,content:d.response||d.error||'No response',ts:new Date().toISOString()})}catch(e){S.typing=null;S.messages[S.channel].push({id:(Date.now()+i+1)+'',channelId:S.channel,senderId:rid,content:'Connection error.',ts:new Date().toISOString()})}
+    render()}
 }
 
-/* ═══════════════════════════════════════════════════
-   INIT
-   ═══════════════════════════════════════════════════ */
-async function init() {
-  try {
-    const res = await fetch('/api/config/agents')
-    S.agents = await res.json()
-  } catch(e) {}
-
-  render()
-  setTimeout(() => {
-    $('splash').classList.add('hide')
-    setTimeout(() => $('splash').remove(), 400)
-  }, 1200)
+async function init(){
+  try{const r=await fetch('/api/config/agents');S.agents=await r.json()}catch(e){}
+  render();setTimeout(()=>{document.getElementById('splash').classList.add('hide');setTimeout(()=>document.getElementById('splash')?.remove(),400)},1200)
 }
 init()
 </script>
