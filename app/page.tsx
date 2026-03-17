@@ -596,7 +596,7 @@ export default function KayouChat() {
         <div className="animate-pulse">
           <img src="/kayou-logo.png" alt="Kayou" className="w-20 h-20 rounded-2xl mb-5" style={{ boxShadow: '0 8px 40px rgba(53,99,201,0.2)' }} />
         </div>
-        <p className="text-[20px] mb-2" style={{ fontWeight: 900, letterSpacing: '-0.04em', color: darkMode ? '#FFFFFF' : '#1A2332' }}>Kayou Chat</p>
+        <p className="text-[20px] mb-2" style={{ fontWeight: 600, letterSpacing: '-0.02em', color: darkMode ? '#FFFFFF' : '#1A2332' }}>Kayou Chat</p>
         <p className="text-[12px]" style={{ color: darkMode ? '#48484A' : '#AEAEB2', fontWeight: 600 }}>Your AI team is loading...</p>
         <div className="mt-6 w-32 h-1 rounded-full overflow-hidden" style={{ background: darkMode ? '#1C1C1E' : '#F0F0F2' }}>
           <div className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, #3563C9, #2A4FAF)', animation: 'loadBar 1.5s ease-in-out forwards' }}></div>
@@ -622,10 +622,10 @@ export default function KayouChat() {
 
         <div className="relative z-10 flex flex-col flex-1 overflow-hidden">
           {/* Header */}
-          <div className="h-[52px] flex items-center px-4 gap-2.5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="h-[52px] flex items-center px-4 gap-2.5 flex-shrink-0" style={{ borderBottom: '1px solid #E5E5E5' }}>
             <img src="/kayou-logo.png" alt="Kayou" className="w-8 h-8 rounded-lg" />
-            <h1 className="text-[15px] text-white flex-1" style={{ fontWeight: 700, letterSpacing: '-0.02em' }}>Kayou Chat</h1>
-            <button onClick={() => { setShowSettings(true); loadAgents(); loadWebhook(); loadRules(); loadProjects(); loadMcps(); loadServices(); loadGithub() }} className="w-7 h-7 rounded flex items-center justify-center" style={{ color: 'rgba(255,255,255,0.4)' }} title="Settings">
+            <h1 className="text-[15px] flex-1" style={{ fontWeight: 600, letterSpacing: '-0.02em', color: '#171717' }}>Kayou Chat</h1>
+            <button onClick={() => { setShowSettings(true); loadAgents(); loadWebhook(); loadRules(); loadProjects(); loadMcps(); loadServices(); loadGithub() }} className="w-7 h-7 rounded flex items-center justify-center" style={{ color: '#A3A3A3' }} title="Settings">
               <span className="material-symbols-rounded" style={{ fontSize: 16 }}>settings</span>
             </button>
           </div>
@@ -746,22 +746,22 @@ export default function KayouChat() {
               {railView === 'home' && (<>
                 <button onClick={() => setChannelsCollapsed(!channelsCollapsed)} className="w-full px-5 mb-1 flex items-center gap-1.5 group">
                   <span className="material-symbols-rounded text-white/40 transition-transform" style={{ fontSize: 14, transform: channelsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>expand_more</span>
-                  <span className="text-[9px] font-black uppercase text-white/50" style={{ letterSpacing: '0.14em' }}>Channels</span>
-                  <span className="text-[9px] font-bold text-white/30 ml-auto">{CHANNELS.length}</span>
+                  <span className="text-[11px] font-medium uppercase text-neutral-400" style={{ letterSpacing: '0.14em' }}>Channels</span>
+                  <span className="text-[11px] font-medium text-neutral-400 ml-auto">{CHANNELS.length}</span>
                 </button>
                 {!channelsCollapsed && CHANNELS.map(ch => (
                   <button key={ch.id} onClick={() => switchChannel(ch.id)}
                     className={`ch-item w-[calc(100%-16px)] mx-2 flex items-center gap-2.5 px-3 py-[7px] text-left ${activeChannel === ch.id ? 'active' : ''}`}>
-                    <span className="material-symbols-rounded" style={{ fontSize: 17, color: activeChannel === ch.id ? '#FFFFFF' : 'rgba(255,255,255,0.8)' }}>{ch.icon}</span>
-                    <span className="text-[13.5px] truncate" style={{ color: activeChannel === ch.id ? '#FFFFFF' : 'rgba(255,255,255,0.9)', fontWeight: activeChannel === ch.id ? 600 : 400 }}>{ch.name}</span>
+                    <span className="material-symbols-rounded" style={{ fontSize: 17, color: activeChannel === ch.id ? '#171717' : '#737373' }}>{ch.icon}</span>
+                    <span className="text-[13.5px] truncate" style={{ color: activeChannel === ch.id ? '#171717' : '#525252', fontWeight: activeChannel === ch.id ? 600 : 400 }}>{ch.name}</span>
                   </button>
                 ))}
               </>)}
 
               <button onClick={() => setDmsCollapsed(!dmsCollapsed)} className="w-full px-5 mt-4 mb-1 flex items-center gap-1.5 group">
                 <span className="material-symbols-rounded text-white/40 transition-transform" style={{ fontSize: 14, transform: dmsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>expand_more</span>
-                <span className="text-[9px] font-black uppercase text-white/50" style={{ letterSpacing: '0.14em' }}>Direct Messages</span>
-                <span className="text-[9px] font-bold text-white/30 ml-auto">{DM_CHANNELS.length}</span>
+                <span className="text-[11px] font-medium uppercase text-neutral-400" style={{ letterSpacing: '0.14em' }}>Direct Messages</span>
+                <span className="text-[11px] font-medium text-neutral-400 ml-auto">{DM_CHANNELS.length}</span>
               </button>
               {!dmsCollapsed && DM_CHANNELS.map(dm => {
                 const p = PEOPLE[dm.personId]
@@ -769,11 +769,11 @@ export default function KayouChat() {
                   <button key={dm.id} onClick={() => switchChannel(dm.id)}
                     className={`ch-item w-[calc(100%-16px)] mx-2 flex items-center gap-2.5 px-3 py-[7px] text-left ${activeChannel === dm.id ? 'active' : ''}`}>
                     <div className="relative flex-shrink-0">
-                      <div className="w-[22px] h-[22px] rounded-md flex items-center justify-center text-white text-[9px] font-bold" style={{ background: 'rgba(255,255,255,0.3)' }}>{p.avatar}</div>
-                      <span className="absolute -bottom-px -right-px w-[8px] h-[8px] rounded-full" style={{ background: '#4CAF50', border: '1.5px solid #1E1F22' }}></span>
+                      <div className="w-[22px] h-[22px] rounded-md flex items-center justify-center text-white text-[9px] font-bold" style={{ background: '#E5E5E5' }}>{p.avatar}</div>
+                      <span className="absolute -bottom-px -right-px w-[8px] h-[8px] rounded-full" style={{ background: '#4CAF50', border: '1.5px solid #FFFFFF' }}></span>
                     </div>
-                    <span className="text-[13.5px] truncate" style={{ color: activeChannel === dm.id ? '#FFFFFF' : 'rgba(255,255,255,0.9)', fontWeight: activeChannel === dm.id ? 600 : 400 }}>{p.name}</span>
-                    {p.isBot && <span className="text-[8px] font-bold px-1.5 py-[2px] rounded-md uppercase tracking-wide" style={{ background: 'rgba(255,255,255,0.25)', color: '#FFFFFF' }}>ai</span>}
+                    <span className="text-[13.5px] truncate" style={{ color: activeChannel === dm.id ? '#171717' : '#525252', fontWeight: activeChannel === dm.id ? 600 : 400 }}>{p.name}</span>
+                    {p.isBot && <span className="text-[8px] font-bold px-1.5 py-[2px] rounded-md uppercase tracking-wide" style={{ background: '#F0F0F0', color: '#737373' }}>ai</span>}
                   </button>
                 )
               })}
@@ -782,34 +782,34 @@ export default function KayouChat() {
           </div>
 
           {/* Bottom user */}
-          <div className="px-4 py-2.5 flex items-center gap-3 flex-shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <div className="px-4 py-2.5 flex items-center gap-3 flex-shrink-0" style={{ borderTop: '1px solid #E5E5E5' }}>
             <div className="relative cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
               {myAvatar ? (
                 <img src={myAvatar} className="w-9 h-9 rounded-xl object-cover" />
               ) : (
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-xs" style={{ background: 'rgba(255,255,255,0.3)' }}>A</div>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-xs" style={{ background: '#E5E5E5' }}>A</div>
               )}
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2" style={{ background: '#4CAF50', borderColor: '#1E1F22' }}></span>
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2" style={{ background: '#4CAF50', borderColor: '#FFFFFF' }}></span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-semibold text-white">Aimar</p>
-              <p className="text-[10px] truncate text-white/80 flex items-center gap-1"><span className="material-symbols-rounded" style={{ fontSize: 12 }}>{myStatus.emoji}</span> {myStatus.text}</p>
+              <p className="text-[13px] font-semibold text-neutral-800">Aimar</p>
+              <p className="text-[10px] truncate text-neutral-500 flex items-center gap-1"><span className="material-symbols-rounded" style={{ fontSize: 12 }}>{myStatus.emoji}</span> {myStatus.text}</p>
             </div>
           </div>
 
           {/* Mode toggles */}
-          <div className="px-4 py-2 flex gap-2 flex-shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <div className="px-4 py-2 flex gap-2 flex-shrink-0" style={{ borderTop: '1px solid #E5E5E5' }}>
             <button onClick={() => setDarkMode(!darkMode)}
               className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl transition-all"
-              style={{ background: darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)' }}>
-              <span className="material-symbols-rounded text-white/90" style={{ fontSize: 14 }}>{darkMode ? 'dark_mode' : 'light_mode'}</span>
-              <span className="text-[11px] font-bold text-white/80">{darkMode ? 'Night' : 'Day'}</span>
+              style={{ background: darkMode ? '#1A1A1A' : '#F5F5F5' }}>
+              <span className="material-symbols-rounded text-neutral-600" style={{ fontSize: 14 }}>{darkMode ? 'dark_mode' : 'light_mode'}</span>
+              <span className="text-[11px] font-medium text-neutral-600">{darkMode ? 'Night' : 'Day'}</span>
             </button>
             <button onClick={() => setChillMode(!chillMode)}
               className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl transition-all"
               style={{ background: chillMode ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)' }}>
               <span className="text-[12px]">{chillMode ? '🌴' : '💼'}</span>
-              <span className="text-[11px] font-bold text-white/80">{chillMode ? 'Chill' : 'Work'}</span>
+              <span className="text-[11px] font-medium text-neutral-600">{chillMode ? 'Chill' : 'Work'}</span>
             </button>
           </div>
         </div>
@@ -849,7 +849,7 @@ export default function KayouChat() {
               <span className="text-[11px] flex items-center gap-1" style={{ color: darkMode ? '#8E8E93' : '#94A3B8' }}><span className="material-symbols-rounded" style={{ fontSize: 13 }}>{dmPerson.statusEmoji}</span> {dmPerson.statusText}</span>
             </>) : channel ? (<>
               <span className="material-symbols-rounded" style={{ fontSize: 26, color: '#3563C9' }}>{channel.icon}</span>
-              <span className="text-[16px] uppercase" style={{ fontWeight: 900, letterSpacing: '-0.01em', color: darkMode ? '#FFFFFF' : '#1A1A1A' }}>{channel.name}</span>
+              <span className="text-[16px] uppercase" style={{ fontWeight: 600, letterSpacing: '-0.01em', color: darkMode ? '#FFFFFF' : '#1A1A1A' }}>{channel.name}</span>
               <span className="text-[13px] font-medium ml-2 hidden sm:inline" style={{ color: darkMode ? '#A1A1A6' : '#64748B' }}>{channel.description}</span>
             </>) : null}
           </div>
@@ -1344,7 +1344,7 @@ export default function KayouChat() {
                     }
                     setPendingPhoto(null)
                   }} className="px-4 py-1.5 rounded-full text-[11px] font-bold text-white shadow-lg transition-all hover:scale-105 active:scale-95"
-                    style={{ background: '#007AFF' }}>
+                    style={{ background: '#171717' }}>
                     Save
                   </button>
                   <button onClick={() => setPendingPhoto(null)}
@@ -1375,7 +1375,7 @@ export default function KayouChat() {
             {showProfile !== 'aimar' && (
               <div className="flex gap-2 px-5 mb-5">
                 <button onClick={() => { switchChannel(`dm-${showProfile}`); setShowProfile(null) }}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold text-neutral-800 transition-all hover:scale-[1.02] active:scale-[0.98]"
                   style={{ background: p.gradient, boxShadow: '0 4px 14px rgba(53,99,201,0.25)' }}>
                   <span className="material-symbols-rounded" style={{ fontSize: 16 }}>chat</span>
                   Message
@@ -1502,7 +1502,7 @@ export default function KayouChat() {
               <input value={myStatus.text} onChange={e => setMyStatus(s => ({ ...s, text: e.target.value }))}
                 className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-[13px]" style={{ color: darkMode ? '#E5E5EA' : '#1E293B' }} placeholder="What's your status?" />
               <button onClick={() => { PEOPLE.aimar.statusEmoji = myStatus.emoji; PEOPLE.aimar.statusText = myStatus.text; setStatusModal(false) }}
-                className="w-full py-2.5 rounded-xl text-[13px] font-semibold text-white" style={{ background: '#007AFF', boxShadow: '0 4px 14px rgba(74,158,232,0.25)' }}>
+                className="w-full py-2.5 rounded-xl text-[13px] font-semibold text-neutral-800" style={{ background: '#171717', boxShadow: '0 4px 14px rgba(74,158,232,0.25)' }}>
                 Save Status
               </button>
             </div>
@@ -1646,7 +1646,7 @@ export default function KayouChat() {
                 <span className="material-symbols-rounded" style={{ fontSize: 20, color: '#3563C9' }}>chevron_left</span>
                 <span className="text-[14px] font-bold" style={{ color: '#3563C9', letterSpacing: '-0.02em' }}>Chat</span>
               </button>
-              <h2 className="flex-1 text-center text-[17px]" style={{ color: darkMode ? '#FFFFFF' : '#1A2332', fontWeight: 900, letterSpacing: '-0.04em' }}>Settings</h2>
+              <h2 className="flex-1 text-center text-[17px]" style={{ color: darkMode ? '#FFFFFF' : '#1A2332', fontWeight: 600, letterSpacing: '-0.02em' }}>Settings</h2>
               <div className="w-[60px]"></div>
             </div>
 
@@ -1990,8 +1990,8 @@ export default function KayouChat() {
                     setSettingsTab('agents')
                     loadAgents()
                   }} disabled={!newAgent.name.trim()}
-                    className="w-full py-3 rounded-xl text-[13px] font-semibold text-white disabled:opacity-40 transition-all"
-                    style={{ background: '#007AFF' }}>
+                    className="w-full py-3 rounded-xl text-[13px] font-semibold text-neutral-800 disabled:opacity-40 transition-all"
+                    style={{ background: '#171717' }}>
                     Add Agent
                   </button>
                 </div>
@@ -2250,7 +2250,7 @@ export default function KayouChat() {
                         <input id="akili-key" className="w-full mt-1 px-3 py-2.5 rounded-lg border text-[13px] font-mono" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }}
                           placeholder="ak_..." type="password" />
                       </div>
-                      <button className="w-full py-2.5 rounded-xl text-[13px] font-semibold text-white" style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
+                      <button className="w-full py-2.5 rounded-xl text-[13px] font-semibold text-neutral-800" style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}>
                         Connect Akili Money
                       </button>
                     </div>
