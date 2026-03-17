@@ -618,22 +618,15 @@ export default function KayouChat() {
 
       {/* ═══ SIDEBAR ═══ */}
       <div className={`${isMobile ? (mobileSidebar ? 'mobile-sidebar' : 'hidden') : 'w-[272px]'} flex flex-col flex-shrink-0 sidebar-panel`} style={{ borderRight: isMobile ? 'none' : 'none' }}>
-        {/* Decorative bubbles */}
-        <div className="bubble bubble-1"></div>
-        <div className="bubble bubble-2"></div>
-        <div className="bubble bubble-3"></div>
-        <div className="bubble bubble-4"></div>
-        <div className="bubble bubble-5"></div>
+        {/* Clean sidebar — no decorations */}
 
         <div className="relative z-10 flex flex-col flex-1 overflow-hidden">
-          {/* Logo + title */}
-          <div className="h-[76px] flex items-center px-4 gap-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
-            <div className="w-[58px] h-[58px] flex-shrink-0 transition-transform hover:scale-105">
-              <img src="/kayou-logo.png" alt="Kayou" className="w-full h-full object-contain" />
-            </div>
-            <h1 className="text-[18px] text-white flex-1" style={{ fontWeight: 900, letterSpacing: '-0.04em' }}>Kayou Chat</h1>
-            <button onClick={() => { setShowSettings(true); loadAgents(); loadWebhook(); loadRules(); loadProjects(); loadMcps(); loadServices(); loadGithub() }} className="nav-btn w-8 h-8 rounded-lg flex items-center justify-center" style={{ color: 'rgba(255,255,255,0.8)' }} title="Settings">
-              <span className="material-symbols-rounded" style={{ fontSize: 18 }}>settings</span>
+          {/* Header */}
+          <div className="h-[52px] flex items-center px-4 gap-2.5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <img src="/kayou-logo.png" alt="Kayou" className="w-8 h-8 rounded-lg" />
+            <h1 className="text-[15px] text-white flex-1" style={{ fontWeight: 700, letterSpacing: '-0.02em' }}>Kayou Chat</h1>
+            <button onClick={() => { setShowSettings(true); loadAgents(); loadWebhook(); loadRules(); loadProjects(); loadMcps(); loadServices(); loadGithub() }} className="w-7 h-7 rounded flex items-center justify-center" style={{ color: 'rgba(255,255,255,0.4)' }} title="Settings">
+              <span className="material-symbols-rounded" style={{ fontSize: 16 }}>settings</span>
             </button>
           </div>
 
@@ -777,7 +770,7 @@ export default function KayouChat() {
                     className={`ch-item w-[calc(100%-16px)] mx-2 flex items-center gap-2.5 px-3 py-[7px] text-left ${activeChannel === dm.id ? 'active' : ''}`}>
                     <div className="relative flex-shrink-0">
                       <div className="w-[22px] h-[22px] rounded-md flex items-center justify-center text-white text-[9px] font-bold" style={{ background: 'rgba(255,255,255,0.3)' }}>{p.avatar}</div>
-                      <span className="absolute -bottom-px -right-px w-[8px] h-[8px] rounded-full" style={{ background: '#4CAF50', border: '1.5px solid #3563C9' }}></span>
+                      <span className="absolute -bottom-px -right-px w-[8px] h-[8px] rounded-full" style={{ background: '#4CAF50', border: '1.5px solid #1E1F22' }}></span>
                     </div>
                     <span className="text-[13.5px] truncate" style={{ color: activeChannel === dm.id ? '#FFFFFF' : 'rgba(255,255,255,0.9)', fontWeight: activeChannel === dm.id ? 600 : 400 }}>{p.name}</span>
                     {p.isBot && <span className="text-[8px] font-bold px-1.5 py-[2px] rounded-md uppercase tracking-wide" style={{ background: 'rgba(255,255,255,0.25)', color: '#FFFFFF' }}>ai</span>}
@@ -796,7 +789,7 @@ export default function KayouChat() {
               ) : (
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-xs" style={{ background: 'rgba(255,255,255,0.3)' }}>A</div>
               )}
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2" style={{ background: '#4CAF50', borderColor: '#3563C9' }}></span>
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2" style={{ background: '#4CAF50', borderColor: '#1E1F22' }}></span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[13px] font-semibold text-white">Aimar</p>
