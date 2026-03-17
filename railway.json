@@ -2,7 +2,7 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npm run build || echo 'Build failed, using vanilla fallback'"
+    "buildCommand": "echo 'No build needed — vanilla JS'"
   },
   "deploy": {
     "startCommand": "node server/index.js",
