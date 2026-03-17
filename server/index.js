@@ -7,7 +7,22 @@ const { Server } = require('socket.io')
 
 const { execSync } = require('child_process')
 
+// Load .env
+const envPath = path.join(__dirname, '..', '.env')
+if (fs.existsSync(envPath)) {
+  fs.readFileSync(envPath, 'utf-8').split('\n').forEach(line => {
+    const [key, ...val] = line.split('=')
+    if (key && val.length) process.env[key.trim()] = val.join('=').trim()
+  })
+}
+
 const CONFIG_PATH = path.join(__dirname, '..', 'kayou-config.json')
+
+// Resolve ENV: references in config values
+function resolveEnv(val) {
+  if (typeof val === 'string' && val.startsWith('ENV:')) return process.env[val.slice(4)] || ''
+  return val
+}
 const UPLOADS_DIR = path.join(__dirname, '..', 'out', 'uploads')
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true })
 
@@ -43,7 +58,7 @@ fastify.post('/api/config/agents', async (req) => {
   const c = loadConfig(); const { name, provider, apiKey, model, systemPrompt, color } = req.body
   const agent = { id: name.toLowerCase().replace(/[^a-z0-9]/g, '-'), name, provider: provider || 'anthropic', apiKey: apiKey || '', model: model || 'claude-sonnet-4-20250514', systemPrompt: systemPrompt || '', enabled: false, color: color || '#6366F1', permissions: ['projects','mcps'] }
   c.agents.push(agent); saveConfig(c)
-  return { ...agent, apiKey: agent.apiKey ? '••••' + agent.apiKey.slice(-4) : '', hasKey: !!agent.apiKey }
+  const key = resolveEnv(agent.apiKey); return { ...agent, apiKey: key ? '••••' + key.slice(-4) : '', hasKey: !!key }
 })
 fastify.delete('/api/config/agents/:id', async (req) => {
   const c = loadConfig(); c.agents = c.agents.filter(a => a.id !== req.params.id); saveConfig(c); return { ok: true }
@@ -153,7 +168,8 @@ fastify.post('/api/chat', async (req, reply) => {
   const agent = c.agents.find(a => a.id === agentId)
   if (!agent) return reply.code(404).send({ error: 'Agent not found' })
   if (!agent.enabled) return reply.code(400).send({ error: 'Agent is disabled' })
-  if (!agent.apiKey && agent.provider !== 'ollama') return reply.code(400).send({ error: 'No API key' })
+  const agentApiKey = resolveEnv(agent.apiKey)
+  if (!agentApiKey && agent.provider !== 'ollama') return reply.code(400).send({ error: 'No API key' })
 
   // Inject rules into system prompt
   const rules = c.rules || []
@@ -194,7 +210,7 @@ fastify.post('/api/chat', async (req, reply) => {
     if (agent.provider === 'anthropic') {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': agent.apiKey, 'anthropic-version': '2023-06-01' },
+        headers: { 'Content-Type': 'application/json', 'x-api-key': agentApiKey, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({ model: agent.model || 'claude-sonnet-4-20250514', max_tokens: 500, system: fullSystemPrompt, messages: [...(history || []).slice(-10), { role: 'user', content: message }] }),
       })
       const data = await res.json()
@@ -203,7 +219,7 @@ fastify.post('/api/chat', async (req, reply) => {
     } else if (agent.provider === 'openai') {
       const res = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${agent.apiKey}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${agentApiKey}` },
         body: JSON.stringify({ model: agent.model || 'gpt-4o', max_tokens: 500, messages: [{ role: 'system', content: fullSystemPrompt }, ...(history || []).slice(-10), { role: 'user', content: message }] }),
       })
       const data = await res.json()
@@ -221,7 +237,7 @@ fastify.post('/api/chat', async (req, reply) => {
       const data = await res.json()
       responseText = data.message?.content || 'No response'
     } else if (agent.provider === 'custom') {
-      const res = await fetch(agent.model, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${agent.apiKey}` }, body: JSON.stringify({ message, history }) })
+      const res = await fetch(agent.model, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${agentApiKey}` }, body: JSON.stringify({ message, history }) })
       const data = await res.json()
       responseText = data.response || data.content || data.message || JSON.stringify(data)
     }
