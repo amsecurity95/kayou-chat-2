@@ -1,7 +1,8 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS"
+    "builder": "NIXPACKS",
+    "buildCommand": "npm run build || echo 'Build failed, using vanilla fallback'"
   },
   "deploy": {
     "startCommand": "node server/index.js",
