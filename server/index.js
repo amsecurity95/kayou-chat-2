@@ -29,6 +29,14 @@ if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true })
 function loadConfig() {
   try {
     if (fs.existsSync(CONFIG_PATH)) return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'))
+    // Bootstrap from example config on first run (e.g. Railway deploy)
+    const examplePath = path.join(__dirname, '..', 'kayou-config.example.json')
+    if (fs.existsSync(examplePath)) {
+      const example = fs.readFileSync(examplePath, 'utf-8')
+      fs.writeFileSync(CONFIG_PATH, example)
+      console.log('Bootstrapped config from kayou-config.example.json')
+      return JSON.parse(example)
+    }
   } catch (e) { console.error('Config load error:', e.message) }
   return { agents: [], webhookSecret: '', github: {}, rules: [], mcps: [], projects: [], services: [] }
 }
@@ -49,7 +57,7 @@ fastify.put('/api/config/agents/:id', async (req, reply) => {
   if (idx === -1) return reply.code(404).send({ error: 'Not found' })
   const u = req.body; const a = c.agents[idx]
   if (u.apiKey && !u.apiKey.startsWith('••••')) a.apiKey = u.apiKey
-  ;['name','model','systemPrompt','enabled','provider','color'].forEach(k => { if (u[k] !== undefined) a[k] = u[k] })
+  ;['name','model','systemPrompt','enabled','provider','color','webhookUrl'].forEach(k => { if (u[k] !== undefined) a[k] = u[k] })
   if (u.permissions) a.permissions = u.permissions
   if (u.tasks) a.tasks = u.tasks
   if (u.profilePhoto !== undefined) a.profilePhoto = u.profilePhoto
@@ -171,7 +179,7 @@ fastify.post('/api/chat', async (req, reply) => {
   if (!agent) return reply.code(404).send({ error: 'Agent not found' })
   if (!agent.enabled) return reply.code(400).send({ error: 'Agent is disabled' })
   const agentApiKey = resolveEnv(agent.apiKey)
-  if (!agentApiKey && agent.provider !== 'ollama') return reply.code(400).send({ error: 'No API key' })
+  if (!agentApiKey && agent.provider !== 'ollama' && agent.provider !== 'webhook') return reply.code(400).send({ error: 'No API key' })
 
   // Inject rules into system prompt
   const rules = c.rules || []
@@ -240,6 +248,25 @@ fastify.post('/api/chat', async (req, reply) => {
       })
       const data = await res.json()
       responseText = data.message?.content || 'No response'
+    } else if (agent.provider === 'groq') {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${agentApiKey}` },
+        body: JSON.stringify({ model: agent.model || 'llama-3.3-70b-versatile', max_tokens: 500, messages: [{ role: 'system', content: fullSystemPrompt }, ...(history || []).slice(-10), { role: 'user', content: message }] }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error))
+      responseText = data.choices?.[0]?.message?.content || 'No response'
+    } else if (agent.provider === 'webhook') {
+      const webhookUrl = resolveEnv(agent.webhookUrl)
+      if (!webhookUrl) throw new Error('No webhook URL configured for this agent')
+      const res = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(agentApiKey ? { 'Authorization': `Bearer ${agentApiKey}` } : {}) },
+        body: JSON.stringify({ message, history: (history || []).slice(-10), systemPrompt: fullSystemPrompt, agentId, channelId }),
+      })
+      const data = await res.json()
+      responseText = data.response || data.content || data.message || data.choices?.[0]?.message?.content || JSON.stringify(data)
     } else if (agent.provider === 'custom') {
       const res = await fetch(agent.model, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${agentApiKey}` }, body: JSON.stringify({ message, history }) })
       const data = await res.json()

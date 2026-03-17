@@ -1786,7 +1786,9 @@ export default function KayouChat() {
                                 className="w-full mt-1 px-3 py-2 rounded-lg border text-[13px]" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }}>
                                 <option value="anthropic">Anthropic</option>
                                 <option value="openai">OpenAI</option>
+                                <option value="groq">Groq</option>
                                 <option value="ollama">Ollama (local)</option>
+                                <option value="webhook">Webhook</option>
                                 <option value="custom">Custom URL</option>
                               </select>
                             </div>
@@ -1951,7 +1953,9 @@ export default function KayouChat() {
                         className="w-full mt-1 px-3 py-2.5 rounded-lg border text-[13px]" style={{ background: darkMode ? '#2C2C2E' : '#FFFFFF', borderColor: darkMode ? '#3A3A3C' : '#E2E8F0', color: darkMode ? '#E5E5EA' : '#1E293B' }}>
                         <option value="anthropic">Anthropic</option>
                         <option value="openai">OpenAI</option>
-                        <option value="ollama">Ollama</option>
+                        <option value="groq">Groq</option>
+                        <option value="ollama">Ollama (local)</option>
+                        <option value="webhook">Webhook</option>
                         <option value="custom">Custom URL</option>
                       </select>
                     </div>
