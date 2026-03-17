@@ -609,7 +609,7 @@ export default function KayouChat() {
     <>
     <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ position: 'fixed', top: -9999, left: -9999, opacity: 0 }} />
     <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} style={{ position: 'fixed', top: -9999, left: -9999, opacity: 0 }} />
-    <div className="flex h-screen overflow-hidden" style={{ background: darkMode ? '#1C1C1E' : '#FFFFFF' }}>
+    <div className="flex h-screen overflow-hidden max-w-[100vw]" style={{ background: darkMode ? '#1C1C1E' : '#FFFFFF', position: 'fixed', inset: 0 }}>
 
       {/* ═══ MOBILE SIDEBAR OVERLAY ═══ */}
       {mobileSidebar && isMobile && (
