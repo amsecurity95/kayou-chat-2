@@ -43,12 +43,8 @@ function loadConfig() {
 function saveConfig(config) { fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2)) }
 
 fastify.register(cors, { origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE'] })
-// Serve React build if available, otherwise vanilla HTML from public/
-const outDir = path.join(__dirname, '..', 'out')
-const publicDir = path.join(__dirname, '..', 'public')
-const staticRoot = (fs.existsSync(outDir) && fs.existsSync(path.join(outDir, 'index.html'))) ? outDir : publicDir
-fastify.register(fastifyStatic, { root: staticRoot, prefix: '/' })
-console.log(`Serving frontend from: ${staticRoot === outDir ? 'out/ (React)' : 'public/ (vanilla JS)'}`)
+// Serve vanilla JS platform from public/
+fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'public'), prefix: '/' })
 fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'uploads'), prefix: '/uploads/', decorateReply: false })
 fastify.get('/health', async () => ({ status: 'ok' }))
 
