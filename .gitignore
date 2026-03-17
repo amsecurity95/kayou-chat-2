@@ -40,3 +40,4 @@ coverage/
 kayou-config.json
 uploads/
 out/uploads/
+.github/
