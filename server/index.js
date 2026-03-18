@@ -225,6 +225,22 @@ fastify.addHook('onRequest', async (req, reply) => {
 
 // ══════════════ AGENT PHOTOS (DB-persisted) ══════════════
 let agentPhotosCache = {} // in-memory cache of agent photos from DB
+let groqRateLimit = { remainingTokens: null, limitTokens: null, remainingRequests: null, limitRequests: null, resetTokens: null, lastUpdated: null }
+
+function captureGroqRateLimit(res) {
+  const h = (name) => res.headers.get(name)
+  const rt = h('x-ratelimit-remaining-tokens')
+  const lt = h('x-ratelimit-limit-tokens')
+  const rr = h('x-ratelimit-remaining-requests')
+  const lr = h('x-ratelimit-limit-requests')
+  const resetT = h('x-ratelimit-reset-tokens')
+  if (rt !== null) groqRateLimit.remainingTokens = parseInt(rt)
+  if (lt !== null) groqRateLimit.limitTokens = parseInt(lt)
+  if (rr !== null) groqRateLimit.remainingRequests = parseInt(rr)
+  if (lr !== null) groqRateLimit.limitRequests = parseInt(lr)
+  if (resetT) groqRateLimit.resetTokens = resetT
+  groqRateLimit.lastUpdated = new Date().toISOString()
+}
 async function loadAgentPhotos() {
   if (!db) return
   try {
@@ -1057,7 +1073,7 @@ fastify.get('/api/stats', async () => {
   const today = new Date(); today.setHours(0,0,0,0)
   const { rows: [todayRow] } = await db.query('SELECT COUNT(*) as count FROM messages WHERE created_at >= $1', [today.toISOString()])
   const { rows: [totalRow] } = await db.query('SELECT COUNT(*) as count FROM messages')
-  return { messagesToday: parseInt(todayRow.count), messagesTotal: parseInt(totalRow.count) }
+  return { messagesToday: parseInt(todayRow.count), messagesTotal: parseInt(totalRow.count), groq: groqRateLimit }
 })
 
 function startHeartbeat() {
@@ -1382,6 +1398,7 @@ fastify.post('/api/chat', async (req, reply) => {
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${agentApiKey}` },
           body: JSON.stringify(reqBody),
         })
+        captureGroqRateLimit(res)
         const data = await res.json()
         if (data.error) throw new Error(data.error.message || JSON.stringify(data.error))
 
