@@ -17,6 +17,8 @@ if (fs.existsSync(envPath)) {
 }
 
 const CONFIG_PATH = path.join(__dirname, '..', 'kayou-config.json')
+const BRAINS_DIR = path.join(__dirname, '..', 'brains')
+if (!fs.existsSync(BRAINS_DIR)) fs.mkdirSync(BRAINS_DIR, { recursive: true })
 
 // Resolve ENV: references in config values
 function resolveEnv(val) {
@@ -29,7 +31,6 @@ if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true })
 function loadConfig() {
   try {
     if (fs.existsSync(CONFIG_PATH)) return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'))
-    // Bootstrap from example config on first run (e.g. Railway deploy)
     const examplePath = path.join(__dirname, '..', 'kayou-config.example.json')
     if (fs.existsSync(examplePath)) {
       const example = fs.readFileSync(examplePath, 'utf-8')
@@ -42,8 +43,104 @@ function loadConfig() {
 }
 function saveConfig(config) { fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2)) }
 
+// ══════════════ AGENT BRAIN SYSTEM ══════════════
+function loadBrain(agentId) {
+  const brainPath = path.join(BRAINS_DIR, agentId + '.json')
+  try {
+    if (fs.existsSync(brainPath)) return JSON.parse(fs.readFileSync(brainPath, 'utf-8'))
+  } catch(e) {}
+  return {
+    id: agentId,
+    personality: [],       // Core personality traits that persist
+    knowledge: [],         // Learned knowledge snippets
+    patterns: [],          // Response patterns / style notes
+    mentorLearnings: [],   // Things learned from mentor agent
+    mentor: null,          // Agent ID of mentor (e.g. 'claude' for Sonic)
+    interactions: 0,       // Total messages processed
+    lastActive: null,
+    createdAt: new Date().toISOString()
+  }
+}
+
+function saveBrain(agentId, brain) {
+  fs.writeFileSync(path.join(BRAINS_DIR, agentId + '.json'), JSON.stringify(brain, null, 2))
+}
+
+function getBrainPrompt(brain) {
+  let prompt = ''
+  if (brain.personality.length > 0) {
+    prompt += '\n\nYOUR BRAIN (persistent memory — this is who you are):\n'
+    prompt += 'Personality: ' + brain.personality.join('. ') + '\n'
+  }
+  if (brain.knowledge.length > 0) {
+    prompt += 'Knowledge you\'ve learned: ' + brain.knowledge.slice(-20).join(' | ') + '\n'
+  }
+  if (brain.patterns.length > 0) {
+    prompt += 'Your style: ' + brain.patterns.slice(-10).join('. ') + '\n'
+  }
+  if (brain.mentorLearnings.length > 0) {
+    prompt += 'Learned from mentor: ' + brain.mentorLearnings.slice(-15).join(' | ') + '\n'
+  }
+  if (brain.interactions > 0) {
+    prompt += `You've had ${brain.interactions} conversations. You grow smarter with each one.\n`
+  }
+  return prompt
+}
+
+// Extract key learnings from a response to feed into brain
+function extractLearnings(responseText, topic) {
+  const learnings = []
+  // Extract any definitive statements, rules, or knowledge
+  const sentences = responseText.split(/[.!?\n]/).filter(s => s.trim().length > 15 && s.trim().length < 200)
+  for (const s of sentences) {
+    const t = s.trim()
+    // Look for knowledge-type sentences
+    if (t.match(/^(always|never|make sure|check|verify|review|ensure|watch|flag|scan|audit|important|critical|security|vulnerability|xss|sql|inject|auth|token|key|password|encrypt|hash)/i)) {
+      learnings.push(t)
+    }
+  }
+  return learnings.slice(0, 3) // Max 3 learnings per response
+}
+
+// Feed mentor's response into student's brain
+function mentorLearn(studentId, mentorResponse, topic) {
+  const brain = loadBrain(studentId)
+  const learnings = extractLearnings(mentorResponse, topic)
+  for (const l of learnings) {
+    if (!brain.mentorLearnings.includes(l)) {
+      brain.mentorLearnings.push(l)
+      // Keep last 50 mentor learnings
+      if (brain.mentorLearnings.length > 50) brain.mentorLearnings.shift()
+    }
+  }
+  saveBrain(studentId, brain)
+}
+
+// Update brain after an agent responds
+function updateBrain(agentId, userMessage, agentResponse) {
+  const brain = loadBrain(agentId)
+  brain.interactions++
+  brain.lastActive = new Date().toISOString()
+
+  // Auto-learn from own responses
+  const learnings = extractLearnings(agentResponse, userMessage)
+  for (const l of learnings) {
+    if (!brain.knowledge.includes(l) && brain.knowledge.length < 100) {
+      brain.knowledge.push(l)
+    }
+  }
+
+  saveBrain(agentId, brain)
+
+  // If this agent has students, feed them
+  const c = loadConfig()
+  const students = c.agents.filter(a => a.mentor === agentId)
+  for (const student of students) {
+    mentorLearn(student.id, agentResponse, userMessage)
+  }
+}
+
 fastify.register(cors, { origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE'] })
-// Serve vanilla JS platform from public/
 fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'public'), prefix: '/' })
 fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'uploads'), prefix: '/uploads/', decorateReply: false })
 fastify.get('/health', async () => ({ status: 'ok' }))
@@ -51,14 +148,17 @@ fastify.get('/health', async () => ({ status: 'ok' }))
 // ══════════════ AGENTS ══════════════
 fastify.get('/api/config/agents', async () => {
   const c = loadConfig()
-  return c.agents.map(a => ({ ...a, apiKey: a.apiKey ? '••••' + a.apiKey.slice(-4) : '', hasKey: !!a.apiKey }))
+  return c.agents.map(a => {
+    const brain = loadBrain(a.id)
+    return { ...a, apiKey: a.apiKey ? '••••' + a.apiKey.slice(-4) : '', hasKey: !!a.apiKey, brain: { interactions: brain.interactions, lastActive: brain.lastActive, personalityCount: brain.personality.length, knowledgeCount: brain.knowledge.length, mentorLearnings: brain.mentorLearnings.length, mentor: brain.mentor } }
+  })
 })
 fastify.put('/api/config/agents/:id', async (req, reply) => {
   const c = loadConfig(); const idx = c.agents.findIndex(a => a.id === req.params.id)
   if (idx === -1) return reply.code(404).send({ error: 'Not found' })
   const u = req.body; const a = c.agents[idx]
   if (u.apiKey && !u.apiKey.startsWith('••••')) a.apiKey = u.apiKey
-  ;['name','model','systemPrompt','enabled','provider','color','webhookUrl'].forEach(k => { if (u[k] !== undefined) a[k] = u[k] })
+  ;['name','model','systemPrompt','enabled','provider','color','webhookUrl','mentor'].forEach(k => { if (u[k] !== undefined) a[k] = u[k] })
   if (u.permissions) a.permissions = u.permissions
   if (u.tasks) a.tasks = u.tasks
   if (u.profilePhoto !== undefined) a.profilePhoto = u.profilePhoto
@@ -66,13 +166,39 @@ fastify.put('/api/config/agents/:id', async (req, reply) => {
   return { ...a, apiKey: a.apiKey ? '••••' + a.apiKey.slice(-4) : '', hasKey: !!a.apiKey }
 })
 fastify.post('/api/config/agents', async (req) => {
-  const c = loadConfig(); const { name, provider, apiKey, model, systemPrompt, color } = req.body
-  const agent = { id: name.toLowerCase().replace(/[^a-z0-9]/g, '-'), name, provider: provider || 'anthropic', apiKey: apiKey || '', model: model || 'claude-sonnet-4-20250514', systemPrompt: systemPrompt || '', enabled: false, color: color || '#6366F1', permissions: ['projects','mcps'] }
+  const c = loadConfig(); const { name, provider, apiKey, model, systemPrompt, color, mentor } = req.body
+  const agent = { id: name.toLowerCase().replace(/[^a-z0-9]/g, '-'), name, provider: provider || 'anthropic', apiKey: apiKey || '', model: model || 'claude-sonnet-4-20250514', systemPrompt: systemPrompt || '', enabled: false, color: color || '#6366F1', permissions: ['projects','mcps'], mentor: mentor || null }
   c.agents.push(agent); saveConfig(c)
+  // Initialize brain
+  const brain = loadBrain(agent.id)
+  if (mentor) brain.mentor = mentor
+  saveBrain(agent.id, brain)
   const key = resolveEnv(agent.apiKey); return { ...agent, apiKey: key ? '••••' + key.slice(-4) : '', hasKey: !!key }
 })
 fastify.delete('/api/config/agents/:id', async (req) => {
   const c = loadConfig(); c.agents = c.agents.filter(a => a.id !== req.params.id); saveConfig(c); return { ok: true }
+})
+
+// ══════════════ BRAIN API ══════════════
+fastify.get('/api/brain/:id', async (req) => {
+  return loadBrain(req.params.id)
+})
+fastify.put('/api/brain/:id', async (req) => {
+  const brain = loadBrain(req.params.id)
+  const u = req.body
+  if (u.personality) brain.personality = u.personality
+  if (u.knowledge) brain.knowledge = u.knowledge
+  if (u.patterns) brain.patterns = u.patterns
+  if (u.mentor !== undefined) brain.mentor = u.mentor
+  saveBrain(req.params.id, brain)
+  return brain
+})
+fastify.get('/api/brains', async () => {
+  const c = loadConfig()
+  return c.agents.map(a => {
+    const brain = loadBrain(a.id)
+    return { id: a.id, name: a.name, color: a.color, ...brain }
+  })
 })
 
 // ══════════════ RULES ══════════════
@@ -124,7 +250,57 @@ fastify.delete('/api/projects/:id', async (req) => {
   const c = loadConfig(); c.projects = (c.projects || []).filter(p => p.id !== req.params.id); saveConfig(c); return { ok: true }
 })
 
-// ══════════════ SERVICES (webhooks/external) ══════════════
+// ══════════════ FILESYSTEM (My Apps access) ══════════════
+const MY_APPS_DIR = path.join(require('os').homedir(), 'Desktop', 'My Apps')
+
+fastify.get('/api/files/list', async (req) => {
+  const subpath = req.query.path || ''
+  const target = path.resolve(MY_APPS_DIR, subpath)
+  if (!target.startsWith(MY_APPS_DIR)) return { error: 'Access denied' }
+  try {
+    const entries = fs.readdirSync(target, { withFileTypes: true })
+    return entries
+      .filter(e => !e.name.startsWith('.'))
+      .map(e => {
+        const full = path.join(target, e.name)
+        const stat = fs.statSync(full)
+        return { name: e.name, type: e.isDirectory() ? 'directory' : 'file', size: stat.size, modified: stat.mtime.toISOString(), path: path.relative(MY_APPS_DIR, full) }
+      })
+      .filter(e => e.type === 'directory' || e.size < 10 * 1024 * 1024)
+      .sort((a, b) => a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'directory' ? -1 : 1)
+  } catch (err) { return { error: err.message } }
+})
+
+fastify.get('/api/files/read', async (req, reply) => {
+  const filePath = req.query.path
+  if (!filePath) return reply.code(400).send({ error: 'No path provided' })
+  const target = path.resolve(MY_APPS_DIR, filePath)
+  if (!target.startsWith(MY_APPS_DIR)) return reply.code(403).send({ error: 'Access denied' })
+  try {
+    const stat = fs.statSync(target)
+    if (stat.size > 500 * 1024) return reply.code(400).send({ error: 'File too large (>500KB)' })
+    const content = fs.readFileSync(target, 'utf-8')
+    return { path: filePath, content, size: stat.size }
+  } catch (err) { return reply.code(404).send({ error: err.message }) }
+})
+
+fastify.get('/api/files/scan', async () => {
+  try {
+    const entries = fs.readdirSync(MY_APPS_DIR, { withFileTypes: true })
+    return entries
+      .filter(e => e.isDirectory() && !e.name.startsWith('.'))
+      .map(e => {
+        const dir = path.join(MY_APPS_DIR, e.name)
+        const stat = fs.statSync(dir)
+        let files = []
+        try { files = fs.readdirSync(dir).filter(f => !f.startsWith('.')) } catch(err) {}
+        return { name: e.name, modified: stat.mtime.toISOString(), fileCount: files.length, hasPackageJson: files.includes('package.json'), hasIndex: files.some(f => f.match(/^index\.(html|js|tsx?|py)$/)), hasReadme: files.some(f => f.toLowerCase().startsWith('readme')), topFiles: files.slice(0, 15) }
+      })
+      .sort((a, b) => new Date(b.modified) - new Date(a.modified))
+  } catch (err) { return { error: err.message } }
+})
+
+// ══════════════ SERVICES ══════════════
 fastify.get('/api/config/services', async () => loadConfig().services || [])
 fastify.post('/api/config/services', async (req) => {
   const c = loadConfig(); if (!c.services) c.services = []
@@ -151,7 +327,7 @@ fastify.post('/api/webhook/message', async (req, reply) => {
 
 // ══════════════ IMAGE UPLOAD ══════════════
 fastify.post('/api/upload', async (req, reply) => {
-  const { image, filename } = req.body // base64 image
+  const { image, filename } = req.body
   if (!image) return reply.code(400).send({ error: 'No image' })
   const ext = filename?.split('.').pop() || 'png'
   const name = `${Date.now()}.${ext}`
@@ -182,11 +358,11 @@ fastify.post('/api/chat', async (req, reply) => {
   const agentApiKey = resolveEnv(agent.apiKey)
   if (!agentApiKey && agent.provider !== 'ollama' && agent.provider !== 'webhook') return reply.code(400).send({ error: 'No API key' })
 
-  // Inject rules into system prompt
+  // Inject rules
   const rules = c.rules || []
   const rulesText = rules.length > 0 ? '\n\nCOMPANY RULES (you must follow these):\n' + rules.map((r, i) => `${i + 1}. ${r}`).join('\n') : ''
 
-  // Inject visible MCPs and projects context
+  // Inject MCPs/projects/services
   const perms = agent.permissions || []
   let contextText = ''
   if (perms.includes('mcps') && c.mcps?.length > 0) {
@@ -200,12 +376,12 @@ fastify.post('/api/chat', async (req, reply) => {
     contextText += '\n\nCONNECTED SERVICES:\n' + c.services.map(s => `- ${s.name}: ${s.type} (${s.url || ''})`).join('\n')
   }
 
-  // Inject assigned tasks
+  // Inject tasks
   const tasks = agent.tasks || []
   let tasksText = ''
   if (tasks.length > 0) tasksText = '\n\nYOUR ASSIGNED TASKS:\n' + tasks.map((t, i) => `${i + 1}. ${t}`).join('\n')
 
-  // Special ideas channel context
+  // Channel context
   const channelId = req.body.channelId || ''
   let channelContext = ''
   if (channelId === 'general') {
@@ -216,7 +392,26 @@ fastify.post('/api/chat', async (req, reply) => {
     channelContext = `\n\nYou're in #${channelId}. This is a focused work channel. Group chat — messages show who said what as [Name]: format. Be concise and actionable. If you're the team lead, give your verdict after hearing from the team.`
   }
 
-  const fullSystemPrompt = agent.systemPrompt + rulesText + contextText + tasksText + channelContext
+  // Filesystem context for Kayou Code
+  let filesystemContext = ''
+  if (perms.includes('filesystem') || agentId === 'kayou-code') {
+    try {
+      const apps = fs.readdirSync(MY_APPS_DIR, { withFileTypes: true })
+        .filter(e => e.isDirectory() && !e.name.startsWith('.'))
+        .map(e => {
+          const stat = fs.statSync(path.join(MY_APPS_DIR, e.name))
+          return `- ${e.name} (modified: ${stat.mtime.toLocaleDateString()})`
+        })
+      filesystemContext = '\n\nLOCAL PROJECTS (~/Desktop/My Apps/):\n' + apps.join('\n') +
+        '\n\nYou can tell Aimar about these projects. When he asks about a project, reference its name. You have access to browse files on Aimar\'s computer through the platform.'
+    } catch(e) {}
+  }
+
+  // ═══ BRAIN INJECTION ═══
+  const brain = loadBrain(agentId)
+  const brainPrompt = getBrainPrompt(brain)
+
+  const fullSystemPrompt = agent.systemPrompt + rulesText + contextText + tasksText + channelContext + filesystemContext + brainPrompt
 
   try {
     let responseText = ''
@@ -224,7 +419,7 @@ fastify.post('/api/chat', async (req, reply) => {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': agentApiKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: agent.model || 'claude-sonnet-4-20250514', max_tokens: 500, system: fullSystemPrompt, messages: [...(history || []).slice(-10), { role: 'user', content: message }] }),
+        body: JSON.stringify({ model: agent.model || 'claude-sonnet-4-20250514', max_tokens: 500, system: fullSystemPrompt, messages: [...(history || []).slice(-20), { role: 'user', content: message }] }),
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error.message)
@@ -233,7 +428,7 @@ fastify.post('/api/chat', async (req, reply) => {
       const res = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${agentApiKey}` },
-        body: JSON.stringify({ model: agent.model || 'gpt-4o', max_tokens: 500, messages: [{ role: 'system', content: fullSystemPrompt }, ...(history || []).slice(-10), { role: 'user', content: message }] }),
+        body: JSON.stringify({ model: agent.model || 'gpt-4o', max_tokens: 500, messages: [{ role: 'system', content: fullSystemPrompt }, ...(history || []).slice(-20), { role: 'user', content: message }] }),
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error.message)
@@ -245,7 +440,7 @@ fastify.post('/api/chat', async (req, reply) => {
       const res = await fetch('http://localhost:11434/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: agent.model || 'gemma3:4b', stream: false, messages: [{ role: 'system', content: fullSystemPrompt }, ...(history || []).slice(-10), userMsg] }),
+        body: JSON.stringify({ model: agent.model || 'gemma3:4b', stream: false, messages: [{ role: 'system', content: fullSystemPrompt }, ...(history || []).slice(-20), userMsg] }),
       })
       const data = await res.json()
       responseText = data.message?.content || 'No response'
@@ -253,7 +448,7 @@ fastify.post('/api/chat', async (req, reply) => {
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${agentApiKey}` },
-        body: JSON.stringify({ model: agent.model || 'llama-3.3-70b-versatile', max_tokens: 500, messages: [{ role: 'system', content: fullSystemPrompt }, ...(history || []).slice(-10), { role: 'user', content: message }] }),
+        body: JSON.stringify({ model: agent.model || 'llama-3.3-70b-versatile', max_tokens: 500, messages: [{ role: 'system', content: fullSystemPrompt }, ...(history || []).slice(-20), { role: 'user', content: message }] }),
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error.message || JSON.stringify(data.error))
@@ -264,7 +459,7 @@ fastify.post('/api/chat', async (req, reply) => {
       const res = await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(agentApiKey ? { 'Authorization': `Bearer ${agentApiKey}` } : {}) },
-        body: JSON.stringify({ message, history: (history || []).slice(-10), systemPrompt: fullSystemPrompt, agentId, channelId }),
+        body: JSON.stringify({ message, history: (history || []).slice(-20), systemPrompt: fullSystemPrompt, agentId, channelId }),
       })
       const data = await res.json()
       responseText = data.response || data.content || data.message || data.choices?.[0]?.message?.content || JSON.stringify(data)
@@ -273,6 +468,10 @@ fastify.post('/api/chat', async (req, reply) => {
       const data = await res.json()
       responseText = data.response || data.content || data.message || JSON.stringify(data)
     }
+
+    // ═══ BRAIN LEARNING — runs after every response ═══
+    updateBrain(agentId, message, responseText)
+
     return { response: responseText }
   } catch (err) {
     console.error(`Agent ${agentId} error:`, err.message)
@@ -294,7 +493,7 @@ const start = async () => {
     }
     const c = loadConfig()
     console.log(`Server running on http://localhost:${port}`)
-    console.log(`Agents: ${c.agents.length} | Projects: ${(c.projects||[]).length} | MCPs: ${(c.mcps||[]).length}`)
+    console.log(`Agents: ${c.agents.length} | Projects: ${(c.projects||[]).length} | Brains: ${fs.readdirSync(BRAINS_DIR).length}`)
   } catch (err) { fastify.log.error(err); process.exit(1) }
 }
 start()

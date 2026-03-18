@@ -2,314 +2,1812 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kayou — AI Agent Platform</title>
 <link rel="icon" href="/kayou-logo.png">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Rounded" rel="stylesheet">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;font-family:'Inter',-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;background:#FFFFFF;color:#1A1A2E;font-size:14px;overflow:hidden}
-.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}
-::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(0,0,0,.1);border-radius:3px}
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg-base:#08080d;
+  --bg-surface:#0f0f17;
+  --bg-card:#151520;
+  --bg-card-hover:#1a1a28;
+  --bg-elevated:#1e1e2e;
+  --border:#1e1e30;
+  --border-light:#2a2a40;
+  --text-primary:#e8e8ef;
+  --text-secondary:#8888a0;
+  --text-muted:#55556a;
+  --accent:#4ade80;
+  --accent-dim:#22c55e20;
+  --blue:#3b82f6;
+  --blue-dim:#3b82f620;
+  --purple:#8b5cf6;
+  --purple-dim:#8b5cf620;
+  --orange:#f59e0b;
+  --orange-dim:#f59e0b20;
+  --red:#ef4444;
+  --red-dim:#ef444420;
+  --cyan:#06b6d4;
+  --cyan-dim:#06b6d420;
+}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg-base);color:var(--text-primary);overflow:hidden}
+.material-symbols-rounded{font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 24;font-size:22px;user-select:none}
 
-/* ═══ SHELL ═══ */
-#shell{width:100%;height:100vh;background:#FFFFFF;display:flex;flex-direction:column;overflow:hidden}
+/* ── Layout ── */
+.app{display:flex;height:100vh;width:100vw}
+.sidebar{width:64px;background:var(--bg-surface);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:16px 0;gap:4px;flex-shrink:0;z-index:10}
+.sidebar .logo{width:36px;height:36px;border-radius:10px;margin-bottom:16px;cursor:pointer;transition:transform .2s}
+.sidebar .logo:hover{transform:scale(1.1)}
+.sidebar .nav-item{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:12px;cursor:pointer;color:var(--text-muted);transition:all .15s;position:relative}
+.sidebar .nav-item:hover{background:var(--bg-card);color:var(--text-secondary)}
+.sidebar .nav-item.active{background:var(--bg-elevated);color:var(--text-primary)}
+.sidebar .nav-item.active::before{content:'';position:absolute;left:-2px;width:4px;height:20px;background:var(--accent);border-radius:0 4px 4px 0}
+.sidebar .nav-bottom{margin-top:auto;display:flex;flex-direction:column;gap:4px;align-items:center}
+.sidebar .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px}
+.sidebar .badge{position:absolute;top:6px;right:6px;width:8px;height:8px;background:var(--accent);border-radius:50%;border:2px solid var(--bg-surface)}
 
-/* ═══ TOP BAR ═══ */
-.topbar{height:60px;display:flex;align-items:center;padding:0 24px;gap:20px;border-bottom:1px solid #F0F0F5;flex-shrink:0;background:#FFFFFF}
-.topbar .logo{display:flex;align-items:center;gap:10px;flex-shrink:0}
-.topbar .logo img{width:32px;height:32px}
-.topbar .logo span{font-size:16px;font-weight:800;letter-spacing:-.02em;color:#1A1A2E}
-.topbar .search{flex:1;max-width:440px;margin:0 auto;position:relative}
-.topbar .search input{width:100%;height:38px;border-radius:10px;border:1px solid #E8E8EF;background:#F8F8FB;padding:0 14px 0 38px;font-size:13px;color:#1A1A2E;font-family:inherit;transition:all .15s}
-.topbar .search input::placeholder{color:#B0B0C0}
-.topbar .search input:focus{outline:none;border-color:#7B8CDE;background:#fff;box-shadow:0 0 0 3px rgba(123,140,222,.12)}
-.topbar .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:18px;color:#B0B0C0}
-.topbar .top-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
-.topbar .top-actions button{width:38px;height:38px;border-radius:10px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#8B8BA0;transition:all .12s}
-.topbar .top-actions button:hover{background:#F5F5FA;color:#1A1A2E}
-.topbar .top-avatar{width:36px;height:36px;border-radius:50%;overflow:hidden;cursor:pointer;flex-shrink:0;background:linear-gradient(135deg,#6366F1,#8B5CF6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px}
+/* ── Main Content ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:56px;display:flex;align-items:center;padding:0 24px;border-bottom:1px solid var(--border);gap:16px;flex-shrink:0}
+.topbar .page-title{font-size:15px;font-weight:600;letter-spacing:-.02em}
+.topbar .spacer{flex:1}
+.topbar .search{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:7px 12px 7px 36px;color:var(--text-primary);font-size:13px;width:240px;outline:none;font-family:inherit;position:relative}
+.topbar .search:focus{border-color:var(--border-light)}
+.topbar .search-wrap{position:relative}
+.topbar .search-wrap .material-symbols-rounded{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:18px;color:var(--text-muted)}
+.topbar .icon-btn{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;color:var(--text-secondary);transition:all .15s;border:none;background:transparent}
+.topbar .icon-btn:hover{background:var(--bg-card);color:var(--text-primary)}
 
-/* ═══ BODY ═══ */
-.body{display:flex;flex:1;overflow:hidden}
+.content{flex:1;overflow-y:auto;padding:24px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.content::-webkit-scrollbar{width:6px}
+.content::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 
-/* ═══ SIDEBAR ═══ */
-.sidebar{width:200px;flex-shrink:0;padding:20px 12px;display:flex;flex-direction:column;border-right:1px solid #F0F0F5;background:#FFFFFF}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:500;color:#6B6B80;transition:all .12s;border:none;background:none;width:100%;text-align:left;font-family:inherit;margin-bottom:2px}
-.nav-item:hover{background:#F5F5FA;color:#1A1A2E}
-.nav-item.active{background:#EEF2FF;color:#6366F1;font-weight:600}
-.nav-item .material-symbols-rounded{font-size:20px}
-.nav-item.active .material-symbols-rounded{color:#6366F1}
+/* ── Cards ── */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:20px;transition:border-color .15s}
+.card:hover{border-color:var(--border-light)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.card-title{font-size:14px;font-weight:600;letter-spacing:-.01em}
+.card-subtitle{font-size:12px;color:var(--text-muted);margin-top:2px}
+.card-badge{font-size:11px;padding:4px 10px;border-radius:6px;font-weight:500;background:var(--bg-elevated);color:var(--text-secondary)}
 
-.sidebar-user{margin-top:auto;padding:12px 8px;display:flex;align-items:center;gap:10px;border-top:1px solid #F0F0F5}
-.sidebar-user .av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#6366F1,#8B5CF6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:12px;position:relative;flex-shrink:0;overflow:hidden}
-.sidebar-user .av img{width:100%;height:100%;object-fit:cover}
-.sidebar-user .av .dot{position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:#10B981;border:2px solid #FFFFFF}
-.sidebar-user .uname{font-size:13px;font-weight:600;color:#1A1A2E}
+/* ── Grid ── */
+.grid{display:grid;gap:16px}
+.grid-3{grid-template-columns:repeat(3,1fr)}
+.grid-2{grid-template-columns:repeat(2,1fr)}
+.grid-auto{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.grid-dashboard{grid-template-columns:1.2fr 1fr;gap:16px}
 
-/* ═══ MAIN ═══ */
-.main-area{flex:1;overflow-y:auto;padding:28px 32px;display:flex;gap:24px}
-.main-left{flex:1;min-width:0}
-.main-right{width:300px;flex-shrink:0}
+/* ── Stats ── */
+.stat-value{font-size:28px;font-weight:700;letter-spacing:-.03em;margin:8px 0 4px}
+.stat-label{font-size:12px;color:var(--text-muted);font-weight:500}
+.stat-row{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:8px}
 
-/* Header */
-.home-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px}
-.home-head h1{font-size:26px;font-weight:700;letter-spacing:-.03em;color:#1A1A2E;margin-bottom:2px}
-.home-head p{font-size:14px;color:#8B8BA0;font-weight:400}
-.home-head .acts{display:flex;gap:8px}
-.home-head .acts button{width:32px;height:32px;border-radius:8px;border:1px solid #E8E8EF;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#8B8BA0;transition:all .1s}
-.home-head .acts button:hover{border-color:#B0B0C0;color:#1A1A2E}
+/* ── Gauge ── */
+.gauge{position:relative;width:100px;height:100px;margin:0 auto}
+.gauge svg{transform:rotate(-90deg)}
+.gauge-bg{fill:none;stroke:var(--bg-elevated);stroke-width:6}
+.gauge-fill{fill:none;stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset .8s ease}
+.gauge-value{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700}
 
-/* ═══ INTEGRATION CARDS ═══ */
-.int-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px}
-.int-card{background:#fff;border:1px solid #EAEAF0;border-radius:14px;padding:20px;transition:all .15s}
-.int-card:hover{border-color:#D0D0E0;box-shadow:0 2px 12px rgba(0,0,0,.04)}
-.int-card .card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
-.int-card .card-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center}
-.int-card .card-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:8px;background:#D1FAE5;color:#065F46}
-.int-card h3{font-size:16px;font-weight:700;color:#1A1A2E;margin-bottom:6px;letter-spacing:-.01em}
-.int-card .card-desc{font-size:12px;color:#8B8BA0;margin-bottom:16px;line-height:1.5}
-.int-card .card-stats{display:flex;flex-direction:column;gap:10px}
-.int-card .card-stat{display:flex;align-items:center;gap:6px}
-.int-card .card-stat .dot{width:7px;height:7px;border-radius:50%;background:#10B981;flex-shrink:0}
-.int-card .card-stat .stat-label{font-size:12px;color:#8B8BA0;flex:1}
-.int-card .card-stat-val{font-size:22px;font-weight:800;color:#1A1A2E;letter-spacing:-.02em}
-.int-card .card-stat-change{font-size:12px;color:#B0B0C0;margin-left:4px}
+/* ── Table ── */
+.table{width:100%;border-collapse:collapse}
+.table th{text-align:left;font-size:11px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;border-bottom:1px solid var(--border)}
+.table td{padding:10px 12px;font-size:13px;border-bottom:1px solid var(--border)}
+.table tr:last-child td{border-bottom:none}
+.table tr:hover td{background:var(--bg-surface)}
 
-/* ═══ METRIC CARDS ═══ */
-.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
-.metric-card{background:#fff;border:1px solid #EAEAF0;border-radius:14px;padding:24px 24px;position:relative;overflow:hidden}
-.metric-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:0 4px 4px 0}
-.metric-card.green::before{background:#10B981}
-.metric-card.blue::before{background:#6366F1}
-.metric-card.pink::before{background:#EC4899}
-.metric-card.purple::before{background:#8B5CF6}
-.metric-card .m-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
-.metric-card .m-top h4{font-size:15px;font-weight:500;color:#6B6B80}
-.metric-card .m-top .material-symbols-rounded{font-size:22px;color:#B0B0C0}
-.metric-card .m-val{font-size:32px;font-weight:800;letter-spacing:-.03em;color:#1A1A2E}
-.metric-card .m-ring{position:absolute;right:18px;bottom:22px;width:60px;height:60px}
-.metric-card .m-bottom{display:flex;align-items:center;gap:6px;margin-top:8px}
-.metric-card .m-pct{font-size:13px;font-weight:600}
-.metric-card .m-pct.up{color:#10B981}
-.metric-card .m-pct.down{color:#EF4444}
-.metric-card .m-check{width:18px;height:18px;border-radius:50%;border:1.5px solid #D0D0E0;display:flex;align-items:center;justify-content:center;margin-left:auto;color:#B0B0C0}
+/* ── Progress ── */
+.progress-bar{height:4px;background:var(--bg-elevated);border-radius:2px;overflow:hidden;margin-top:8px}
+.progress-fill{height:100%;border-radius:2px;transition:width .6s ease}
 
-/* ═══ ACTIVITY PANEL ═══ */
-.activity{background:#1A1A2E;border-radius:14px;padding:20px;color:#fff;position:sticky;top:0}
-.activity h3{font-size:15px;font-weight:700;margin-bottom:16px;color:#fff}
-.act-item{display:flex;gap:10px;padding:12px 0;border-top:1px solid rgba(255,255,255,.08)}
-.act-item:first-of-type{border:none;padding-top:0}
-.act-item .act-av{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
-.act-item .act-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-.act-item .act-av .material-symbols-rounded{font-size:16px;color:rgba(255,255,255,.7)}
-.act-item .act-body{flex:1;min-width:0}
-.act-item .act-title{font-size:13px;font-weight:600;color:#fff;display:flex;align-items:center;gap:6px}
-.act-item .act-title .time-badge{font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.6)}
-.act-item .act-sub{font-size:11px;color:rgba(255,255,255,.4);margin-top:3px;display:flex;align-items:center;gap:4px}
+/* ── Tags/Pills ── */
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:3px 8px;border-radius:6px}
+.tag-green{background:var(--accent-dim);color:var(--accent)}
+.tag-blue{background:var(--blue-dim);color:var(--blue)}
+.tag-purple{background:var(--purple-dim);color:var(--purple)}
+.tag-orange{background:var(--orange-dim);color:var(--orange)}
+.tag-red{background:var(--red-dim);color:var(--red)}
 
-/* ═══ CHAT VIEW ═══ */
-.chat-layout{display:flex;height:100%;margin:-28px -32px;width:calc(100% + 64px)}
-.chat-channels{width:240px;flex-shrink:0;border-right:1px solid #F0F0F5;padding:20px 12px;overflow-y:auto}
-.chat-channels h4{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#B0B0C0;margin-bottom:8px;padding:0 10px}
-.chat-ch{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:#6B6B80;font-weight:500;transition:all .1s;margin-bottom:1px}
-.chat-ch:hover{background:#F5F5FA;color:#1A1A2E}
-.chat-ch.active{background:#E8F4F8;color:#0D9488;font-weight:600}
-.chat-main{flex:1;display:flex;flex-direction:column}
-.chat-hdr{height:52px;display:flex;align-items:center;padding:0 24px;border-bottom:1px solid #F0F0F5;font-weight:600;font-size:15px;gap:8px;color:#1A1A2E;flex-shrink:0}
-.chat-msgs{flex:1;overflow-y:auto;padding:20px 24px}
-.chat-empty{text-align:center;padding:80px 0;color:#B0B0C0}
-.chat-empty .material-symbols-rounded{font-size:48px;display:block;margin-bottom:8px;opacity:.3}
-.msg-row{display:flex;gap:10px;margin-bottom:16px}
-.msg-row.own{flex-direction:row-reverse}
-.msg-av{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:11px;overflow:hidden}
-.msg-av img{width:100%;height:100%;object-fit:cover}
-.msg-body{max-width:65%}
-.msg-meta{display:flex;align-items:center;gap:6px;margin-bottom:3px}
-.msg-meta .name{font-size:12px;font-weight:600;color:#6B6B80}
-.msg-meta .time{font-size:11px;color:#B0B0C0}
-.msg-bubble{padding:10px 16px;border-radius:14px;font-size:14px;line-height:1.55;border-bottom-left-radius:4px}
-.msg-row.own .msg-bubble{background:#6366F1;color:#fff;border-radius:14px;border-bottom-right-radius:4px}
-.msg-row:not(.own) .msg-bubble{background:#F5F5FA;color:#1A1A2E;border:1px solid #EAEAF0}
-.msg-bubble b{font-weight:600}
-.msg-bubble code{background:rgba(0,0,0,.06);padding:1px 5px;border-radius:3px;font-size:12px;font-family:'SF Mono',monospace}
-.chat-input{padding:12px 24px;border-top:1px solid #F0F0F5;flex-shrink:0}
-.chat-input textarea{width:100%;border:1px solid #E8E8EF;border-radius:10px;padding:10px 14px;font-size:14px;font-family:inherit;resize:none;min-height:40px;max-height:120px;background:#F8F8FB;color:#1A1A2E;transition:all .15s}
-.chat-input textarea:focus{outline:none;border-color:#7B8CDE;background:#fff;box-shadow:0 0 0 3px rgba(123,140,222,.1)}
-.chat-input textarea::placeholder{color:#B0B0C0}
+/* ── Dot indicator ── */
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.dot-green{background:var(--accent)}
+.dot-red{background:var(--red)}
+.dot-orange{background:var(--orange)}
+.dot-gray{background:var(--text-muted)}
 
-/* Typing */
-@keyframes bounce{0%,100%{transform:translateY(0);opacity:.3}50%{transform:translateY(-3px);opacity:1}}
-.typing-dots{display:inline-flex;gap:3px;padding:10px 16px;background:#F5F5FA;border:1px solid #EAEAF0;border-radius:14px;border-bottom-left-radius:4px}
-.typing-dots span{width:6px;height:6px;border-radius:50%;background:#B0B0C0}
-.typing-dots span:nth-child(1){animation:bounce 1.2s infinite}
-.typing-dots span:nth-child(2){animation:bounce 1.2s .2s infinite}
-.typing-dots span:nth-child(3){animation:bounce 1.2s .4s infinite}
+/* ── Buttons ── */
+.btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--accent);color:#000}
+.btn-primary:hover{background:#5eead4}
+.btn-ghost{background:transparent;color:var(--text-secondary);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--bg-card);color:var(--text-primary)}
+.btn-sm{padding:5px 10px;font-size:12px}
 
-/* ═══ SETTINGS ═══ */
-.settings-wrap{max-width:800px}
-.settings-wrap h2{font-size:22px;font-weight:700;margin-bottom:4px}
-.settings-wrap .sub{color:#8B8BA0;margin-bottom:24px}
-.settings-wrap h4{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#B0B0C0;margin-bottom:10px}
-.agent-card{display:flex;align-items:center;gap:14px;padding:14px 18px;border:1px solid #EAEAF0;border-radius:12px;background:#fff;margin-bottom:8px;transition:all .1s}
-.agent-card:hover{border-color:#D0D0E0}
-.agent-card .a-av{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:13px;flex-shrink:0;overflow:hidden}
-.agent-card .a-av img{width:100%;height:100%;object-fit:cover}
-.agent-card .a-info{flex:1}
-.agent-card .a-name{font-weight:600;font-size:14px;color:#1A1A2E}
-.agent-card .a-meta{font-size:12px;color:#8B8BA0}
-.agent-card .a-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px}
-.agent-card .a-badge.on{background:#D1FAE5;color:#065F46}
-.agent-card .a-badge.off{background:#F3F4F6;color:#8B8BA0}
+/* ── Hero Banner ── */
+.hero{background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#0f172a 100%);border:1px solid var(--border);border-radius:14px;padding:32px;display:flex;align-items:center;gap:24px;position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;right:-40px;top:-40px;width:200px;height:200px;background:radial-gradient(circle,var(--purple-dim) 0%,transparent 70%);pointer-events:none}
+.hero-text h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-bottom:6px}
+.hero-text p{font-size:13px;color:var(--text-secondary);line-height:1.5;max-width:360px}
+.hero-logo{width:100px;height:100px;border-radius:20px;object-fit:contain;filter:drop-shadow(0 0 30px rgba(139,92,246,.3))}
 
-/* ═══ SPLASH ═══ */
-#splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;z-index:9999;transition:opacity .4s}
-#splash.hide{opacity:0;pointer-events:none}
-#splash img{width:48px;height:48px;border-radius:12px;margin-bottom:16px}
-#splash h1{font-size:18px;font-weight:700;letter-spacing:-.02em;margin-bottom:4px}
-#splash p{font-size:13px;color:#B0B0C0}
-#splash .bar{width:120px;height:3px;border-radius:2px;background:#EAEAF0;margin-top:20px;overflow:hidden}
-#splash .bar div{height:100%;border-radius:2px;background:#6366F1;animation:loadBar 1.4s ease-in-out forwards}
-@keyframes loadBar{0%{width:0}60%{width:70%}100%{width:100%}}
-@keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+/* ── Chat ── */
+.chat-layout{display:flex;height:100%;gap:0}
+.chat-channels{width:190px;background:var(--bg-surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.chat-channels-header{padding:10px 12px;font-size:13px;font-weight:600;border-bottom:1px solid var(--border)}
+.channel-list{overflow-y:auto;padding:2px 6px}
+.channel-item{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--text-secondary);transition:all .12s}
+.channel-item:hover{background:var(--bg-card);color:var(--text-primary)}
+.channel-item.active{background:var(--bg-elevated);color:var(--text-primary)}
+.channel-item .material-symbols-rounded{font-size:16px;color:var(--text-muted)}
+.channel-section{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;padding:10px 10px 3px}
 
-/* ═══ RESPONSIVE ═══ */
-@media(max-width:1100px){.int-grid{grid-template-columns:repeat(2,1fr)}.metric-grid{grid-template-columns:repeat(2,1fr)}.main-right{width:260px}}
-@media(max-width:900px){.main-right{display:none}}
-@media(max-width:768px){.sidebar{display:none}.main-area{padding:16px}.int-grid{grid-template-columns:1fr 1fr}.metric-grid{grid-template-columns:1fr 1fr}.chat-channels{display:none}.chat-layout{margin:0;width:100%}}
-@media(max-width:480px){.int-grid{grid-template-columns:1fr}.metric-grid{grid-template-columns:1fr}}
+.chat-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.chat-header{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.chat-header-title{font-size:14px;font-weight:600}
+.chat-header-desc{font-size:12px;color:var(--text-muted);margin-left:6px}
+.chat-messages{flex:1;overflow-y:auto;padding:10px 16px;display:flex;flex-direction:column;gap:1px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.chat-messages::-webkit-scrollbar{width:6px}
+.chat-messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+.msg{display:flex;gap:8px;padding:3px 16px;max-width:100%;animation:fadeUp .25s ease}
+.msg-right{justify-content:flex-end}
+.msg-right .msg-avatar,.msg-right .msg-avatar-text{display:none}
+.msg-left .msg-bubble{border-radius:16px 16px 16px 4px}
+.msg-right .msg-bubble{border-radius:16px 16px 4px 16px;background:#2563eb!important;text-align:left}
+.msg-right .msg-name{display:none}
+.msg-right .msg-text{color:#fff}
+.msg-avatar{width:28px;height:28px;border-radius:50%;flex-shrink:0;object-fit:cover;margin-top:18px}
+.msg-avatar-text{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;margin-top:18px}
+.msg-bubble{padding:8px 14px;max-width:520px;min-width:40px;word-break:break-word}
+.msg-body{display:flex;flex-direction:column;max-width:520px}
+.msg-header{display:flex;align-items:baseline;gap:6px;margin-bottom:1px}
+.msg-name{font-size:11px;font-weight:600}
+.msg-time{font-size:10px;color:var(--text-muted)}
+.msg-text{font-size:13.5px;color:#e8e8ef;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+.msg-text code{background:rgba(255,255,255,.12);padding:1px 5px;border-radius:4px;font-size:12px;font-family:'SF Mono',Monaco,monospace}
+.msg-group .msg-avatar,.msg-group .msg-avatar-text,.msg-group .msg-header{display:none}
+.msg-group .msg-bubble{border-radius:16px}
+.msg-group.msg-left .msg-bubble{border-radius:4px 16px 16px 4px}
+.msg-group.msg-right .msg-bubble{border-radius:16px 4px 4px 16px}
+.msg-group{padding:1px 16px}
+
+/* ── Mention Autocomplete ── */
+.mention-popup{position:absolute;bottom:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;max-height:220px;overflow-y:auto;display:none;z-index:20;box-shadow:0 -4px 20px rgba(0,0,0,.4)}
+.mention-popup.show{display:block}
+.mention-section{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;padding:8px 12px 4px}
+.mention-item{display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer;font-size:13px;color:var(--text-secondary);transition:background .1s}
+.mention-item:hover,.mention-item.active{background:var(--bg-elevated);color:var(--text-primary)}
+.mention-item img{width:22px;height:22px;border-radius:50%;object-fit:cover}
+.mention-dot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;flex-shrink:0}
+.mention-tag{display:inline;padding:1px 4px;border-radius:4px;font-weight:600;font-size:13px}
+
+.chat-input-area{padding:10px 16px 14px;flex-shrink:0;position:relative}
+.chat-input-wrap{display:flex;flex-direction:column;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.chat-toolbar{display:flex;align-items:center;gap:2px;padding:6px 10px;border-bottom:1px solid var(--border)}
+.chat-toolbar button{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:var(--text-muted);border-radius:6px;cursor:pointer;font-size:14px;font-family:inherit;transition:all .12s}
+.chat-toolbar button:hover{background:var(--bg-elevated);color:var(--text-primary)}
+.chat-input-row{display:flex;align-items:flex-end;padding:10px 12px 6px 14px}
+.chat-bottom-row{display:flex;align-items:center;justify-content:space-between;padding:4px 10px 8px}
+.chat-bottom-left{display:flex;align-items:center;gap:2px}
+.chat-bottom-left button{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:var(--text-muted);border-radius:6px;cursor:pointer;transition:all .12s}
+.chat-bottom-left button:hover{background:var(--bg-elevated);color:var(--text-primary)}
+.chat-bottom-left .material-symbols-rounded{font-size:20px}
+.chat-input{flex:1;background:none;border:none;color:var(--text-primary);font-size:14px;font-family:inherit;resize:none;outline:none;min-height:24px;max-height:140px;line-height:1.5}
+.chat-input::placeholder{color:var(--text-muted)}
+.chat-send{width:34px;height:34px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.chat-send:hover{background:#5eead4}
+.chat-send:disabled{opacity:.3;cursor:default}
+.chat-send .material-symbols-rounded{font-size:18px;color:#000}
+
+.typing-indicator{padding:3px 16px;font-size:12px;color:var(--text-muted);min-height:0;transition:all .2s}
+.typing-bubble{display:flex;align-items:center;gap:8px;animation:fadeUp .25s ease}
+.typing-bubble-avatar{width:24px;height:24px;border-radius:50%;flex-shrink:0;object-fit:cover}
+.typing-bubble-avatar-text{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0}
+.typing-bubble-body{padding:8px 14px;border-radius:16px 16px 16px 4px;display:flex;align-items:center;gap:8px}
+.typing-dots{display:flex;gap:4px}
+.typing-dots span{width:6px;height:6px;border-radius:50%;animation:pulse-dot 1.4s infinite ease-in-out}
+.typing-dots span:nth-child(1){animation-delay:0s}
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+.typing-name{font-size:11px;font-weight:500}
+@keyframes pulse-dot{0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Agents Page ── */
+.agent-card{display:flex;align-items:center;gap:14px;padding:16px;cursor:pointer}
+.agent-card .agent-photo{width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.agent-card .agent-photo-text{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;flex-shrink:0}
+.agent-card .agent-info{flex:1;min-width:0}
+.agent-card .agent-name{font-size:14px;font-weight:600}
+.agent-card .agent-role{font-size:12px;color:var(--text-muted);margin-top:1px}
+.agent-card .agent-meta{display:flex;gap:8px;margin-top:6px}
+
+/* ── Settings ── */
+.settings-group{margin-bottom:24px}
+.settings-group-title{font-size:13px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;margin-bottom:8px}
+.setting-label{font-size:13px;font-weight:500}
+.toggle{width:40px;height:22px;border-radius:11px;background:var(--bg-elevated);border:1px solid var(--border);cursor:pointer;position:relative;transition:all .2s;flex-shrink:0}
+.toggle.on{background:var(--accent);border-color:var(--accent)}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle.on::after{transform:translateX(18px)}
+.input{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text-primary);font-size:13px;font-family:inherit;outline:none;width:100%}
+.input:focus{border-color:var(--border-light)}
+.textarea{resize:vertical;min-height:80px;line-height:1.5}
+.select{appearance:none;background:var(--bg-card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238888a0' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;border:1px solid var(--border);border-radius:8px;padding:8px 30px 8px 12px;color:var(--text-primary);font-size:13px;font-family:inherit;outline:none;cursor:pointer}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.show{opacity:1;pointer-events:all}
+.modal{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:24px;width:90%;max-width:500px;max-height:80vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:16px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:6px;display:block}
+
+/* ── Activity Feed ── */
+.activity-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.activity-item:last-child{border-bottom:none}
+.activity-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.activity-text{font-size:13px;color:var(--text-secondary);line-height:1.4}
+.activity-time{font-size:11px;color:var(--text-muted);margin-top:2px}
+
+/* ── Splash ── */
+.splash{position:fixed;inset:0;background:var(--bg-base);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;transition:opacity .4s}
+.splash.hide{opacity:0;pointer-events:none}
+.splash img{width:120px;height:120px;border-radius:28px;animation:pulse-glow 2s infinite}
+.splash p{margin-top:16px;font-size:14px;color:var(--text-muted);font-weight:500}
+@keyframes pulse-glow{0%,100%{filter:drop-shadow(0 0 10px rgba(139,92,246,.2))}50%{filter:drop-shadow(0 0 25px rgba(139,92,246,.5))}}
+
+/* ── Responsive ── */
+@media(max-width:900px){
+  .grid-3{grid-template-columns:1fr 1fr}
+  .grid-dashboard{grid-template-columns:1fr}
+  .chat-channels{display:none}
+}
+@media(max-width:600px){
+  .grid-3,.grid-2{grid-template-columns:1fr}
+  .sidebar{width:52px}
+  .topbar .search{width:140px}
+  .content{padding:16px}
+}
+
+/* ── Animations ── */
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .3s ease forwards}
+.page{display:none}
+.page.active{display:block}
+.page-chat.active{display:flex;height:100%}
+
+/* ── Mini charts ── */
+.mini-chart{display:flex;align-items:flex-end;gap:2px;height:32px}
+.mini-chart-bar{width:4px;border-radius:2px;background:var(--accent);opacity:.6;transition:height .3s}
 </style>
 </head>
 <body>
 
-<div id="splash">
+<!-- Splash -->
+<div class="splash" id="splash">
   <img src="/kayou-logo.png" alt="Kayou">
-  <h1>Kayou</h1>
-  <p>Loading your workspace...</p>
-  <div class="bar"><div></div></div>
+  <p>Loading platform...</p>
 </div>
 
-<div id="shell">
-  <!-- Top Bar -->
-  <div class="topbar">
-    <div class="logo"><img src="/kayou-logo.png" alt="K"><span>KAYOU</span></div>
-    <div class="search">
-      <span class="material-symbols-rounded search-icon">search</span>
-      <input type="text" placeholder="Search for tasks">
-    </div>
-    <div class="top-actions">
-      <button onclick="setView('home')"><span class="material-symbols-rounded" style="font-size:20px">notifications</span></button>
-      <button onclick="setView('chat')"><span class="material-symbols-rounded" style="font-size:20px">chat_bubble</span></button>
-      <button><span class="material-symbols-rounded" style="font-size:20px">lan</span></button>
-      <button onclick="setView('settings')"><span class="material-symbols-rounded" style="font-size:20px">chat</span></button>
-    </div>
-    <div class="top-avatar" id="topAv">A</div>
+<div class="app" id="app" style="opacity:0">
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <img src="/kayou-logo.png" class="logo" alt="K" onclick="navigate('dashboard')">
+
+  <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')" title="Dashboard">
+    <span class="material-symbols-rounded">space_dashboard</span>
+  </div>
+  <div class="nav-item" data-page="chat" onclick="navigate('chat')" title="Chat">
+    <span class="material-symbols-rounded">forum</span>
+    <div class="badge" id="chat-badge" style="display:none"></div>
+  </div>
+  <div class="nav-item" data-page="agents" onclick="navigate('agents')" title="Agents">
+    <span class="material-symbols-rounded">smart_toy</span>
+  </div>
+  <div class="nav-item" data-page="projects" onclick="navigate('projects')" title="Projects">
+    <span class="material-symbols-rounded">folder_open</span>
   </div>
 
-  <div class="body">
-    <!-- Sidebar -->
-    <div class="sidebar">
-      <div id="sideNav"></div>
-      <div class="sidebar-user" id="sideUser"></div>
+  <div class="nav-bottom">
+    <div class="nav-item" data-page="settings" onclick="navigate('settings')" title="Settings">
+      <span class="material-symbols-rounded">settings</span>
     </div>
-    <!-- Main -->
-    <div class="main-area" id="mainArea"></div>
+    <div class="avatar" title="Aimar">A</div>
   </div>
+</nav>
+
+<!-- Main -->
+<main class="main">
+  <div class="topbar">
+    <span class="page-title" id="page-title">Dashboard</span>
+    <div class="spacer"></div>
+    <div class="search-wrap">
+      <span class="material-symbols-rounded">search</span>
+      <input class="search" placeholder="Search..." id="search-input">
+    </div>
+    <button class="icon-btn" title="Notifications"><span class="material-symbols-rounded">notifications</span></button>
+    <button class="icon-btn" title="Help"><span class="material-symbols-rounded">help</span></button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="content page active" id="page-dashboard">
+    <div class="hero fade-in" style="margin-bottom:20px">
+      <img src="/kayou-logo.png" class="hero-logo" alt="Kayou">
+      <div class="hero-text">
+        <h2>Kayou AI Platform</h2>
+        <p>Your AI agent team is online. Manage pipelines, chat with agents, and track project delivery — all from one dashboard.</p>
+        <button class="btn btn-primary" style="margin-top:14px" onclick="navigate('chat')">Open Chat <span class="material-symbols-rounded" style="font-size:16px">arrow_forward</span></button>
+      </div>
+    </div>
+
+    <div class="grid grid-3 fade-in" style="margin-bottom:16px;animation-delay:.1s">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Active Agents</span>
+          <span class="tag tag-green">Online</span>
+        </div>
+        <div class="stat-value" id="stat-agents">0</div>
+        <div class="stat-row"><span>Enabled</span><span id="stat-enabled">0</span></div>
+        <div class="mini-chart" id="chart-agents"></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Messages Today</span>
+          <span class="tag tag-blue">Live</span>
+        </div>
+        <div class="stat-value" id="stat-messages">0</div>
+        <div class="stat-row"><span>This session</span><span id="stat-session">0</span></div>
+        <div class="mini-chart" id="chart-msgs"></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Projects</span>
+          <span class="tag tag-purple">Tracking</span>
+        </div>
+        <div class="stat-value" id="stat-projects">0</div>
+        <div class="stat-row"><span>Avg Progress</span><span id="stat-avg-progress">0%</span></div>
+        <div class="mini-chart" id="chart-projects"></div>
+      </div>
+    </div>
+
+    <div class="grid grid-dashboard fade-in" style="animation-delay:.2s">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Agent Performance</span>
+          <button class="btn btn-ghost btn-sm" onclick="navigate('agents')">View all</button>
+        </div>
+        <table class="table">
+          <thead><tr><th>Agent</th><th>Provider</th><th>Status</th><th>Role</th></tr></thead>
+          <tbody id="agent-table-body"></tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="card" style="text-align:center">
+          <div class="card-header"><span class="card-title">Platform Health</span><span class="card-badge">Live</span></div>
+          <div class="gauge">
+            <svg width="100" height="100" viewBox="0 0 100 100">
+              <circle class="gauge-bg" cx="50" cy="50" r="42"/>
+              <circle class="gauge-fill" cx="50" cy="50" r="42" stroke="var(--accent)" id="health-gauge" style="stroke-dasharray:264;stroke-dashoffset:264"/>
+            </svg>
+            <div class="gauge-value" id="health-score">0</div>
+          </div>
+          <p style="font-size:12px;color:var(--text-muted);margin-top:8px">System operational</p>
+        </div>
+
+        <div class="card" style="flex:1">
+          <div class="card-header"><span class="card-title">Recent Activity</span></div>
+          <div id="activity-feed"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="page page-chat" id="page-chat">
+    <div class="chat-channels">
+      <div class="chat-channels-header">Kayou Chat</div>
+      <div class="channel-section">Channels</div>
+      <div class="channel-list" id="channel-list"></div>
+      <div class="channel-section">Direct Messages</div>
+      <div class="channel-list" id="dm-list"></div>
+    </div>
+    <div class="chat-main">
+      <div class="chat-header">
+        <span class="material-symbols-rounded" style="font-size:20px;color:var(--text-muted)" id="chat-icon">tag</span>
+        <span class="chat-header-title" id="chat-channel-name">general</span>
+        <span class="chat-header-desc" id="chat-channel-desc"></span>
+      </div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="typing-indicator" id="typing-indicator"></div>
+      <div class="chat-input-area">
+        <div class="mention-popup" id="mention-popup"></div>
+        <div class="chat-input-wrap">
+          <div class="chat-toolbar">
+            <button title="Bold" onclick="wrapSelection('**','**')"><strong>B</strong></button>
+            <button title="Italic" onclick="wrapSelection('*','*')"><em>I</em></button>
+            <button title="Strikethrough" onclick="wrapSelection('~~','~~')"><s>S</s></button>
+            <button title="Code" onclick="wrapSelection('`','`')"><span style="font-family:monospace;font-size:13px">&lt;/&gt;</span></button>
+          </div>
+          <div class="chat-input-row">
+            <textarea class="chat-input" id="chat-input" placeholder="Message #general..." rows="1"></textarea>
+            <button class="chat-send" id="chat-send" disabled><span class="material-symbols-rounded">arrow_upward</span></button>
+          </div>
+          <div class="chat-bottom-row">
+            <div class="chat-bottom-left">
+              <button title="Mention agent" onclick="insertAtCursor('@')"><span class="material-symbols-rounded">alternate_email</span></button>
+              <button title="Tag project" onclick="insertAtCursor('#')"><span class="material-symbols-rounded">tag</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AGENTS -->
+  <div class="content page" id="page-agents">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <h2 style="font-size:18px;font-weight:700">AI Agents</h2>
+        <p style="font-size:13px;color:var(--text-muted);margin-top:4px">Manage your AI team members</p>
+      </div>
+      <button class="btn btn-primary" onclick="showAddAgent()"><span class="material-symbols-rounded" style="font-size:16px">add</span> Add Agent</button>
+    </div>
+    <div class="grid grid-auto" id="agents-grid"></div>
+  </div>
+
+  <!-- PROJECTS -->
+  <div class="content page" id="page-projects">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <h2 style="font-size:18px;font-weight:700">Projects</h2>
+        <p style="font-size:13px;color:var(--text-muted);margin-top:4px">Track delivery across your team</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="scanMyApps()"><span class="material-symbols-rounded" style="font-size:16px">folder_open</span> Scan My Apps</button>
+        <button class="btn btn-primary" onclick="showAddProject()"><span class="material-symbols-rounded" style="font-size:16px">add</span> New Project</button>
+      </div>
+    </div>
+
+    <!-- Delivery Overview Stats -->
+    <div class="grid grid-3" style="margin-bottom:16px" id="project-stats-row">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Total Projects</span>
+          <span class="tag tag-purple">Tracked</span>
+        </div>
+        <div class="stat-value" id="proj-stat-total">0</div>
+        <div class="stat-row"><span>Active</span><span id="proj-stat-active">0</span></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Avg. Completion</span>
+          <span class="tag tag-green">Progress</span>
+        </div>
+        <div class="stat-value" id="proj-stat-avg">0%</div>
+        <div class="stat-row"><span>Goal</span><span>100%</span></div>
+        <div class="progress-bar" style="margin-top:10px"><div class="progress-fill" id="proj-avg-bar" style="width:0%;background:var(--accent)"></div></div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div class="card-header"><span class="card-title">Delivery Score</span><span class="card-badge">Live</span></div>
+        <div class="gauge" style="width:80px;height:80px">
+          <svg width="80" height="80" viewBox="0 0 100 100">
+            <circle class="gauge-bg" cx="50" cy="50" r="42"/>
+            <circle class="gauge-fill" cx="50" cy="50" r="42" stroke="var(--accent)" id="proj-gauge" style="stroke-dasharray:264;stroke-dashoffset:264"/>
+          </svg>
+          <div class="gauge-value" id="proj-gauge-val" style="font-size:18px">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Project Cards Grid -->
+    <div id="projects-grid"></div>
+
+    <!-- Empty State -->
+    <div id="projects-empty" style="text-align:center;padding:60px 20px;display:none">
+      <span class="material-symbols-rounded" style="font-size:48px;color:var(--text-muted)">folder_off</span>
+      <p style="color:var(--text-muted);margin-top:12px">No projects yet. Create one or scan My Apps to import.</p>
+    </div>
+
+    <!-- My Apps Browser -->
+    <div class="card" id="myapps-browser" style="display:none;margin-top:16px">
+      <div class="card-header">
+        <span class="card-title"><span class="material-symbols-rounded" style="font-size:18px;vertical-align:middle">computer</span> My Apps — Local Projects</span>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('myapps-browser').style.display='none'">Close</button>
+      </div>
+      <div id="myapps-list"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="content page" id="page-settings">
+    <h2 style="font-size:18px;font-weight:700;margin-bottom:20px">Settings</h2>
+
+    <div class="settings-group">
+      <div class="settings-group-title"><span class="material-symbols-rounded" style="font-size:18px">gavel</span> Company Rules</div>
+      <div id="rules-list"></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input class="input" id="new-rule-input" placeholder="Add a new rule..." style="flex:1">
+        <button class="btn btn-ghost" onclick="addRule()">Add</button>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title"><span class="material-symbols-rounded" style="font-size:18px">link</span> GitHub</div>
+      <div class="card" style="padding:16px">
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <input class="input" id="github-username" placeholder="GitHub username">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Token</label>
+          <input class="input" id="github-token" type="password" placeholder="ghp_...">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveGitHub()">Save</button>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title"><span class="material-symbols-rounded" style="font-size:18px">webhook</span> Webhook</div>
+      <div class="card" style="padding:16px">
+        <p style="font-size:13px;color:var(--text-secondary)">Endpoint: <code style="background:var(--bg-elevated);padding:2px 6px;border-radius:4px;font-size:12px">/api/webhook/message</code></p>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:6px">Secret: <span id="webhook-secret">loading...</span></p>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal" onclick="event.stopPropagation()"></div>
 </div>
 
 <script>
-const S = { view:'home', agents:[], channel:'general', messages:{} , typing:null }
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+const API = '';
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-const PEOPLE = {
-  aimar:{name:'Aimar',avatar:'A',gradient:'linear-gradient(135deg,#6366F1,#8B5CF6)',role:'CEO'},
-  'kayou-code':{name:'Kayou Code',avatar:'KC',gradient:'linear-gradient(135deg,#6366F1,#4F46E5)',role:'Build Lead',isBot:true},
-  dev:{name:'Dev',avatar:'DV',gradient:'linear-gradient(135deg,#3B82F6,#2563EB)',role:'Developer',isBot:true},
-  ops:{name:'Ops',avatar:'OP',gradient:'linear-gradient(135deg,#06B6D4,#0891B2)',role:'DevOps',isBot:true},
-  'kayou-kilo':{name:'Kayou Kilo',avatar:'KK',gradient:'linear-gradient(135deg,#8B5CF6,#7C3AED)',role:'Research Lead',isBot:true},
-  scout:{name:'Scout',avatar:'SC',gradient:'linear-gradient(135deg,#F59E0B,#D97706)',role:'Trend Hunter',isBot:true},
-  analyst:{name:'Analyst',avatar:'AN',gradient:'linear-gradient(135deg,#10B981,#059669)',role:'Numbers',isBot:true},
-  claude:{name:'Claude',avatar:'C',gradient:'linear-gradient(135deg,#F97316,#EA580C)',role:'Security Lead',isBot:true},
-}
-const CHANNELS = [{id:'general',name:'general',icon:'forum'},{id:'ideas',name:'ideas',icon:'lightbulb'},{id:'research',name:'research',icon:'lab_research'},{id:'build',name:'build',icon:'construction'},{id:'testing',name:'testing',icon:'bug_report'},{id:'release',name:'release',icon:'rocket_launch'}]
-const DM_IDS = ['kayou-code','kayou-kilo','claude','dev','ops','scout','analyst']
-const CHANNEL_AGENTS = {general:['kayou-code','kayou-kilo'],ideas:['kayou-kilo','scout','analyst'],research:['kayou-kilo','scout','analyst'],build:['kayou-code','dev','ops'],testing:['kayou-code','dev'],release:['kayou-code','ops']}
-
-CHANNELS.forEach(c=>S.messages[c.id]=[]);DM_IDS.forEach(id=>S.messages['dm-'+id]=[])
-
-const $ = id => document.getElementById(id)
-function formatTs(iso){const d=new Date(iso),m=(Date.now()-d.getTime())/60000;if(m<1)return'now';if(m<60)return Math.round(m)+'m';if(m<1440)return Math.round(m/60)+'h';return d.toLocaleDateString([],{month:'short',day:'numeric'})}
-function fmt(t){return t.replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/@(\w[\w\s]*?\w)/g,'<span style="color:#6366F1;font-weight:600">@$1</span>')}
-
-const NAV = [{id:'home',icon:'home',label:'Home'},{id:'dashboard',icon:'grid_view',label:'Dashboard'},{id:'tasks',icon:'task_alt',label:'Tasks'},{id:'chat',icon:'chat_bubble',label:'Chat'},{id:'analytics',icon:'bar_chart',label:'Analytics'},{id:'settings',icon:'settings',label:'Settings'}]
-
-function setView(v){S.view=v;render()}
-
-function render(){
-  $('sideNav').innerHTML=NAV.map(n=>`<button class="nav-item ${S.view===n.id?'active':''}" onclick="setView('${n.id}')"><span class="material-symbols-rounded">${n.icon}</span>${n.label}</button>`).join('')
-  $('sideUser').innerHTML=`<div class="av">A<div class="dot"></div></div><div class="uname">Aimar</div>`
-  const m=$('mainArea');if(S.view==='home')renderHome(m);else if(S.view==='chat')renderChat(m);else if(S.view==='settings')renderSettings(m);else m.innerHTML=`<div class="main-left"><h1 style="font-size:24px;font-weight:700;margin-bottom:4px">${NAV.find(n=>n.id===S.view)?.label||S.view}</h1><p style="color:#8B8BA0">Coming soon</p></div>`
+function wrapSelection(before, after) {
+  const input = document.getElementById('chat-input');
+  const start = input.selectionStart;
+  const end = input.selectionEnd;
+  const selected = input.value.substring(start, end);
+  const replacement = before + (selected || 'text') + after;
+  input.value = input.value.substring(0, start) + replacement + input.value.substring(end);
+  input.focus();
+  input.selectionStart = start + before.length;
+  input.selectionEnd = start + before.length + (selected || 'text').length;
+  document.getElementById('chat-send').disabled = !input.value.trim();
 }
 
-function renderHome(el){
-  const cards=[
-    {name:'GitHub',desc:'Integration with repository management and CI/CD.',icon:'code',color:'#1F2937',bg:'#F0F4F8',stats:[{l:'Commands',v:'135',c:'48'},{l:'Tasks',v:'5,720',c:'5,720'}]},
-    {name:'MCP',desc:'API agent integrations with model context protocol.',icon:'hub',color:'#7C3AED',bg:'#F3EEFF',stats:[{l:'Commands',v:'287',c:'43'},{l:'Tasks',v:'116',c:'3,910'}]},
-    {name:'Webhook',desc:'API agent integrations with external webhooks.',icon:'webhook',color:'#0891B2',bg:'#E8F8F5',stats:[{l:'Commands',v:'195',c:'67'},{l:'Tasks',v:'4,261',c:'4,261'}]},
-    {name:'API',desc:'All agent integrations with direct API connections.',icon:'api',color:'#6366F1',bg:'#EEF0FF',stats:[{l:'Commands',v:'223',c:'94'},{l:'Connections',v:'6,102',c:'6,102'}]},
-  ]
-  const metrics=[
-    {l:'Orders',v:'920',pct:75,cls:'green',color:'#10B981',icon:'shopping_bag'},
-    {l:'Visits',v:'995',pct:58,cls:'blue',color:'#6366F1',icon:'visibility'},
-    {l:'Profit',v:'1,025',pct:84,cls:'pink',color:'#EC4899',icon:'trending_up'},
-    {l:'Sales',v:'878',pct:52,cls:'purple',color:'#8B5CF6',icon:'point_of_sale'},
-  ]
-  const acts=[
-    {t:'Webhook triggered',tm:'15m',sub:'16 minutes ago',icon:'webhook'},
-    {t:'MCP task completed',tm:'26m',sub:'36 minutes ago',icon:'hub'},
-    {t:'GitHub command executed',tm:'35m',sub:'35 minutes ago',icon:'code'},
-    {t:'New API connection added',tm:'42m',sub:'32 minutes ago',icon:'api'},
-    {t:'MCP command executed',tm:'1h',sub:'1 hour ago',icon:'hub'},
-    {t:'GitHub command executed',tm:'1h',sub:'35 minutes ago',icon:'code'},
-    {t:'MCP command executed',tm:'1h',sub:'1 hour ago',icon:'hub'},
-  ]
-  el.innerHTML=`
-  <div class="main-left">
-    <div class="home-head"><div><h1>Hello Aimar</h1><p>here's your workspace overview</p></div><div class="acts"><button><span class="material-symbols-rounded" style="font-size:18px">notifications</span></button><button><span class="material-symbols-rounded" style="font-size:18px">filter_list</span></button><button><span class="material-symbols-rounded" style="font-size:18px">more_horiz</span></button></div></div>
-    <div class="int-grid">${cards.map(c=>`<div class="int-card"><div class="card-top"><div class="card-icon" style="background:${c.bg}"><span class="material-symbols-rounded" style="font-size:24px;color:${c.color}">${c.icon}</span></div><span class="card-badge">Active</span></div><h3>${c.name}</h3><p class="card-desc">${c.desc}</p><div class="card-stats">${c.stats.map(s=>`<div class="card-stat"><span class="dot"></span><span class="stat-label">${s.l}</span></div><div style="display:flex;align-items:baseline;gap:4px"><span class="card-stat-val">${s.v}</span><span class="card-stat-change">▸ ${s.c}</span></div>`).join('')}</div></div>`).join('')}</div>
-    <div class="metric-grid">${metrics.map(m=>`<div class="metric-card ${m.cls}"><div class="m-top"><h4>${m.l}</h4><span class="material-symbols-rounded">${m.icon}</span></div><div class="m-val">${m.v}</div><svg class="m-ring" viewBox="0 0 36 36"><path d="M18 2.0845a15.9155 15.9155 0 0 1 0 31.831a15.9155 15.9155 0 0 1 0-31.831" fill="none" stroke="#EAEAF0" stroke-width="3"/><path d="M18 2.0845a15.9155 15.9155 0 0 1 0 31.831a15.9155 15.9155 0 0 1 0-31.831" fill="none" stroke="${m.color}" stroke-width="3" stroke-dasharray="${m.pct},100" stroke-linecap="round"/><text x="18" y="21" text-anchor="middle" style="font-size:8px;font-weight:700;fill:#1A1A2E">${m.pct}%</text></svg><div class="m-bottom"><span class="m-pct up">▲ ${m.pct}%</span><div class="m-check"><span class="material-symbols-rounded" style="font-size:12px">check</span></div></div></div>`).join('')}</div>
-  </div>
-  <div class="main-right">
-    <div class="activity"><h3>Activity</h3>${acts.map(a=>`<div class="act-item"><div class="act-av"><span class="material-symbols-rounded">${a.icon}</span></div><div class="act-body"><div class="act-title">${a.t}<span class="time-badge">${a.tm}</span></div><div class="act-sub"><span class="material-symbols-rounded" style="font-size:12px">schedule</span>${a.sub}</div></div></div>`).join('')}</div>
-  </div>`
+function insertAtCursor(char) {
+  const input = document.getElementById('chat-input');
+  const pos = input.selectionStart;
+  input.value = input.value.substring(0, pos) + char + input.value.substring(pos);
+  input.focus();
+  input.selectionStart = input.selectionEnd = pos + char.length;
+  input.dispatchEvent(new Event('input'));
+}
+let agents = [], projects = [], rules = [], githubConfig = {};
+let currentPage = 'dashboard';
+let currentChannel = 'general';
+let channelMessages = {};
+let messageCount = 0;
+let sessionMessages = 0;
+
+const CHANNELS = [
+  { id: 'general', name: 'general', icon: 'tag', desc: "Team room — everyone's here" },
+  { id: 'ideas', name: 'ideas', icon: 'lightbulb', desc: 'Brainstorm and pitch new ideas' },
+  { id: 'research', name: 'research', icon: 'query_stats', desc: 'Market research & analysis' },
+  { id: 'build', name: 'build', icon: 'construction', desc: 'Development & engineering' },
+  { id: 'testing', name: 'testing', icon: 'bug_report', desc: 'QA & testing' },
+  { id: 'release', name: 'release', icon: 'rocket_launch', desc: 'Deployments & releases' },
+];
+
+const CHANNEL_AGENTS = {
+  general: ['kayou-code', 'kayou-kilo'],
+  ideas: ['kayou-kilo', 'scout', 'analyst'],
+  research: ['kayou-kilo', 'scout', 'analyst'],
+  build: ['kayou-code', 'dev', 'ops', 'sonic'],
+  testing: ['kayou-code', 'dev', 'claude', 'sonic'],
+  release: ['kayou-code', 'ops', 'claude', 'sonic'],
+};
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+async function init() {
+  await Promise.all([loadAgents(), loadProjects(), loadRules(), loadGitHub()]);
+  renderChannelList();
+  renderDMList();
+  renderDashboard();
+  renderAgents();
+  renderProjects();
+  renderSettings();
+  initChat();
+
+  setTimeout(() => {
+    document.getElementById('splash').classList.add('hide');
+    document.getElementById('app').style.opacity = '1';
+    document.getElementById('app').style.transition = 'opacity .3s';
+  }, 600);
 }
 
-function renderChat(el){
-  const isDM=S.channel.startsWith('dm-'),msgs=S.messages[S.channel]||[],p=isDM?PEOPLE[S.channel.replace('dm-','')]:null,ch=CHANNELS.find(c=>c.id===S.channel)
-  el.innerHTML=`<div class="chat-layout"><div class="chat-channels"><h4>Channels</h4>${CHANNELS.map(c=>`<div class="chat-ch ${S.channel===c.id?'active':''}" onclick="S.channel='${c.id}';render()"><span class="material-symbols-rounded" style="font-size:18px">${c.icon}</span>${c.name}</div>`).join('')}<h4 style="margin-top:20px">Direct Messages</h4>${DM_IDS.map(id=>{const pp=PEOPLE[id],ph=S.agents.find(a=>a.id===id)?.profilePhoto;return`<div class="chat-ch ${S.channel==='dm-'+id?'active':''}" onclick="S.channel='dm-${id}';render()"><div style="width:20px;height:20px;border-radius:50%;background:${pp.gradient};display:flex;align-items:center;justify-content:center;color:#fff;font-size:8px;font-weight:600;overflow:hidden;flex-shrink:0">${ph?`<img src="${ph}" style="width:100%;height:100%;object-fit:cover">`:''}</div>${pp.name}</div>`}).join('')}</div><div class="chat-main"><div class="chat-hdr"><span class="material-symbols-rounded" style="font-size:20px;color:#6366F1">${isDM?'person':ch?.icon||'forum'}</span>${isDM?p?.name:'# '+(ch?.name||'')}</div><div class="chat-msgs" id="chatMsgs">${msgs.length===0?'<div class="chat-empty"><span class="material-symbols-rounded">chat</span><p>No messages yet. Say something!</p></div>':msgs.map(m=>{const pp=PEOPLE[m.senderId],own=m.senderId==='aimar',ph=S.agents.find(a=>a.id===m.senderId)?.profilePhoto;return`<div class="msg-row ${own?'own':''}" style="animation:fadeUp 150ms ease-out"><div class="msg-av" style="background:${pp?.gradient||'#ccc'}">${ph?`<img src="${ph}">`:pp?.avatar||'?'}</div><div class="msg-body">${!own?`<div class="msg-meta"><span class="name">${pp?.name}</span><span class="time">${formatTs(m.ts)}</span></div>`:''}
-<div class="msg-bubble">${fmt(m.content)}${own?`<div style="font-size:11px;text-align:right;margin-top:2px;opacity:.5">${formatTs(m.ts)}</div>`:''}</div></div></div>`}).join('')}${S.typing&&PEOPLE[S.typing]?`<div class="msg-row" style="animation:fadeUp 150ms ease-out"><div class="msg-av" style="background:${PEOPLE[S.typing].gradient}">${PEOPLE[S.typing].avatar}</div><div class="typing-dots"><span></span><span></span><span></span></div></div>`:''}</div><div class="chat-input"><textarea id="chatInput" rows="1" placeholder="${isDM?'Message '+p?.name:'Message #'+(ch?.name||'')}" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"></textarea></div></div></div>`
-  const ma=document.getElementById('chatMsgs');if(ma)ma.scrollTop=ma.scrollHeight
+// ═══════════════════════════════════════
+// API
+// ═══════════════════════════════════════
+async function loadAgents() {
+  try { agents = await (await fetch(API + '/api/config/agents')).json(); } catch(e) { console.error('Failed to load agents', e); }
+}
+async function loadProjects() {
+  try { projects = await (await fetch(API + '/api/projects')).json(); } catch(e) { console.error('Failed to load projects', e); }
+}
+async function loadRules() {
+  try { rules = await (await fetch(API + '/api/config/rules')).json(); } catch(e) { console.error('Failed to load rules', e); }
+}
+async function loadGitHub() {
+  try { githubConfig = await (await fetch(API + '/api/config/github')).json(); } catch(e) {}
 }
 
-function renderSettings(el){
-  el.innerHTML=`<div class="main-left"><div class="settings-wrap"><h2>Settings</h2><p class="sub">Manage your AI agents and platform integrations</p><h4>AI Agents</h4>${S.agents.map(a=>`<div class="agent-card"><div class="a-av" style="background:${a.color||'#6366F1'}">${a.profilePhoto?`<img src="${a.profilePhoto}">`:(a.name||'?').charAt(0)}</div><div class="a-info"><div class="a-name">${a.name}</div><div class="a-meta">${a.provider} · ${a.model||'webhook'}</div></div><span class="a-badge ${a.enabled?'on':'off'}">${a.enabled?'Active':'Off'}</span></div>`).join('')}</div></div>`
+// ═══════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════
+function navigate(page) {
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.sidebar .nav-item').forEach(n => {
+    n.classList.toggle('active', n.dataset.page === page);
+  });
+  const titles = { dashboard: 'Dashboard', chat: 'Chat', agents: 'AI Agents', projects: 'Projects', settings: 'Settings' };
+  document.getElementById('page-title').textContent = titles[page] || page;
 }
 
-async function sendMsg(){
-  const inp=document.getElementById('chatInput'),text=inp.value.trim();if(!text)return;inp.value=''
-  S.messages[S.channel].push({id:Date.now()+'',channelId:S.channel,senderId:'aimar',content:text,ts:new Date().toISOString()});render()
-  const isDM=S.channel.startsWith('dm-')
-  let resp;if(isDM){resp=[S.channel.replace('dm-','')]}else{const ca=CHANNEL_AGENTS[S.channel]||['kayou-code','kayou-kilo'],lead=ca[0],mem=ca.slice(1),picked=mem.filter(()=>Math.random()>.5).slice(0,2);if(!picked.length&&mem.length)picked.push(mem[0]);resp=[...picked,lead]}
-  for(let i=0;i<resp.length;i++){const rid=resp[i];S.typing=rid;render()
-    try{const hist=S.messages[S.channel].slice(-12).map(m=>({role:m.senderId==='aimar'?'user':'assistant',content:m.senderId==='aimar'?m.content:(m.senderId===rid?m.content:`[${PEOPLE[m.senderId]?.name}]: ${m.content}`)}));const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agentId:rid,message:text,history:hist,channelId:S.channel})});const d=await r.json();S.typing=null;S.messages[S.channel].push({id:(Date.now()+i+1)+'',channelId:S.channel,senderId:rid,content:d.response||d.error||'No response',ts:new Date().toISOString()})}catch(e){S.typing=null;S.messages[S.channel].push({id:(Date.now()+i+1)+'',channelId:S.channel,senderId:rid,content:'Connection error.',ts:new Date().toISOString()})}
-    render()}
+// ═══════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════
+function renderDashboard() {
+  const enabled = agents.filter(a => a.enabled);
+  document.getElementById('stat-agents').textContent = enabled.length;
+  document.getElementById('stat-enabled').textContent = enabled.length + '/' + agents.length;
+  document.getElementById('stat-messages').textContent = messageCount;
+  document.getElementById('stat-session').textContent = sessionMessages;
+  document.getElementById('stat-projects').textContent = projects.length;
+
+  const avgP = projects.length > 0 ? Math.round(projects.reduce((s, p) => s + (p.progress || 0), 0) / projects.length) : 0;
+  document.getElementById('stat-avg-progress').textContent = avgP + '%';
+
+  const healthScore = enabled.length > 0 ? Math.min(10, Math.round((enabled.length / Math.max(agents.length, 1)) * 10 * 10) / 10) : 0;
+  document.getElementById('health-score').textContent = healthScore.toFixed(1);
+  const circ = 264;
+  document.getElementById('health-gauge').style.strokeDashoffset = circ - (circ * healthScore / 10);
+
+  renderMiniChart('chart-agents', [3,5,4,6,5,7,enabled.length]);
+  renderMiniChart('chart-msgs', [2,5,8,4,6,3,messageCount % 10 || 1]);
+  renderMiniChart('chart-projects', [1,2,1,3,2,3,projects.length]);
+
+  const tbody = document.getElementById('agent-table-body');
+  tbody.innerHTML = agents.map(a => `
+    <tr>
+      <td style="display:flex;align-items:center;gap:8px">
+        ${agentAvatar(a, 26)}
+        <span style="font-weight:500">${esc(a.name)}</span>
+      </td>
+      <td><span class="tag tag-${providerColor(a.provider)}">${esc(a.provider)}</span></td>
+      <td><span class="dot ${a.enabled ? 'dot-green' : 'dot-gray'}"></span> ${a.enabled ? 'Active' : 'Inactive'}</td>
+      <td style="color:var(--text-muted)">${esc(a.reportsTo || '—')}</td>
+    </tr>
+  `).join('');
+
+  const feed = document.getElementById('activity-feed');
+  const activities = [
+    { color: 'var(--accent)', text: 'Platform initialized', time: 'Just now' },
+    { color: 'var(--blue)', text: `${enabled.length} agents online`, time: 'Just now' },
+    { color: 'var(--purple)', text: `${projects.length} projects tracked`, time: 'Active' },
+    { color: 'var(--orange)', text: 'Chat channels ready', time: 'Live' },
+  ];
+  feed.innerHTML = activities.map(a => `
+    <div class="activity-item">
+      <div class="activity-dot" style="background:${a.color}"></div>
+      <div>
+        <div class="activity-text">${a.text}</div>
+        <div class="activity-time">${a.time}</div>
+      </div>
+    </div>
+  `).join('');
 }
 
-async function init(){
-  try{const r=await fetch('/api/config/agents');S.agents=await r.json()}catch(e){}
-  render();setTimeout(()=>{document.getElementById('splash').classList.add('hide');setTimeout(()=>document.getElementById('splash')?.remove(),400)},1200)
+function renderMiniChart(id, data) {
+  const max = Math.max(...data, 1);
+  document.getElementById(id).innerHTML = data.map(v => `<div class="mini-chart-bar" style="height:${Math.max(4, (v/max)*32)}px"></div>`).join('');
 }
-init()
+
+function providerColor(p) {
+  return { groq: 'blue', anthropic: 'orange', openai: 'green', webhook: 'purple', ollama: 'blue', custom: 'red' }[p] || 'blue';
+}
+
+function agentAvatar(a, size) {
+  size = size || 34;
+  if (a.profilePhoto) return `<img src="${esc(a.profilePhoto)}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover">`;
+  const c = a.color || '#6366F1';
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-size:${size*0.35}px;font-weight:600;flex-shrink:0">${esc(a.name?.[0] || '?')}</div>`;
+}
+
+function esc(s) {
+  if (!s) return '';
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ═══════════════════════════════════════
+// CHAT
+// ═══════════════════════════════════════
+function renderChannelList() {
+  document.getElementById('channel-list').innerHTML = CHANNELS.map(ch => `
+    <div class="channel-item ${ch.id === currentChannel ? 'active' : ''}" data-channel="${ch.id}" onclick="switchChannel('${ch.id}')">
+      <span class="material-symbols-rounded">${ch.icon}</span>
+      ${ch.name}
+    </div>
+  `).join('');
+}
+
+function renderDMList() {
+  document.getElementById('dm-list').innerHTML = agents.map(a => `
+    <div class="channel-item" data-channel="dm-${a.id}" onclick="switchChannel('dm-${a.id}')">
+      ${agentAvatar(a, 24)}
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.name)}</span>
+      ${a.enabled ? '<span class="dot dot-green" style="margin-left:auto"></span>' : ''}
+    </div>
+  `).join('');
+}
+
+function switchChannel(id) {
+  currentChannel = id;
+  document.querySelectorAll('.channel-item').forEach(el => el.classList.toggle('active', el.dataset.channel === id));
+
+  const ch = CHANNELS.find(c => c.id === id);
+  const isDM = id.startsWith('dm-');
+  const agent = isDM ? agents.find(a => a.id === id.slice(3)) : null;
+
+  document.getElementById('chat-icon').textContent = isDM ? 'person' : (ch?.icon || 'tag');
+  document.getElementById('chat-channel-name').textContent = isDM ? (agent?.name || id) : (ch?.name || id);
+  document.getElementById('chat-channel-desc').textContent = isDM ? (agent?.enabled ? 'Online' : 'Offline') : (ch?.desc || '');
+  document.getElementById('chat-input').placeholder = `Message ${isDM ? (agent?.name || '') : '#' + (ch?.name || id)}... (@ to tag)`;
+
+  renderMessages();
+}
+
+let mentionActive = false;
+let mentionQuery = '';
+let mentionStart = -1;
+let mentionIndex = 0;
+
+function getMentionItems(query) {
+  const q = query.toLowerCase();
+  const items = [];
+
+  // Agents
+  const matchedAgents = agents.filter(a => a.name.toLowerCase().includes(q) || a.id.includes(q));
+  if (matchedAgents.length > 0) {
+    items.push({ type: 'section', label: 'Agents' });
+    matchedAgents.forEach(a => items.push({ type: 'agent', id: a.id, name: a.name, color: a.color, photo: a.profilePhoto }));
+  }
+
+  // Projects
+  const matchedProjects = projects.filter(p => p.name.toLowerCase().includes(q));
+  if (matchedProjects.length > 0) {
+    items.push({ type: 'section', label: 'Projects' });
+    matchedProjects.forEach(p => items.push({ type: 'project', id: p.id, name: p.name }));
+  }
+
+  return items;
+}
+
+function renderMentionPopup() {
+  const popup = document.getElementById('mention-popup');
+  if (!mentionActive) { popup.classList.remove('show'); return; }
+
+  const items = getMentionItems(mentionQuery);
+  if (items.length === 0) { popup.classList.remove('show'); return; }
+
+  const selectables = items.filter(i => i.type !== 'section');
+  if (mentionIndex >= selectables.length) mentionIndex = 0;
+
+  let selectIdx = -1;
+  popup.innerHTML = items.map(item => {
+    if (item.type === 'section') return `<div class="mention-section">${item.label}</div>`;
+    selectIdx++;
+    const isActive = selectIdx === mentionIndex;
+    if (item.type === 'agent') {
+      const avatar = item.photo
+        ? `<img src="${esc(item.photo)}">`
+        : `<div class="mention-dot" style="background:${item.color}">${esc(item.name[0])}</div>`;
+      return `<div class="mention-item ${isActive ? 'active' : ''}" data-type="agent" data-id="${item.id}" data-name="${esc(item.name)}" onclick="selectMention(this)">
+        ${avatar} <span>@${esc(item.name)}</span>
+      </div>`;
+    }
+    if (item.type === 'project') {
+      return `<div class="mention-item ${isActive ? 'active' : ''}" data-type="project" data-id="${item.id}" data-name="${esc(item.name)}" onclick="selectMention(this)">
+        <div class="mention-dot" style="background:var(--purple)"><span class="material-symbols-rounded" style="font-size:12px;color:#fff">folder</span></div>
+        <span>#${esc(item.name)}</span>
+      </div>`;
+    }
+    return '';
+  }).join('');
+  popup.classList.add('show');
+}
+
+function selectMention(el) {
+  const input = document.getElementById('chat-input');
+  const name = el.dataset.name;
+  const prefix = el.dataset.type === 'project' ? '#' : '@';
+  const before = input.value.substring(0, mentionStart);
+  const after = input.value.substring(input.selectionStart);
+  input.value = before + prefix + name + ' ' + after;
+  mentionActive = false;
+  renderMentionPopup();
+  input.focus();
+  document.getElementById('chat-send').disabled = !input.value.trim();
+}
+
+function initChat() {
+  const input = document.getElementById('chat-input');
+  const send = document.getElementById('chat-send');
+
+  input.addEventListener('input', () => {
+    send.disabled = !input.value.trim();
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+
+    // Check for @ mention
+    const val = input.value;
+    const cursor = input.selectionStart;
+    const textBefore = val.substring(0, cursor);
+    const atMatch = textBefore.match(/@([^\s]*)$/);
+    if (atMatch) {
+      mentionActive = true;
+      mentionQuery = atMatch[1];
+      mentionStart = cursor - atMatch[0].length;
+      mentionIndex = 0;
+      renderMentionPopup();
+    } else {
+      mentionActive = false;
+      renderMentionPopup();
+    }
+  });
+
+  input.addEventListener('keydown', e => {
+    if (mentionActive) {
+      const selectables = getMentionItems(mentionQuery).filter(i => i.type !== 'section');
+      if (e.key === 'ArrowDown') { e.preventDefault(); mentionIndex = (mentionIndex + 1) % selectables.length; renderMentionPopup(); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); mentionIndex = (mentionIndex - 1 + selectables.length) % selectables.length; renderMentionPopup(); return; }
+      if (e.key === 'Tab' || e.key === 'Enter') {
+        if (selectables.length > 0) {
+          e.preventDefault();
+          const item = selectables[mentionIndex];
+          const prefix = item.type === 'project' ? '#' : '@';
+          const before = input.value.substring(0, mentionStart);
+          const after = input.value.substring(input.selectionStart);
+          input.value = before + prefix + item.name + ' ' + after;
+          mentionActive = false;
+          renderMentionPopup();
+          send.disabled = !input.value.trim();
+          return;
+        }
+      }
+      if (e.key === 'Escape') { mentionActive = false; renderMentionPopup(); return; }
+    }
+
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  send.addEventListener('click', sendMessage);
+
+  addSystemMessage('general', 'Welcome to Kayou Chat. Your AI team is ready.');
+  renderMessages();
+}
+
+function addSystemMessage(channel, text) {
+  if (!channelMessages[channel]) channelMessages[channel] = [];
+  channelMessages[channel].push({ id: Date.now(), sender: 'system', text: text, ts: new Date() });
+}
+
+function addMessage(channel, senderId, senderName, text, color, photo) {
+  if (!channelMessages[channel]) channelMessages[channel] = [];
+  channelMessages[channel].push({ id: Date.now() + Math.random(), sender: senderId, name: senderName, text: text, ts: new Date(), color: color, photo: photo });
+  messageCount++;
+  sessionMessages++;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('chat-send').disabled = true;
+
+  addMessage(currentChannel, 'aimar', 'Aimar', text, '#3b82f6');
+  renderMessages();
+  scrollChat();
+
+  const isDM = currentChannel.startsWith('dm-');
+  let agentIds = [];
+
+  if (isDM) {
+    agentIds = [currentChannel.slice(3)];
+  } else {
+    // Check for @mentions — if any agent is tagged, only those agents respond
+    const taggedAgents = [];
+    const mentionRegex = /@([\w\s-]+)/g;
+    let match;
+    while ((match = mentionRegex.exec(text)) !== null) {
+      const tagName = match[1].trim().toLowerCase();
+      const found = agents.find(a => a.name.toLowerCase() === tagName || a.id === tagName);
+      if (found) taggedAgents.push(found.id);
+    }
+    agentIds = taggedAgents.length > 0 ? taggedAgents : (CHANNEL_AGENTS[currentChannel] || []);
+  }
+
+  // Stagger agent responses with realistic delays
+  for (let idx = 0; idx < agentIds.length; idx++) {
+    const agentId = agentIds[idx];
+    const agent = agents.find(a => a.id === agentId);
+    if (!agent || !agent.enabled) continue;
+
+    // Wait before showing typing — like a real person reading the message
+    const readDelay = idx === 0 ? 600 + Math.random() * 800 : 1500 + Math.random() * 2000;
+    await sleep(readDelay);
+
+    showTyping(agent.name, agentId);
+    scrollChat();
+
+    try {
+      const history = (channelMessages[currentChannel] || [])
+        .filter(m => m.sender !== 'system')
+        .slice(-20)
+        .map(m => ({ role: m.sender === 'aimar' ? 'user' : 'assistant', content: m.sender === 'aimar' ? m.text : `[${m.name}]: ${m.text}` }));
+
+      const msgText = isDM ? text : `[Aimar]: ${text}`;
+
+      const fetchStart = Date.now();
+      const res = await fetch(API + '/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId: agentId, message: msgText, history: history, channelId: isDM ? '' : currentChannel })
+      });
+
+      const data = await res.json();
+
+      // Ensure minimum typing time so it doesn't feel instant
+      const elapsed = Date.now() - fetchStart;
+      const minTyping = 800 + Math.random() * 1200;
+      if (elapsed < minTyping) await sleep(minTyping - elapsed);
+
+      if (data.response) {
+        addMessage(currentChannel, agentId, agent.name, data.response, agent.color, agent.profilePhoto);
+      } else if (data.error) {
+        addMessage(currentChannel, agentId, agent.name, 'Error: ' + data.error, '#ef4444');
+      }
+    } catch (err) {
+      addMessage(currentChannel, agentId, agent.name, 'Connection error', '#ef4444');
+    }
+
+    hideTyping();
+    renderMessages();
+    scrollChat();
+  }
+
+  renderDashboard();
+}
+
+function showTyping(name, agentId) {
+  const agent = agents.find(a => a.id === agentId) || {};
+  const color = agent.color || '#6366F1';
+  const dotColor = color;
+  let avatarHTML;
+  if (agent.profilePhoto) {
+    avatarHTML = `<img class="typing-bubble-avatar" src="${esc(agent.profilePhoto)}">`;
+  } else {
+    avatarHTML = `<div class="typing-bubble-avatar-text" style="background:${color}">${esc(name?.[0] || '?')}</div>`;
+  }
+  document.getElementById('typing-indicator').innerHTML = `
+    <div class="typing-bubble">
+      ${avatarHTML}
+      <div class="typing-bubble-body" style="background:${color}20;border:1px solid ${color}40">
+        <div class="typing-dots">
+          <span style="background:${dotColor}"></span>
+          <span style="background:${dotColor}"></span>
+          <span style="background:${dotColor}"></span>
+        </div>
+        <span class="typing-name" style="color:${color}">${esc(name)}</span>
+      </div>
+    </div>
+  `;
+}
+function hideTyping() {
+  document.getElementById('typing-indicator').innerHTML = '';
+}
+
+function renderMessages() {
+  const container = document.getElementById('chat-messages');
+  const msgs = channelMessages[currentChannel] || [];
+
+  container.innerHTML = msgs.map((m, i) => {
+    if (m.sender === 'system') {
+      return `<div style="text-align:center;padding:6px;font-size:11px;color:var(--text-muted)">${esc(m.text)}</div>`;
+    }
+
+    const prev = msgs[i - 1];
+    const isGroup = prev && prev.sender === m.sender && prev.sender !== 'system' && (m.ts - prev.ts) < 120000;
+    const time = m.ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const isUser = m.sender === 'aimar';
+    const side = isUser ? 'msg-right' : 'msg-left';
+
+    // Bubble color — user gets blue, agents get their own color
+    const bubbleColor = isUser ? '#2563eb' : (m.color ? m.color + '25' : '#6366F125');
+    const bubbleBorder = isUser ? 'none' : `1px solid ${m.color || '#6366F1'}40`;
+
+    let avatarHTML = '';
+    if (!isUser) {
+      if (m.photo) {
+        avatarHTML = `<img class="msg-avatar" src="${esc(m.photo)}">`;
+      } else {
+        avatarHTML = `<div class="msg-avatar-text" style="background:${m.color || '#6366F1'}">${esc(m.name?.[0] || '?')}</div>`;
+      }
+    }
+
+    return `
+      <div class="msg ${side} ${isGroup ? 'msg-group' : ''}">
+        ${avatarHTML}
+        <div class="msg-body">
+          <div class="msg-header">
+            <span class="msg-name" style="color:${m.color || 'var(--text-primary)'}">${esc(m.name)}</span>
+            <span class="msg-time">${time}</span>
+          </div>
+          <div class="msg-bubble" style="background:${bubbleColor};border:${bubbleBorder}">
+            <div class="msg-text">${formatMsg(m.text)}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function scrollChat() {
+  const el = document.getElementById('chat-messages');
+  setTimeout(() => el.scrollTop = el.scrollHeight, 50);
+}
+
+function formatMsg(s) {
+  let out = esc(s)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+  // Highlight @agent mentions
+  out = out.replace(/@([\w\s-]+?)(?=\s|$|[.,!?])/g, (match, name) => {
+    const agent = agents.find(a => a.name.toLowerCase() === name.trim().toLowerCase() || a.id === name.trim().toLowerCase());
+    if (agent) return `<span class="mention-tag" style="background:${agent.color}30;color:${agent.color}">@${esc(agent.name)}</span>`;
+    return match;
+  });
+
+  // Highlight #project mentions
+  out = out.replace(/#([\w\s-]+?)(?=\s|$|[.,!?])/g, (match, name) => {
+    const proj = projects.find(p => p.name.toLowerCase() === name.trim().toLowerCase());
+    if (proj) return `<span class="mention-tag" style="background:var(--purple-dim);color:var(--purple)">#${esc(proj.name)}</span>`;
+    return match;
+  });
+
+  return out;
+}
+
+// ═══════════════════════════════════════
+// AGENTS PAGE
+// ═══════════════════════════════════════
+function renderAgents() {
+  // Sort by team hierarchy: leads first, then their reports grouped together
+  const teamOrder = ['kayou-code', 'dev', 'ops', 'claude', 'sonic', 'kayou-kilo', 'scout', 'analyst'];
+  const sorted = [...agents].sort((a, b) => {
+    const ai = teamOrder.indexOf(a.id);
+    const bi = teamOrder.indexOf(b.id);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+
+  // Group into teams
+  const buildTeam = sorted.filter(a => ['kayou-code','dev','ops'].includes(a.id));
+  const securityTeam = sorted.filter(a => ['claude','sonic'].includes(a.id));
+  const researchTeam = sorted.filter(a => ['kayou-kilo','scout','analyst'].includes(a.id));
+  const others = sorted.filter(a => !['kayou-code','dev','ops','claude','sonic','kayou-kilo','scout','analyst'].includes(a.id));
+
+  const renderTeam = (label, icon, team) => {
+    if (team.length === 0) return '';
+    return `<div style="margin-bottom:20px">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+        <span class="material-symbols-rounded" style="font-size:16px">${icon}</span> ${label}
+      </div>
+      <div class="grid grid-auto">${team.map(a => renderAgentCard(a)).join('')}</div>
+    </div>`;
+  };
+
+  document.getElementById('agents-grid').innerHTML =
+    renderTeam('Build Team', 'construction', buildTeam) +
+    renderTeam('Security Team', 'shield', securityTeam) +
+    renderTeam('Research Team', 'query_stats', researchTeam) +
+    (others.length > 0 ? renderTeam('Other', 'group', others) : '');
+}
+
+function renderAgentCard(a) {
+  return ((a) => {
+    const b = a.brain || {};
+    const mentorName = b.mentor ? agents.find(x => x.id === b.mentor)?.name : null;
+    return `
+    <div class="card agent-card" onclick="showAgentDetail('${a.id}')">
+      ${a.profilePhoto
+        ? `<img class="agent-photo" src="${esc(a.profilePhoto)}">`
+        : `<div class="agent-photo-text" style="background:${a.color || '#6366F1'}">${esc(a.name?.[0])}</div>`
+      }
+      <div class="agent-info">
+        <div class="agent-name">${esc(a.name)}</div>
+        <div class="agent-role">Reports to ${esc(a.reportsTo || 'CEO')}${mentorName ? ' · Learns from ' + esc(mentorName) : ''}</div>
+        <div class="agent-meta">
+          <span class="tag tag-${providerColor(a.provider)}">${esc(a.provider)}</span>
+          <span class="tag ${a.enabled ? 'tag-green' : 'tag-red'}">${a.enabled ? 'Active' : 'Inactive'}</span>
+          ${b.interactions > 0 ? `<span class="tag tag-purple" title="Brain: ${b.knowledgeCount || 0} knowledge, ${b.mentorLearnings || 0} mentor learnings">🧠 ${b.interactions}</span>` : '<span class="tag" style="background:var(--bg-elevated);color:var(--text-muted)">🧠 New</span>'}
+        </div>
+      </div>
+      <span class="material-symbols-rounded" style="color:var(--text-muted)">chevron_right</span>
+    </div>
+  `})(a);
+}
+
+async function showAgentDetail(id) {
+  const a = agents.find(x => x.id === id);
+  if (!a) return;
+
+  // Load full brain data
+  let brain = { personality: [], knowledge: [], patterns: [], mentorLearnings: [], interactions: 0 };
+  try { brain = await (await fetch(API + '/api/brain/' + id)).json(); } catch(e) {}
+
+  const mentorName = brain.mentor ? agents.find(x => x.id === brain.mentor)?.name : null;
+  const brainScore = Math.min(10, ((brain.personality.length + brain.knowledge.length + brain.patterns.length + brain.mentorLearnings.length) / 5)).toFixed(1);
+
+  document.getElementById('modal').innerHTML = `
+    <h3 style="display:flex;align-items:center;gap:10px">
+      ${agentAvatar(a, 32)}
+      ${esc(a.name)}
+      ${mentorName ? `<span style="font-size:12px;color:var(--cyan);font-weight:400">Learns from ${esc(mentorName)}</span>` : ''}
+    </h3>
+
+    <!-- Profile Photo -->
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;padding:12px;background:var(--bg-surface);border:1px solid var(--border);border-radius:10px">
+      <div id="edit-photo-preview" style="width:56px;height:56px;border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:${a.color || '#6366F1'};font-size:20px;font-weight:600">
+        ${a.profilePhoto ? `<img src="${esc(a.profilePhoto)}" style="width:100%;height:100%;object-fit:cover">` : esc(a.name?.[0] || '?')}
+      </div>
+      <div style="flex:1">
+        <label class="form-label" style="margin-bottom:6px">Profile Photo</label>
+        <div style="display:flex;gap:8px">
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer">
+            <span class="material-symbols-rounded" style="font-size:16px">upload</span> Upload
+            <input type="file" accept="image/*" id="edit-photo-input" onchange="previewAgentPhoto(this, '${a.id}')" style="display:none">
+          </label>
+          ${a.profilePhoto ? `<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="removeAgentPhoto('${a.id}')"><span class="material-symbols-rounded" style="font-size:16px">delete</span> Remove</button>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <!-- Brain Section -->
+    <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span style="font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px">🧠 Agent Brain</span>
+        <span class="tag tag-purple">${brainScore}/10</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+        <div style="text-align:center;padding:8px;background:var(--bg-card);border-radius:8px">
+          <div style="font-size:18px;font-weight:700;color:var(--accent)">${brain.personality.length}</div>
+          <div style="font-size:10px;color:var(--text-muted)">Traits</div>
+        </div>
+        <div style="text-align:center;padding:8px;background:var(--bg-card);border-radius:8px">
+          <div style="font-size:18px;font-weight:700;color:var(--blue)">${brain.knowledge.length}</div>
+          <div style="font-size:10px;color:var(--text-muted)">Knowledge</div>
+        </div>
+        <div style="text-align:center;padding:8px;background:var(--bg-card);border-radius:8px">
+          <div style="font-size:18px;font-weight:700;color:var(--cyan)">${brain.mentorLearnings.length}</div>
+          <div style="font-size:10px;color:var(--text-muted)">Mentor</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted)">
+        ${brain.interactions} conversations · ${brain.patterns.length} style patterns
+        ${brain.lastActive ? ' · Last active: ' + new Date(brain.lastActive).toLocaleDateString() : ''}
+      </div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="showBrainEditor('${id}')">Edit Brain</button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Model</label>
+      <input class="input" id="edit-model" value="${esc(a.model || '')}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">System Prompt</label>
+      <textarea class="input textarea" id="edit-prompt" rows="6">${esc(a.systemPrompt || '')}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Provider</label>
+      <select class="input select" id="edit-provider">
+        ${['groq','anthropic','openai','ollama','webhook','custom'].map(p => `<option ${p===a.provider?'selected':''}>${p}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">API Key</label>
+      <input class="input" id="edit-key" type="password" value="${a.hasKey ? '••••' : ''}" placeholder="Enter API key...">
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:10px">
+      <label class="form-label" style="margin:0">Enabled</label>
+      <div class="toggle ${a.enabled ? 'on' : ''}" id="edit-enabled" onclick="this.classList.toggle('on')"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" style="color:var(--red)" onclick="deleteAgent('${a.id}')">Delete</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAgent('${a.id}')">Save</button>
+    </div>
+  `;
+  openModal();
+}
+
+async function showBrainEditor(id) {
+  let brain;
+  try { brain = await (await fetch(API + '/api/brain/' + id)).json(); } catch(e) { return; }
+  const a = agents.find(x => x.id === id);
+
+  document.getElementById('modal').innerHTML = `
+    <h3 style="display:flex;align-items:center;gap:6px">🧠 ${esc(a?.name || id)} — Brain Editor</h3>
+
+    <div class="form-group">
+      <label class="form-label">Personality Traits (one per line)</label>
+      <textarea class="input textarea" id="brain-personality" rows="4">${(brain.personality || []).join('\n')}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Learned Knowledge (one per line)</label>
+      <textarea class="input textarea" id="brain-knowledge" rows="5">${(brain.knowledge || []).join('\n')}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Response Patterns (one per line)</label>
+      <textarea class="input textarea" id="brain-patterns" rows="3">${(brain.patterns || []).join('\n')}</textarea>
+    </div>
+    ${brain.mentorLearnings?.length > 0 ? `
+    <div class="form-group">
+      <label class="form-label">Mentor Learnings (auto-populated from ${esc(brain.mentor || 'mentor')})</label>
+      <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;color:var(--text-secondary);max-height:120px;overflow-y:auto">
+        ${brain.mentorLearnings.map(l => `<div style="padding:3px 0;border-bottom:1px solid var(--border)">• ${esc(l)}</div>`).join('')}
+      </div>
+    </div>
+    ` : ''}
+    <div class="form-group">
+      <label class="form-label">Mentor Agent</label>
+      <select class="input select" id="brain-mentor">
+        <option value="">None</option>
+        ${agents.filter(x => x.id !== id).map(x => `<option value="${x.id}" ${brain.mentor === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="showAgentDetail('${id}')">Back</button>
+      <button class="btn btn-primary" onclick="saveBrain('${id}')">Save Brain</button>
+    </div>
+  `;
+}
+
+async function saveBrain(id) {
+  const body = {
+    personality: document.getElementById('brain-personality').value.split('\n').filter(l => l.trim()),
+    knowledge: document.getElementById('brain-knowledge').value.split('\n').filter(l => l.trim()),
+    patterns: document.getElementById('brain-patterns').value.split('\n').filter(l => l.trim()),
+    mentor: document.getElementById('brain-mentor').value || null,
+  };
+  await fetch(API + '/api/brain/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+  // Also update mentor field in agent config
+  const a = agents.find(x => x.id === id);
+  if (a) {
+    await fetch(API + '/api/config/agents/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mentor: body.mentor }) });
+  }
+
+  await loadAgents();
+  renderAgents();
+  showAgentDetail(id);
+}
+
+let pendingPhotoUpload = null;
+
+function previewAgentPhoto(input, agentId) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const base64 = e.target.result;
+    document.getElementById('edit-photo-preview').innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover">`;
+    pendingPhotoUpload = { base64, filename: file.name, agentId };
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadAgentPhoto(agentId) {
+  if (!pendingPhotoUpload || pendingPhotoUpload.agentId !== agentId) return null;
+  const res = await fetch(API + '/api/upload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image: pendingPhotoUpload.base64, filename: pendingPhotoUpload.filename })
+  });
+  const data = await res.json();
+  pendingPhotoUpload = null;
+  return data.url;
+}
+
+async function removeAgentPhoto(agentId) {
+  await fetch(API + '/api/config/agents/' + agentId, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ profilePhoto: '' })
+  });
+  await loadAgents();
+  renderAgents();
+  renderDMList();
+  renderDashboard();
+  showAgentDetail(agentId);
+}
+
+async function saveAgent(id) {
+  // Handle photo upload first
+  let photoUrl = null;
+  if (pendingPhotoUpload && pendingPhotoUpload.agentId === id) {
+    photoUrl = await uploadAgentPhoto(id);
+  }
+
+  const body = {
+    model: document.getElementById('edit-model').value,
+    systemPrompt: document.getElementById('edit-prompt').value,
+    provider: document.getElementById('edit-provider').value,
+    enabled: document.getElementById('edit-enabled').classList.contains('on'),
+  };
+  const key = document.getElementById('edit-key').value;
+  if (key && !key.startsWith('••••')) body.apiKey = key;
+  if (photoUrl) body.profilePhoto = photoUrl;
+
+  await fetch(API + '/api/config/agents/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  pendingPhotoUpload = null;
+  closeModal();
+  await loadAgents();
+  renderAgents();
+  renderDashboard();
+  renderDMList();
+}
+
+async function deleteAgent(id) {
+  if (!confirm('Delete this agent?')) return;
+  await fetch(API + '/api/config/agents/' + id, { method: 'DELETE' });
+  closeModal();
+  await loadAgents();
+  renderAgents();
+  renderDashboard();
+  renderDMList();
+}
+
+function showAddAgent() {
+  document.getElementById('modal').innerHTML = `
+    <h3>Add Agent</h3>
+    <div class="form-group">
+      <label class="form-label">Name</label>
+      <input class="input" id="new-agent-name" placeholder="Agent name">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Provider</label>
+      <select class="input select" id="new-agent-provider">
+        <option>groq</option><option>anthropic</option><option>openai</option><option>ollama</option><option>webhook</option><option>custom</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Model</label>
+      <input class="input" id="new-agent-model" placeholder="llama-3.3-70b-versatile">
+    </div>
+    <div class="form-group">
+      <label class="form-label">API Key</label>
+      <input class="input" id="new-agent-key" type="password" placeholder="API key or ENV:VAR_NAME">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Color</label>
+      <input class="input" id="new-agent-color" type="color" value="#6366F1" style="height:36px;padding:4px">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="createAgent()">Create</button>
+    </div>
+  `;
+  openModal();
+}
+
+async function createAgent() {
+  const body = {
+    name: document.getElementById('new-agent-name').value,
+    provider: document.getElementById('new-agent-provider').value,
+    model: document.getElementById('new-agent-model').value,
+    apiKey: document.getElementById('new-agent-key').value,
+    color: document.getElementById('new-agent-color').value,
+  };
+  if (!body.name) return;
+  await fetch(API + '/api/config/agents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  closeModal();
+  await loadAgents();
+  renderAgents();
+  renderDashboard();
+  renderDMList();
+}
+
+// ═══════════════════════════════════════
+// PROJECTS PAGE
+// ═══════════════════════════════════════
+function renderProjects() {
+  const grid = document.getElementById('projects-grid');
+  const empty = document.getElementById('projects-empty');
+
+  // Stats
+  const total = projects.length;
+  const active = projects.filter(p => (p.progress || 0) < 100).length;
+  const avgProgress = total > 0 ? Math.round(projects.reduce((s, p) => s + (p.progress || 0), 0) / total) : 0;
+  const score = total > 0 ? (avgProgress / 10).toFixed(1) : '0.0';
+
+  document.getElementById('proj-stat-total').textContent = total;
+  document.getElementById('proj-stat-active').textContent = active + ' active';
+  document.getElementById('proj-stat-avg').textContent = avgProgress + '%';
+  document.getElementById('proj-avg-bar').style.width = avgProgress + '%';
+  document.getElementById('proj-gauge-val').textContent = score;
+  const circ = 264;
+  document.getElementById('proj-gauge').style.strokeDashoffset = circ - (circ * avgProgress / 100);
+
+  if (total === 0) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    document.getElementById('project-stats-row').style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  document.getElementById('project-stats-row').style.display = '';
+
+  // Table-style project list like the screenshot
+  const sorted = [...projects].sort((a, b) => (b.progress || 0) - (a.progress || 0));
+
+  grid.innerHTML = `
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header">
+        <span class="card-title">Project Delivery</span>
+        <span class="card-badge">${total} projects</span>
+      </div>
+      <table class="table">
+        <thead><tr><th>Project</th><th>Progress</th><th>Status</th><th>Trend</th><th>Updated</th></tr></thead>
+        <tbody>
+          ${sorted.map(p => {
+            const progress = p.progress || 0;
+            const hist = p.progressHistory || [];
+            const prev = hist.length >= 2 ? hist[hist.length - 2].value : 0;
+            const diff = progress - prev;
+            const trendClass = diff > 0 ? 'trend-up' : diff < 0 ? 'trend-down' : '';
+            const trendIcon = diff > 0 ? '↗' : diff < 0 ? '↘' : '→';
+            const statusTag = progress >= 100 ? 'green' : progress >= 60 ? 'blue' : progress >= 30 ? 'orange' : 'red';
+            const statusText = progress >= 100 ? 'Complete' : progress >= 60 ? 'On Track' : progress >= 30 ? 'In Progress' : 'Starting';
+            const updated = p.updatedAt ? new Date(p.updatedAt).toLocaleDateString() : (p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—');
+            return `
+              <tr style="cursor:pointer" onclick="showProjectDetail('${p.id}')">
+                <td>
+                  <div style="font-weight:500">${esc(p.name)}</div>
+                  <div style="font-size:11px;color:var(--text-muted)">${esc(p.description || '').substring(0, 50)}</div>
+                </td>
+                <td style="min-width:140px">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <div class="progress-bar" style="flex:1;margin:0"><div class="progress-fill" style="width:${progress}%;background:${progress >= 80 ? 'var(--accent)' : progress >= 40 ? 'var(--blue)' : 'var(--orange)'}"></div></div>
+                    <span style="font-size:12px;font-weight:600;min-width:32px">${progress}%</span>
+                  </div>
+                </td>
+                <td><span class="tag tag-${statusTag}">${statusText}</span></td>
+                <td><span class="${trendClass}">${trendIcon} ${Math.abs(diff)}%</span></td>
+                <td style="font-size:12px;color:var(--text-muted)">${updated}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid grid-auto">
+      ${sorted.map(p => {
+        const progress = p.progress || 0;
+        const hist = p.progressHistory || [];
+        const gaugeColor = progress >= 80 ? 'var(--accent)' : progress >= 40 ? 'var(--blue)' : 'var(--orange)';
+        const offset = circ - (circ * progress / 100);
+        const chartBars = hist.length > 0
+          ? hist.slice(-8).map(h => `<div class="mini-chart-bar" style="height:${Math.max(4, (h.value/100)*32)}px;background:${gaugeColor}"></div>`).join('')
+          : [10,20,30,progress].map(v => `<div class="mini-chart-bar" style="height:${Math.max(4, (v/100)*32)}px;background:${gaugeColor}"></div>`).join('');
+
+        return `
+          <div class="card" style="cursor:pointer;text-align:center" onclick="showProjectDetail('${p.id}')">
+            <div class="card-header" style="text-align:left">
+              <span class="card-title">${esc(p.name)}</span>
+              <span class="material-symbols-rounded" style="font-size:18px;color:var(--text-muted)">chevron_right</span>
+            </div>
+            <div class="gauge" style="width:80px;height:80px;margin:8px auto">
+              <svg width="80" height="80" viewBox="0 0 100 100">
+                <circle class="gauge-bg" cx="50" cy="50" r="42"/>
+                <circle class="gauge-fill" cx="50" cy="50" r="42" stroke="${gaugeColor}" style="stroke-dasharray:264;stroke-dashoffset:${offset}"/>
+              </svg>
+              <div class="gauge-value" style="font-size:18px">${progress}%</div>
+            </div>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:4px">${progress >= 100 ? 'Delivered' : progress >= 60 ? 'On Track' : 'Building'}</p>
+            <div class="mini-chart" style="justify-content:center;margin-top:10px">${chartBars}</div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function showProjectDetail(id) {
+  const p = projects.find(x => x.id === id);
+  if (!p) return;
+
+  const hist = p.progressHistory || [];
+  const histHTML = hist.length > 0 ? `
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+      <label class="form-label">Progress History</label>
+      <div style="display:flex;align-items:flex-end;gap:3px;height:40px;margin-top:6px">
+        ${hist.map(h => {
+          const c = h.value >= 80 ? 'var(--accent)' : h.value >= 40 ? 'var(--blue)' : 'var(--orange)';
+          return `<div title="${h.date}: ${h.value}%" style="flex:1;height:${Math.max(4, (h.value/100)*40)}px;background:${c};border-radius:2px;min-width:6px"></div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:4px">
+        <span>${hist[0]?.date || ''}</span><span>${hist[hist.length-1]?.date || ''}</span>
+      </div>
+    </div>
+  ` : '';
+
+  document.getElementById('modal').innerHTML = `
+    <h3 style="display:flex;align-items:center;gap:8px">
+      <span class="material-symbols-rounded" style="color:var(--blue)">folder</span>
+      ${esc(p.name)}
+    </h3>
+    <div class="form-group">
+      <label class="form-label">Name</label>
+      <input class="input" id="edit-proj-name" value="${esc(p.name || '')}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <textarea class="input textarea" id="edit-proj-desc" rows="3">${esc(p.description || '')}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Repository</label>
+      <input class="input" id="edit-proj-repo" value="${esc(p.repo || '')}" placeholder="owner/repo">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Progress — <strong id="edit-proj-pval">${p.progress || 0}%</strong></label>
+      <input type="range" id="edit-proj-progress" min="0" max="100" value="${p.progress || 0}" style="width:100%;accent-color:var(--accent)" oninput="document.getElementById('edit-proj-pval').textContent=this.value+'%'">
+    </div>
+    ${histHTML}
+    <div class="modal-actions">
+      <button class="btn btn-ghost" style="color:var(--red)" onclick="deleteProject('${p.id}')">Delete</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProject('${p.id}')">Save</button>
+    </div>
+  `;
+  openModal();
+}
+
+async function saveProject(id) {
+  const newProgress = parseInt(document.getElementById('edit-proj-progress').value);
+  const p = projects.find(x => x.id === id);
+  const hist = p?.progressHistory || [];
+  // Track progress change
+  if (!p || newProgress !== (p.progress || 0)) {
+    hist.push({ date: new Date().toLocaleDateString(), value: newProgress });
+  }
+
+  const body = {
+    name: document.getElementById('edit-proj-name').value,
+    description: document.getElementById('edit-proj-desc').value,
+    repo: document.getElementById('edit-proj-repo').value,
+    progress: newProgress,
+    progressHistory: hist,
+    updatedAt: new Date().toISOString(),
+  };
+  await fetch(API + '/api/projects/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  closeModal();
+  await loadProjects();
+  renderProjects();
+  renderDashboard();
+}
+
+async function deleteProject(id) {
+  if (!confirm('Delete this project?')) return;
+  await fetch(API + '/api/projects/' + id, { method: 'DELETE' });
+  closeModal();
+  await loadProjects();
+  renderProjects();
+  renderDashboard();
+}
+
+function showAddProject() {
+  document.getElementById('modal').innerHTML = `
+    <h3>New Project</h3>
+    <div class="form-group">
+      <label class="form-label">Name</label>
+      <input class="input" id="new-proj-name" placeholder="Project name">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <textarea class="input textarea" id="new-proj-desc" rows="3" placeholder="What is this project about?"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Repository</label>
+      <input class="input" id="new-proj-repo" placeholder="owner/repo">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Initial Progress — <strong id="new-proj-pval">0%</strong></label>
+      <input type="range" id="new-proj-progress" min="0" max="100" value="0" style="width:100%;accent-color:var(--accent)" oninput="document.getElementById('new-proj-pval').textContent=this.value+'%'">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="createProject()">Create</button>
+    </div>
+  `;
+  openModal();
+}
+
+async function createProject() {
+  const progress = parseInt(document.getElementById('new-proj-progress')?.value || 0);
+  const body = {
+    name: document.getElementById('new-proj-name').value,
+    description: document.getElementById('new-proj-desc').value,
+    repo: document.getElementById('new-proj-repo').value,
+    progress,
+    progressHistory: [{ date: new Date().toLocaleDateString(), value: progress }],
+    updatedAt: new Date().toISOString(),
+  };
+  if (!body.name) return;
+  await fetch(API + '/api/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  closeModal();
+  await loadProjects();
+  renderProjects();
+  renderDashboard();
+}
+
+// ═══════════════════════════════════════
+// MY APPS BROWSER
+// ═══════════════════════════════════════
+async function scanMyApps() {
+  const browser = document.getElementById('myapps-browser');
+  const list = document.getElementById('myapps-list');
+  browser.style.display = 'block';
+  list.innerHTML = '<p style="color:var(--text-muted);font-size:13px;padding:12px">Scanning...</p>';
+
+  try {
+    const data = await (await fetch(API + '/api/files/scan')).json();
+    if (data.error) { list.innerHTML = `<p style="color:var(--red);padding:12px">${data.error}</p>`; return; }
+
+    list.innerHTML = `
+      <table class="table">
+        <thead><tr><th>Project</th><th>Files</th><th>Last Modified</th><th>Type</th><th></th></tr></thead>
+        <tbody>
+          ${data.map(app => {
+            const type = app.hasPackageJson ? 'Node.js' : app.hasIndex ? 'Web' : 'Other';
+            const typeTag = app.hasPackageJson ? 'blue' : app.hasIndex ? 'green' : 'purple';
+            const modified = new Date(app.modified).toLocaleDateString();
+            const exists = projects.some(p => p.name === app.name);
+            return `
+              <tr>
+                <td style="font-weight:500">${esc(app.name)}</td>
+                <td>${app.fileCount}</td>
+                <td style="font-size:12px;color:var(--text-muted)">${modified}</td>
+                <td><span class="tag tag-${typeTag}">${type}</span></td>
+                <td>
+                  ${exists
+                    ? '<span class="tag tag-green">Tracked</span>'
+                    : `<button class="btn btn-ghost btn-sm" onclick="importFromMyApps('${esc(app.name)}')">Import</button>`
+                  }
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch (err) {
+    list.innerHTML = `<p style="color:var(--red);padding:12px">Failed to scan: ${err.message}</p>`;
+  }
+}
+
+async function importFromMyApps(name) {
+  const body = {
+    name,
+    description: 'Imported from ~/Desktop/My Apps/' + name,
+    progress: 0,
+    progressHistory: [{ date: new Date().toLocaleDateString(), value: 0 }],
+    updatedAt: new Date().toISOString(),
+  };
+  await fetch(API + '/api/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  await loadProjects();
+  renderProjects();
+  renderDashboard();
+  scanMyApps(); // Refresh to show "Tracked"
+}
+
+// ═══════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════
+function renderSettings() {
+  renderRules();
+  document.getElementById('github-username').value = githubConfig.username || '';
+  document.getElementById('github-token').value = githubConfig.hasToken ? '••••••••' : '';
+
+  fetch(API + '/api/config/webhook').then(r => r.json()).then(d => {
+    document.getElementById('webhook-secret').textContent = d.secret || 'Not set';
+  }).catch(() => {});
+}
+
+function renderRules() {
+  document.getElementById('rules-list').innerHTML = rules.map((r, i) => `
+    <div class="setting-row">
+      <div><div class="setting-label">${esc(r)}</div></div>
+      <button class="icon-btn" onclick="removeRule(${i})" title="Remove"><span class="material-symbols-rounded" style="font-size:18px;color:var(--red)">close</span></button>
+    </div>
+  `).join('');
+}
+
+async function addRule() {
+  const input = document.getElementById('new-rule-input');
+  const text = input.value.trim();
+  if (!text) return;
+  rules.push(text);
+  input.value = '';
+  await fetch(API + '/api/config/rules', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rules: rules }) });
+  renderRules();
+}
+
+async function removeRule(i) {
+  rules.splice(i, 1);
+  await fetch(API + '/api/config/rules', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rules: rules }) });
+  renderRules();
+}
+
+async function saveGitHub() {
+  const body = { username: document.getElementById('github-username').value };
+  const token = document.getElementById('github-token').value;
+  if (token && !token.startsWith('••••')) body.token = token;
+  await fetch(API + '/api/config/github', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  await loadGitHub();
+}
+
+// ═══════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════
+function openModal() { document.getElementById('modal-overlay').classList.add('show'); }
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-overlay')) return;
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+
+// ═══════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════
+init();
 </script>
 </body>
 </html>
