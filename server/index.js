@@ -634,6 +634,92 @@ async function triggerTeamResponses(channel, senderId, senderName, text) {
   }
 }
 
+// ══════════════ WORK CHANNEL DISPATCH ══════════════
+// When agents receive instructions in #general, they go to their work channels to execute
+const AGENT_WORK_CHANNELS = {
+  'kayou': 'build', 'dev': 'build', 'ops': 'build', 'kayou-code': 'build',
+  'claude': 'testing', 'sonic': 'testing',
+  'kayou-kilo': 'research', 'scout': 'research', 'analyst': 'research',
+}
+
+async function dispatchToWorkChannels(instruction, respondedAgents) {
+  if (!db) return
+  const c = loadConfig()
+
+  // Group agents by their work channel
+  const channelGroups = {}
+  for (const agentId of respondedAgents) {
+    const workChannel = AGENT_WORK_CHANNELS[agentId]
+    if (!workChannel || workChannel === 'general') continue
+    if (!channelGroups[workChannel]) channelGroups[workChannel] = []
+    channelGroups[workChannel].push(agentId)
+  }
+
+  // For each work channel, have the first agent post their work plan
+  for (const [workChannel, agentIds] of Object.entries(channelGroups)) {
+    const agentId = agentIds[0] // Lead agent for this channel
+    const agent = c.agents.find(a => a.id === agentId)
+    if (!agent || !agent.enabled || agent.provider === 'external') continue
+
+    await new Promise(r => setTimeout(r, 3000 + Math.random() * 2000))
+
+    try {
+      const agentApiKey = resolveEnv(agent.apiKey)
+      if (!agentApiKey && agent.provider !== 'ollama') continue
+
+      const brain = loadBrain(agentId)
+      const brainPrompt = getBrainPrompt(brain)
+      const teammates = agentIds.length > 1
+        ? agentIds.slice(1).map(id => c.agents.find(a => a.id === id)?.name).filter(Boolean).join(', ')
+        : ''
+      const sysPrompt = (agent.systemPrompt || '') + brainPrompt +
+        `\n\nYou're now in #${workChannel} — your work channel. Aimar just gave instructions in #general. Break down what you need to do and start working. ` +
+        (teammates ? `Your teammates here: ${teammates}. Coordinate with them using @mentions. ` : '') +
+        `Be specific about your next steps. If you need to delegate, @tag them.` +
+        '\n\nCORE RULES: Keep it SHORT (2-4 sentences). NEVER start with your own name. Use @Name for mentions.'
+
+      const userMsg = `Aimar's instruction from #general: "${instruction}"\n\nYou're now in #${workChannel}. What's your plan? Start working.`
+      let responseText = ''
+
+      if (agent.provider === 'groq') {
+        const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${agentApiKey}` },
+          body: JSON.stringify({ model: agent.model || 'llama-3.3-70b-versatile', max_tokens: 400, messages: [{ role: 'system', content: sysPrompt }, { role: 'user', content: userMsg }] })
+        })
+        const d = await r.json()
+        responseText = d.choices?.[0]?.message?.content || ''
+      } else if (agent.provider === 'anthropic') {
+        const r = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': agentApiKey, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify({ model: agent.model || 'claude-sonnet-4-20250514', max_tokens: 400, system: sysPrompt, messages: [{ role: 'user', content: userMsg }] })
+        })
+        const d = await r.json()
+        responseText = d.content?.[0]?.text || ''
+      }
+
+      if (responseText) {
+        let clean = responseText.replace(new RegExp('^\\[?' + agent.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\]?:\\s*', 'i'), '')
+        const photo = agentPhotosCache[agent.id] || agent.profilePhoto || null
+        await db.query(
+          'INSERT INTO messages (channel, sender_id, sender_name, text, color, photo) VALUES ($1,$2,$3,$4,$5,$6)',
+          [workChannel, agent.id, agent.name, clean, agent.color, photo]
+        )
+        if (io) {
+          io.emit('new:message', {
+            channel: workChannel, sender: agent.id, name: agent.name,
+            text: clean, color: agent.color, photo, ts: new Date().toISOString()
+          })
+        }
+        console.log(`dispatchToWorkChannels: ${agent.name} posted in #${workChannel}`)
+      }
+    } catch(e) {
+      console.error(`dispatchToWorkChannels error for ${agentId}:`, e.message)
+    }
+  }
+}
+
 // ══════════════ EXTERNAL API (for Open Claw, Telegram bots, etc) ══════════════
 // Auth: send header "Authorization: Bearer <EXTERNAL_API_KEY>" or query param ?key=<KEY>
 function checkExternalAuth(req, reply) {
@@ -1112,6 +1198,13 @@ fastify.post('/api/chat', async (req, reply) => {
 
     // ═══ BRAIN LEARNING — runs after every response ═══
     updateBrain(agentId, message, responseText)
+
+    // If responding in #general to an instruction/task, dispatch to work channel (async)
+    const channelId = req.body.channelId || ''
+    const isInstruction = /\b(go|check|build|create|fix|work on|start|deploy|test|review|scan|look at|investigate|set up|implement|make|do|ship|push|update|handle|run|launch|prepare|analyze|research|find)\b/i.test(message)
+    if (channelId === 'general' && responseText && isInstruction) {
+      dispatchToWorkChannels(message, [agentId]).catch(e => console.error('Dispatch error:', e.message))
+    }
 
     return { response: responseText }
   } catch (err) {
