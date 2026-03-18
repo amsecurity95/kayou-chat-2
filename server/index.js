@@ -760,7 +760,10 @@ fastify.post('/api/chat', async (req, reply) => {
   const channelId = req.body.channelId || ''
   let channelContext = ''
   // List other agents so this agent knows who to @mention
-  const otherAgents = c.agents.filter(a => a.id !== agentId && a.enabled).map(a => a.name)
+  const otherAgents = c.agents.filter(a => a.id !== agentId && a.enabled).map(a => {
+    const ext = a.provider === 'external' ? ' (connects via external tool — real team member, not you)' : ''
+    return a.name + ext
+  })
   const teamList = otherAgents.length > 0 ? `\nTeam members you can @mention: ${otherAgents.join(', ')}, Aimar (CEO)` : ''
   const hasProjects = (c.projects || []).length > 0
   const projectStatus = hasProjects ? 'Active projects are listed above.' : 'There are NO active projects right now.'

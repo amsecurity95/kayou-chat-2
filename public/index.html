@@ -1253,7 +1253,7 @@ async function sendMessage() {
   for (let idx = 0; idx < agentIds.length; idx++) {
     const agentId = agentIds[idx];
     const agent = agents.find(a => a.id === agentId);
-    if (!agent || !agent.enabled) continue;
+    if (!agent || !agent.enabled || agent.provider === 'external') continue;
 
     // Wait before showing typing — like a real person reading the message
     const readDelay = idx === 0 ? 600 + Math.random() * 800 : 1500 + Math.random() * 2000;
