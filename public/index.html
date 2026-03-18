@@ -7,6 +7,7 @@
 <link rel="icon" href="/kayou-logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Rounded" rel="stylesheet">
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -1137,6 +1138,20 @@ async function initChat() {
   }
   renderMessages();
   scrollChat();
+
+  // Real-time messages from external agents (Kayou Code via OpenClaw)
+  if (window.io) {
+    const sock = io(API);
+    sock.on('new:message', (msg) => {
+      // Only add if we're not the sender and it's for a channel we have
+      if (msg.sender === 'aimar') return;
+      addMessage(msg.channel, msg.sender, msg.name, msg.text, msg.color, msg.photo);
+      if (msg.channel === currentChannel) {
+        renderMessages();
+        scrollChat();
+      }
+    });
+  }
   startPolling();
 }
 

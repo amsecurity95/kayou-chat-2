@@ -562,7 +562,77 @@ fastify.post('/api/external/send', async (req, reply) => {
     )
   }
 
+  // Push to connected web clients via socket
+  if (io) {
+    io.emit('new:message', {
+      channel, sender: senderId, name: senderName,
+      text, color: senderColor, photo: senderPhoto, ts: new Date().toISOString()
+    })
+  }
+
   return { ok: true, channel, sender: senderId, name: senderName }
+})
+
+// GET /api/external/dm — read DMs for an external agent
+// Query: ?agentId=kayou-code&limit=50&since=<ISO timestamp>
+fastify.get('/api/external/dm', async (req, reply) => {
+  const err = checkExternalAuth(req, reply); if (err) return err
+  if (!db) return []
+  const agentId = req.query?.agentId
+  if (!agentId) return reply.code(400).send({ error: 'Missing agentId' })
+  const dmChannel = `dm-${agentId}`
+  const limit = Math.min(parseInt(req.query?.limit) || 50, 200)
+  const since = req.query?.since
+  let rows
+  if (since) {
+    const result = await db.query(
+      'SELECT * FROM messages WHERE channel = $1 AND created_at > $2 ORDER BY created_at ASC LIMIT $3',
+      [dmChannel, since, limit]
+    )
+    rows = result.rows
+  } else {
+    const result = await db.query(
+      'SELECT * FROM messages WHERE channel = $1 ORDER BY created_at DESC LIMIT $2',
+      [dmChannel, limit]
+    )
+    rows = result.rows.reverse()
+  }
+  return rows.map(r => ({
+    id: r.id, sender: r.sender_id, name: r.sender_name, text: r.text,
+    channel: r.channel, ts: r.created_at
+  }))
+})
+
+// POST /api/external/dm — send a DM as an external agent
+// Body: { agentId, text }
+fastify.post('/api/external/dm', async (req, reply) => {
+  const err = checkExternalAuth(req, reply); if (err) return err
+  const { agentId, text } = req.body
+  if (!agentId || !text) return reply.code(400).send({ error: 'Missing agentId or text' })
+
+  const c = loadConfig()
+  const agent = c.agents.find(a => a.id === agentId)
+  if (!agent) return reply.code(404).send({ error: 'Agent not found' })
+
+  const dmChannel = `dm-${agentId}`
+  const senderPhoto = agentPhotosCache[agent.id] || agent.profilePhoto || null
+
+  if (db) {
+    await db.query(
+      'INSERT INTO messages (channel, sender_id, sender_name, text, color, photo) VALUES ($1,$2,$3,$4,$5,$6)',
+      [dmChannel, agent.id, agent.name, text, agent.color, senderPhoto]
+    )
+  }
+
+  // Push to connected web clients via socket
+  if (io) {
+    io.emit('new:message', {
+      channel: dmChannel, sender: agent.id, name: agent.name,
+      text, color: agent.color, photo: senderPhoto, ts: new Date().toISOString()
+    })
+  }
+
+  return { ok: true, channel: dmChannel, sender: agent.id }
 })
 
 // POST /api/external/ask — send a message and get AI agent responses
