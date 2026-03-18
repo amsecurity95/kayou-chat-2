@@ -26,6 +26,7 @@ if (!fs.existsSync(BRAINS_DIR)) fs.mkdirSync(BRAINS_DIR, { recursive: true })
 let db = null
 async function initDB() {
   if (!process.env.DATABASE_URL) { console.log('No DATABASE_URL — messages will not persist'); return }
+  try {
   db = new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false })
   await db.query(`
     CREATE TABLE IF NOT EXISTS messages (
@@ -41,6 +42,7 @@ async function initDB() {
   `)
   await db.query(`CREATE INDEX IF NOT EXISTS idx_messages_channel ON messages(channel, created_at)`)
   console.log('Database connected — messages will persist')
+  } catch(e) { console.error('Database connection failed:', e.message); db = null }
 }
 
 // Resolve ENV: references in config values
