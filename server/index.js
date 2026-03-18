@@ -565,17 +565,21 @@ async function triggerTeamResponses(channel, senderId, senderName, text) {
     await new Promise(r => setTimeout(r, 2000 + Math.random() * 3000))
 
     try {
-      // Call the AI directly via the chat endpoint
-      const chatPayload = {
-        agentId,
-        message: `[${senderName} said in #${channel}]: ${text}`,
-        history,
-        channelId: channel
-      }
-      console.log(`triggerTeamResponses: calling /api/chat for ${agentId}`)
-      const res = await fastify.inject({ method: 'POST', url: '/api/chat', payload: chatPayload })
-      const data = JSON.parse(res.payload)
-      console.log(`triggerTeamResponses: ${agentId} response status=${res.statusCode}`, data.response ? 'got response' : data.error || 'no response')
+      console.log(`triggerTeamResponses: calling AI for ${agentId} (${agent.provider})`)
+      // Call the chat endpoint via HTTP to self (fastify.inject can be unreliable after listen)
+      const port = process.env.PORT || 3001
+      const res = await fetch(`http://127.0.0.1:${port}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agentId,
+          message: `[${senderName} said in #${channel}]: ${text}`,
+          history,
+          channelId: channel
+        })
+      })
+      const data = await res.json()
+      console.log(`triggerTeamResponses: ${agentId} status=${res.status}`, data.response ? 'got response' : data.error || 'no response')
 
       if (data.response) {
         // Clean response — strip self-name prefix
