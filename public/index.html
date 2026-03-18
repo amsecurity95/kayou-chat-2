@@ -1407,7 +1407,7 @@ function getAgentStatus(a) {
   if (mins < 2) return { label: 'Responding', color: '#3b82f6', icon: 'chat_bubble' };
   if (mins < 10) return { label: 'Thinking', color: '#8b5cf6', icon: 'psychology' };
   if (mins < 30) return { label: 'Learning', color: '#06b6d4', icon: 'school' };
-  if (mins < 60) return { label: 'Observing', color: '#10B981', icon: 'circle' };
+  if (mins < 60) return { label: 'Observing', color: '#10B981', icon: '' };
   return { label: 'Sleeping', color: '#55556a', icon: 'bedtime' };
 }
 
@@ -1440,7 +1440,7 @@ async function renderOffice() {
             </div>
             <div style="font-size:13px;font-weight:600">${esc(a.name)}</div>
             <div style="font-size:10px;color:${status.color};margin-top:3px;display:flex;align-items:center;justify-content:center;gap:3px">
-              <span class="material-symbols-rounded" style="font-size:12px">${status.icon}</span> ${status.label}
+              ${status.icon ? '<span class="material-symbols-rounded" style="font-size:12px">' + status.icon + '</span> ' : ''}${status.label}
             </div>
             <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${a.interactions} conversations</div>
             ${a.lastMessage ? '<div style="font-size:10px;color:var(--text-secondary);margin-top:4px;background:var(--bg-surface);padding:4px 6px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(a.lastMessage.text.slice(0, 50)) + '</div>' : ''}

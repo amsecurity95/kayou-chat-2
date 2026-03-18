@@ -635,8 +635,13 @@ function startHeartbeat() {
   heartbeatTimer = setInterval(async () => {
     if (!db) return
     const c = loadConfig()
-    // Pick a random research topic
-    const topic = HEARTBEAT_TOPICS[Math.floor(Math.random() * HEARTBEAT_TOPICS.length)]
+    // Build context-aware research topic
+    let topic = HEARTBEAT_TOPICS[Math.floor(Math.random() * HEARTBEAT_TOPICS.length)]
+    // If we have projects, sometimes research how to monetize them instead
+    const existingProjects = (c.projects || []).map(p => p.name).join(', ')
+    if (existingProjects && Math.random() > 0.5) {
+      topic = `We have these projects: ${existingProjects}. Pick one and suggest a specific way to monetize it or make it more valuable. Be concrete — pricing, audience, feature to add.`
+    }
     // Kayou Kilo leads research
     const kilo = c.agents.find(a => a.id === 'kayou-kilo' && a.enabled)
     if (!kilo) return
@@ -762,9 +767,9 @@ fastify.post('/api/chat', async (req, reply) => {
 - When referring to other people, use @Name (e.g. "@Dev", "@Aimar", "@Scout") like social media
 - Just write your message naturally, no brackets, no name prefixes
 - Keep it SHORT — 1-3 sentences like texting coworkers
-- NEVER speculate or make up projects, tasks, releases, or deadlines that Aimar hasn't mentioned. If you have no assigned tasks, say so honestly. Don't fabricate work.
-- If Aimar asks what you're doing and you have nothing assigned, just say "Nothing right now, waiting for tasks" or "What do you need?"
-- Only reference real projects that exist in the PROJECTS section above. If there are none, there are none.${teamList}`
+- NEVER make up fake projects, tasks, releases, or deadlines. If you have no assigned tasks, say "Nothing right now, what do you need?" Don't pretend you're working on something that doesn't exist.
+- Only reference real projects from the PROJECTS section. If there are none listed, don't invent them.
+- BUT you ARE encouraged to come up with real ideas to make money online, improve existing projects, or suggest new opportunities. That's different from speculation — that's initiative. Bring ideas, not fake status updates.${teamList}`
 
   if (channelId === 'general') {
     channelContext = '\n\nYou\'re in #general — the team room. Group chat with Aimar (CEO) and other AI agents.' + socialRules
