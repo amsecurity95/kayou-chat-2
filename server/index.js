@@ -146,7 +146,7 @@ function extractLearnings(responseText, topic) {
       learnings.push(t)
     }
   }
-  return learnings.slice(0, 3) // Max 3 learnings per response
+  return learnings.slice(0, 5) // Max 5 learnings per response
 }
 
 // Feed mentor's response into student's brain
@@ -156,8 +156,8 @@ function mentorLearn(studentId, mentorResponse, topic) {
   for (const l of learnings) {
     if (!brain.mentorLearnings.includes(l)) {
       brain.mentorLearnings.push(l)
-      // Keep last 50 mentor learnings
-      if (brain.mentorLearnings.length > 50) brain.mentorLearnings.shift()
+      // Keep last 200 mentor learnings — Sonic's brain is deep
+      if (brain.mentorLearnings.length > 200) brain.mentorLearnings.shift()
     }
   }
   saveBrain(studentId, brain)
@@ -172,7 +172,7 @@ function updateBrain(agentId, userMessage, agentResponse) {
   // Auto-learn from own responses
   const learnings = extractLearnings(agentResponse, userMessage)
   for (const l of learnings) {
-    if (!brain.knowledge.includes(l) && brain.knowledge.length < 100) {
+    if (!brain.knowledge.includes(l) && brain.knowledge.length < 200) {
       brain.knowledge.push(l)
     }
   }
