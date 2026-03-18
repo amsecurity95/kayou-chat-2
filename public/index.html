@@ -1515,10 +1515,21 @@ async function triggerHeartbeat() {
 }
 
 function formatMsg(s) {
-  let out = esc(s)
+  // Extract highlights before escaping (they contain special chars)
+  const highlights = [];
+  let raw = s.replace(/\{\{hl:(#[A-Fa-f0-9]+)\}\}(.+?)\{\{\/hl\}\}/g, (_, color, text) => {
+    const idx = highlights.length;
+    highlights.push({ color, text });
+    return `%%HL${idx}%%`;
+  });
+  let out = esc(raw)
     .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\{\{hl:(#[A-Fa-f0-9]+)\}\}(.+?)\{\{\/hl\}\}/g, '<span style="background:$130;color:$1;padding:1px 4px;border-radius:3px;font-weight:600">$2</span>');
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  // Restore highlights
+  out = out.replace(/%%HL(\d+)%%/g, (_, idx) => {
+    const h = highlights[parseInt(idx)];
+    return `<span style="background:${h.color}30;color:${h.color};padding:1px 4px;border-radius:3px;font-weight:600">${esc(h.text)}</span>`;
+  });
 
   // Highlight @agent mentions
   out = out.replace(/@([\w\s-]+?)(?=\s|$|[.,!?])/g, (match, name) => {
