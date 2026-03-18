@@ -1262,6 +1262,7 @@ async function sendMessage() {
     showTyping(agent.name, agentId);
     scrollChat();
 
+    let data = {};
     try {
       const history = (channelMessages[currentChannel] || [])
         .filter(m => m.sender !== 'system')
@@ -1277,14 +1278,17 @@ async function sendMessage() {
         body: JSON.stringify({ agentId: agentId, message: msgText, history: history, channelId: isDM ? '' : currentChannel, attachments: msgAttachments })
       });
 
-      const data = await res.json();
+      data = await res.json();
 
       // Ensure minimum typing time so it doesn't feel instant
       const elapsed = Date.now() - fetchStart;
       const minTyping = 800 + Math.random() * 1200;
       if (elapsed < minTyping) await sleep(minTyping - elapsed);
 
-      if (data.response) {
+      if (data.external) {
+        // External agent (e.g. Kayou Code via Telegram) — message was delivered
+        addMessage(currentChannel, agentId, agent.name, '📨 Message received — I\'ll respond via my external connection.', agent.color, agent.profilePhoto);
+      } else if (data.response) {
         // Strip self-name prefix if agent echoes it (e.g. "[Kayou Code]: ..." or "Kayou Code: ...")
         let cleanResponse = data.response.replace(new RegExp('^\\[?' + agent.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\]?:\\s*', 'i'), '');
         addMessage(currentChannel, agentId, agent.name, cleanResponse, agent.color, agent.profilePhoto);
