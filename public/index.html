@@ -966,6 +966,8 @@ async function switchChannel(id) {
   if (!channelMessages[id] || channelMessages[id].length === 0) {
     await loadChannelMessages(id);
   }
+  // Show/hide chat input based on channel
+  document.querySelector('.chat-input-area').style.display = id === 'office' ? 'none' : '';
   if (id === 'office') {
     renderOffice();
   } else {
@@ -1379,12 +1381,30 @@ function scrollChat() {
   setTimeout(() => el.scrollTop = el.scrollHeight, 50);
 }
 
+function getAgentStatus(a) {
+  if (!a.enabled) return { label: 'Offline', color: '#555', icon: 'power_settings_new' };
+  if (a.provider === 'external') {
+    if (a.lastMessage && (Date.now() - new Date(a.lastMessage.ts).getTime()) < 10 * 60 * 1000)
+      return { label: 'Connected', color: '#4ade80', icon: 'wifi' };
+    return { label: 'Away', color: '#F59E0B', icon: 'wifi_off' };
+  }
+  if (!a.lastMessage) return { label: 'Idle', color: '#8888a0', icon: 'dark_mode' };
+  const mins = (Date.now() - new Date(a.lastMessage.ts).getTime()) / 60000;
+  if (mins < 2) return { label: 'Responding', color: '#3b82f6', icon: 'chat_bubble' };
+  if (mins < 10) return { label: 'Thinking', color: '#8b5cf6', icon: 'psychology' };
+  if (mins < 30) return { label: 'Learning', color: '#06b6d4', icon: 'school' };
+  if (mins < 60) return { label: 'Observing', color: '#10B981', icon: 'visibility' };
+  return { label: 'Sleeping', color: '#55556a', icon: 'bedtime' };
+}
+
 async function renderOffice() {
   const container = document.getElementById('chat-messages');
   let activityData = [];
   try { activityData = await (await fetch(API + '/api/agents/activity')).json(); } catch(e) {}
 
-  // Also load office messages
+  // Hide chat input in office
+  document.querySelector('.chat-input-area').style.display = 'none';
+
   const msgs = channelMessages['office'] || [];
 
   container.innerHTML = `
@@ -1395,40 +1415,35 @@ async function renderOffice() {
           <span class="material-symbols-rounded" style="font-size:16px">neurology</span> Research Now
         </button>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:24px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:24px">
         ${activityData.filter(a => a.enabled).map(a => {
-          const timeSince = a.lastMessage ? timeAgo(new Date(a.lastMessage.ts)) : 'Never';
-          const isActive = a.lastMessage && (Date.now() - new Date(a.lastMessage.ts).getTime()) < 30 * 60 * 1000;
+          const status = getAgentStatus(a);
           const photo = a.photo;
-          return `<div class="card" style="padding:14px;text-align:center">
-            <div style="position:relative;display:inline-block;margin-bottom:8px">
-              ${photo ? '<img src="' + esc(photo) + '" style="width:40px;height:40px;border-radius:50%;object-fit:cover">' : '<div style="width:40px;height:40px;border-radius:50%;background:' + a.color + ';display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;margin:0 auto">' + esc(a.name[0]) + '</div>'}
-              <div style="position:absolute;bottom:0;right:0;width:12px;height:12px;border-radius:50%;border:2px solid var(--bg-card);background:${isActive ? 'var(--accent)' : 'var(--text-muted)'}"></div>
+          return `<div class="card" style="padding:12px;text-align:center;cursor:pointer" onclick="navigate('chat');setTimeout(()=>switchChannel('dm-${a.id}'),100)">
+            <div style="position:relative;display:inline-block;margin-bottom:6px">
+              ${photo ? '<img src="' + esc(photo) + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover">' : '<div style="width:36px;height:36px;border-radius:50%;background:' + a.color + ';display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;margin:0 auto">' + esc(a.name[0]) + '</div>'}
+              <div style="position:absolute;bottom:-1px;right:-1px;width:12px;height:12px;border-radius:50%;border:2px solid var(--bg-card);background:${status.color}"></div>
             </div>
             <div style="font-size:13px;font-weight:600">${esc(a.name)}</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${esc(a.provider)} · ${a.interactions} chats</div>
-            <div style="font-size:10px;color:${isActive ? 'var(--accent)' : 'var(--text-muted)'};margin-top:4px">${isActive ? '● Active' : '○ ' + timeSince}</div>
-            ${a.lastMessage ? '<div style="font-size:11px;color:var(--text-secondary);margin-top:6px;background:var(--bg-surface);padding:6px 8px;border-radius:6px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(a.lastMessage.text.slice(0, 60)) + '</div>' : ''}
+            <div style="font-size:10px;color:${status.color};margin-top:3px;display:flex;align-items:center;justify-content:center;gap:3px">
+              <span class="material-symbols-rounded" style="font-size:12px">${status.icon}</span> ${status.label}
+            </div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${a.interactions} conversations</div>
+            ${a.lastMessage ? '<div style="font-size:10px;color:var(--text-secondary);margin-top:4px;background:var(--bg-surface);padding:4px 6px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(a.lastMessage.text.slice(0, 50)) + '</div>' : ''}
           </div>`;
         }).join('')}
       </div>
-      ${msgs.length > 0 ? '<h4 style="font-size:14px;font-weight:600;margin-bottom:12px">Research Feed</h4>' : ''}
+      ${msgs.length > 0 ? '<h4 style="font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:6px"><span class="material-symbols-rounded" style="font-size:18px;color:var(--accent)">science</span> Research Feed</h4>' : '<div style="text-align:center;padding:20px;color:var(--text-muted)"><span class="material-symbols-rounded" style="font-size:40px;display:block;margin-bottom:8px">science</span>Click "Research Now" to have your agents find money-making ideas</div>'}
     </div>
-  `;
-
-  // Render office messages below the grid
-  if (msgs.length > 0) {
-    const msgsHTML = msgs.map(m => {
-      if (m.sender === 'system') return '';
-      const agent = agents.find(a => a.id === m.sender);
+    ${msgs.length > 0 ? '<div style="padding:0 16px">' + msgs.filter(m => m.sender !== 'system').map(m => {
+      const agent = agents.find(x => x.id === m.sender);
       const color = m.color || agent?.color || '#6366F1';
       const photo = m.photo || agent?.profilePhoto || '';
       const avatar = photo ? '<img class="msg-avatar" src="' + esc(photo) + '">' : '<div class="msg-avatar-text" style="background:' + color + '">' + esc((m.name || '?')[0]) + '</div>';
       const time = m.ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       return '<div class="msg msg-left">' + avatar + '<div class="msg-body"><div class="msg-header"><span class="msg-name" style="color:' + color + '">' + esc(m.name) + '</span><span class="msg-time">' + time + '</span></div><div class="msg-bubble" style="background:' + color + '25;border:1px solid ' + color + '40"><div class="msg-text">' + formatMsg(m.text) + '</div></div></div></div>';
-    }).join('');
-    container.innerHTML += '<div style="padding:0 16px">' + msgsHTML + '</div>';
-  }
+    }).join('') + '</div>' : ''}
+  `;
 }
 
 function timeAgo(date) {
