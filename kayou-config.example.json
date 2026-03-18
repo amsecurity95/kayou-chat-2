@@ -194,7 +194,7 @@
       "color": "#FF6B6B",
       "permissions": ["projects", "mcps"],
       "tasks": [],
-      "reportsTo": "claude",
+      "reportsTo": "aimar",
       "channels": ["general", "build", "testing", "release"],
       "profilePhoto": ""
     }

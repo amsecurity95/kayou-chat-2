@@ -1062,17 +1062,20 @@ function addSystemMessage(channel, text) {
 async function addMessage(channel, senderId, senderName, text, color, photo, attachments) {
   if (!channelMessages[channel]) channelMessages[channel] = [];
   const ts = new Date();
-  channelMessages[channel].push({ id: Date.now() + Math.random(), sender: senderId, name: senderName, text: text, ts: ts, color: color, photo: photo, attachments: attachments || null });
+  const localMsg = { id: null, sender: senderId, name: senderName, text: text, ts: ts, color: color, photo: photo, attachments: attachments || null };
+  channelMessages[channel].push(localMsg);
   messageCount++;
   sessionMessages++;
 
-  // Persist to database
+  // Persist to database and store the real ID so polling won't duplicate
   try {
-    await fetch(API + '/api/messages', {
+    const res = await fetch(API + '/api/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ channel, senderId, senderName, text, color, photo, attachments: attachments || null })
     });
+    const data = await res.json();
+    if (data.id) localMsg.id = data.id;
   } catch(e) {}
 }
 
@@ -1107,18 +1110,21 @@ function startPolling() {
       const msgs = await res.json();
       if (!Array.isArray(msgs)) return;
       const current = channelMessages[currentChannel] || [];
-      if (msgs.length > current.length) {
-        // New messages arrived — merge only the new ones
-        const newMsgs = msgs.slice(current.length).map(m => ({
-          ...m, ts: new Date(m.ts), attachments: m.attachments || null
-        }));
+      // Get existing DB IDs to avoid duplicates
+      const existingIds = new Set(current.filter(m => m.id != null).map(m => String(m.id)));
+      // Also match by text+sender to catch locally-added messages still waiting for DB ID
+      const existingKeys = new Set(current.map(m => m.sender + '|' + m.text));
+      const newMsgs = msgs
+        .filter(m => !existingIds.has(String(m.id)) && !existingKeys.has(m.sender + '|' + m.text))
+        .map(m => ({ ...m, ts: new Date(m.ts), attachments: m.attachments || null }));
+      if (newMsgs.length > 0) {
         channelMessages[currentChannel] = [...current, ...newMsgs];
         messageCount += newMsgs.filter(m => m.sender !== 'system').length;
         renderMessages();
         scrollChat();
       }
     } catch(e) {}
-  }, 4000); // every 4 seconds
+  }, 4000);
 }
 
 async function sendMessage() {
@@ -1333,10 +1339,11 @@ function renderAgents() {
   });
 
   // Group into teams
-  const buildTeam = sorted.filter(a => ['kayou','dev','ops'].includes(a.id));
-  const securityTeam = sorted.filter(a => ['claude','sonic','kayou-code'].includes(a.id));
-  const researchTeam = sorted.filter(a => ['kayou-kilo','scout','analyst'].includes(a.id));
-  const others = sorted.filter(a => !['kayou','dev','ops','claude','sonic','kayou-code','kayou-kilo','scout','analyst'].includes(a.id));
+  const buildTeam = sorted.filter(a => a.id === 'kayou' || a.reportsTo === 'kayou');
+  const securityTeam = sorted.filter(a => a.id === 'claude' || a.reportsTo === 'claude');
+  const researchTeam = sorted.filter(a => a.id === 'kayou-kilo' || a.reportsTo === 'kayou-kilo');
+  const independent = sorted.filter(a => a.reportsTo === 'aimar' && !['kayou','claude','kayou-kilo'].includes(a.id));
+  const others = sorted.filter(a => !buildTeam.includes(a) && !securityTeam.includes(a) && !researchTeam.includes(a) && !independent.includes(a));
 
   const renderTeam = (label, icon, team) => {
     if (team.length === 0) return '';
@@ -1352,6 +1359,7 @@ function renderAgents() {
     renderTeam('Build Team', 'construction', buildTeam) +
     renderTeam('Security Team', 'shield', securityTeam) +
     renderTeam('Research Team', 'query_stats', researchTeam) +
+    (independent.length > 0 ? renderTeam('Independent', 'person', independent) : '') +
     (others.length > 0 ? renderTeam('Other', 'group', others) : '');
 }
 
@@ -1450,9 +1458,18 @@ async function showAgentDetail(id) {
       <textarea class="input textarea" id="edit-prompt" rows="6">${esc(a.systemPrompt || '')}</textarea>
     </div>
     <div class="form-group">
+      <label class="form-label">Team / Reports To</label>
+      <select class="input select" id="edit-reports-to">
+        <option value="aimar" ${a.reportsTo==='aimar'?'selected':''}>Independent (Reports to Aimar)</option>
+        <option value="kayou" ${a.reportsTo==='kayou'?'selected':''}>Build Team (under Kayou)</option>
+        <option value="claude" ${a.reportsTo==='claude'?'selected':''}>Security Team (under Claude)</option>
+        <option value="kayou-kilo" ${a.reportsTo==='kayou-kilo'?'selected':''}>Research Team (under Kayou Kilo)</option>
+      </select>
+    </div>
+    <div class="form-group">
       <label class="form-label">Provider</label>
       <select class="input select" id="edit-provider">
-        ${['groq','anthropic','openai','ollama','webhook','custom'].map(p => `<option ${p===a.provider?'selected':''}>${p}</option>`).join('')}
+        ${['groq','anthropic','openai','ollama','webhook','external','custom'].map(p => `<option ${p===a.provider?'selected':''}>${p}</option>`).join('')}
       </select>
     </div>
     <div class="form-group">
@@ -1581,6 +1598,7 @@ async function saveAgent(id) {
     systemPrompt: document.getElementById('edit-prompt').value,
     provider: document.getElementById('edit-provider').value,
     enabled: document.getElementById('edit-enabled').classList.contains('on'),
+    reportsTo: document.getElementById('edit-reports-to').value,
   };
   const key = document.getElementById('edit-key').value;
   if (key && !key.startsWith('••••')) body.apiKey = key;

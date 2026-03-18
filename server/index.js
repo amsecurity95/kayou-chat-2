@@ -212,7 +212,7 @@ fastify.put('/api/config/agents/:id', async (req, reply) => {
   if (idx === -1) return reply.code(404).send({ error: 'Not found' })
   const u = req.body; const a = c.agents[idx]
   if (u.apiKey && !u.apiKey.startsWith('••••')) a.apiKey = u.apiKey
-  ;['name','model','systemPrompt','enabled','provider','color','webhookUrl','mentor'].forEach(k => { if (u[k] !== undefined) a[k] = u[k] })
+  ;['name','model','systemPrompt','enabled','provider','color','webhookUrl','mentor','reportsTo'].forEach(k => { if (u[k] !== undefined) a[k] = u[k] })
   if (u.permissions) a.permissions = u.permissions
   if (u.tasks) a.tasks = u.tasks
   if (u.profilePhoto !== undefined) {
