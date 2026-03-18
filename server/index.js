@@ -362,6 +362,26 @@ fastify.delete('/api/projects/:id', async (req) => {
   const c = loadConfig(); c.projects = (c.projects || []).filter(p => p.id !== req.params.id); saveConfig(c); return { ok: true }
 })
 
+// ══════════════ GITHUB REPOS ══════════════
+fastify.get('/api/github/repos', async (req, reply) => {
+  const c = loadConfig()
+  const token = resolveEnv(c.github?.token)
+  const username = c.github?.username
+  if (!token || !username) return reply.code(400).send({ error: 'GitHub not configured. Add username and token in Settings.' })
+  try {
+    const res = await fetch(`https://api.github.com/users/${username}/repos?sort=updated&per_page=30`, {
+      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+    })
+    const repos = await res.json()
+    if (!Array.isArray(repos)) return reply.code(400).send({ error: repos.message || 'GitHub error' })
+    return repos.map(r => ({
+      name: r.name, fullName: r.full_name, description: r.description,
+      url: r.html_url, language: r.language, stars: r.stargazers_count,
+      updated: r.updated_at, private: r.private
+    }))
+  } catch(e) { return reply.code(500).send({ error: e.message }) }
+})
+
 // ══════════════ FILESYSTEM (My Apps access — local dev only) ══════════════
 const MY_APPS_DIR = path.join(require('os').homedir(), 'Desktop', 'My Apps')
 const HAS_MY_APPS = fs.existsSync(MY_APPS_DIR)
@@ -737,11 +757,14 @@ fastify.post('/api/chat', async (req, reply) => {
   // List other agents so this agent knows who to @mention
   const otherAgents = c.agents.filter(a => a.id !== agentId && a.enabled).map(a => a.name)
   const teamList = otherAgents.length > 0 ? `\nTeam members you can @mention: ${otherAgents.join(', ')}, Aimar (CEO)` : ''
-  const socialRules = `\nIMPORTANT FORMATTING RULES:
+  const socialRules = `\nIMPORTANT RULES:
 - NEVER prefix your messages with your own name like "[Your Name]:" — the chat UI already shows who sent each message
 - When referring to other people, use @Name (e.g. "@Dev", "@Aimar", "@Scout") like social media
 - Just write your message naturally, no brackets, no name prefixes
-- Keep it SHORT — 1-3 sentences like texting coworkers${teamList}`
+- Keep it SHORT — 1-3 sentences like texting coworkers
+- NEVER speculate or make up projects, tasks, releases, or deadlines that Aimar hasn't mentioned. If you have no assigned tasks, say so honestly. Don't fabricate work.
+- If Aimar asks what you're doing and you have nothing assigned, just say "Nothing right now, waiting for tasks" or "What do you need?"
+- Only reference real projects that exist in the PROJECTS section above. If there are none, there are none.${teamList}`
 
   if (channelId === 'general') {
     channelContext = '\n\nYou\'re in #general — the team room. Group chat with Aimar (CEO) and other AI agents.' + socialRules

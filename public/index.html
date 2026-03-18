@@ -500,6 +500,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
         <p style="font-size:13px;color:var(--text-muted);margin-top:4px">Track delivery across your team</p>
       </div>
       <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="scanGitHub()"><span class="material-symbols-rounded" style="font-size:16px">code</span> Scan GitHub</button>
         <button class="btn btn-ghost" onclick="scanMyApps()"><span class="material-symbols-rounded" style="font-size:16px">folder_open</span> Scan My Apps</button>
         <button class="btn btn-primary" onclick="showAddProject()"><span class="material-symbols-rounded" style="font-size:16px">add</span> New Project</button>
       </div>
@@ -1406,7 +1407,7 @@ function getAgentStatus(a) {
   if (mins < 2) return { label: 'Responding', color: '#3b82f6', icon: 'chat_bubble' };
   if (mins < 10) return { label: 'Thinking', color: '#8b5cf6', icon: 'psychology' };
   if (mins < 30) return { label: 'Learning', color: '#06b6d4', icon: 'school' };
-  if (mins < 60) return { label: 'Observing', color: '#10B981', icon: 'visibility' };
+  if (mins < 60) return { label: 'Observing', color: '#10B981', icon: 'circle' };
   return { label: 'Sleeping', color: '#55556a', icon: 'bedtime' };
 }
 
@@ -2087,6 +2088,55 @@ async function createProject() {
 // ═══════════════════════════════════════
 // MY APPS BROWSER
 // ═══════════════════════════════════════
+async function scanGitHub() {
+  const browser = document.getElementById('myapps-browser');
+  const list = document.getElementById('myapps-list');
+  browser.style.display = 'block';
+  list.innerHTML = '<p style="color:var(--text-muted);font-size:13px;padding:12px">Scanning GitHub repos...</p>';
+
+  try {
+    const data = await (await fetch(API + '/api/github/repos')).json();
+    if (data.error) { list.innerHTML = `<p style="color:var(--red);padding:12px">${esc(data.error)}</p>`; return; }
+
+    list.innerHTML = `
+      <table class="table">
+        <thead><tr><th>Repo</th><th>Language</th><th>Updated</th><th></th></tr></thead>
+        <tbody>
+          ${data.map(repo => {
+            const exists = projects.some(p => p.name === repo.name || p.repo === repo.url);
+            const updated = new Date(repo.updated).toLocaleDateString();
+            return `
+              <tr>
+                <td>
+                  <div style="font-weight:500">${esc(repo.name)}</div>
+                  <div style="font-size:11px;color:var(--text-muted)">${esc(repo.description || '')}</div>
+                </td>
+                <td><span class="tag tag-blue">${esc(repo.language || '?')}</span> ${repo.private ? '<span class="tag" style="background:var(--bg-elevated);color:var(--text-muted)">Private</span>' : ''}</td>
+                <td style="font-size:12px;color:var(--text-muted)">${updated}</td>
+                <td>
+                  ${exists
+                    ? '<span class="tag tag-green">Tracked</span>'
+                    : `<button class="btn btn-ghost btn-sm" onclick="importGitHubRepo('${esc(repo.name)}','${esc(repo.url)}','${esc(repo.description || '')}')">Import</button>`
+                  }
+                </td>
+              </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+  } catch (err) { list.innerHTML = `<p style="color:var(--red);padding:12px">${esc(err.message)}</p>`; }
+}
+
+async function importGitHubRepo(name, url, desc) {
+  await fetch(API + '/api/projects', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, description: desc, repo: url, progress: 0 })
+  });
+  await loadProjects();
+  renderProjects();
+  scanGitHub();
+}
+
 async function scanMyApps() {
   const browser = document.getElementById('myapps-browser');
   const list = document.getElementById('myapps-list');
