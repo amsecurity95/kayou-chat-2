@@ -761,21 +761,25 @@ fastify.post('/api/chat', async (req, reply) => {
   // List other agents so this agent knows who to @mention
   const otherAgents = c.agents.filter(a => a.id !== agentId && a.enabled).map(a => a.name)
   const teamList = otherAgents.length > 0 ? `\nTeam members you can @mention: ${otherAgents.join(', ')}, Aimar (CEO)` : ''
-  const socialRules = `\nIMPORTANT RULES:
-- NEVER prefix your messages with your own name like "[Your Name]:" — the chat UI already shows who sent each message
-- When referring to other people, use @Name (e.g. "@Dev", "@Aimar", "@Scout") like social media
-- Just write your message naturally, no brackets, no name prefixes
-- Keep it SHORT — 1-3 sentences like texting coworkers
-- NEVER make up fake projects, tasks, releases, or deadlines. If you have no assigned tasks, say "Nothing right now, what do you need?" Don't pretend you're working on something that doesn't exist.
-- Only reference real projects from the PROJECTS section. If there are none listed, don't invent them.
-- BUT you ARE encouraged to come up with real ideas to make money online, improve existing projects, or suggest new opportunities. That's different from speculation — that's initiative. Bring ideas, not fake status updates.${teamList}`
+  const hasProjects = (c.projects || []).length > 0
+  const projectStatus = hasProjects ? 'Active projects are listed above.' : 'There are NO active projects right now.'
+  const coreRules = `\n\nCORE RULES (ALWAYS FOLLOW):
+- NEVER start your message with your own name like "@Kayou:" or "[Kayou]:" or "Kayou:" — the UI shows your name automatically
+- When mentioning OTHER people, use @Name like social media
+- Keep it SHORT — 1-3 sentences
+- ${projectStatus}
+- NEVER invent, fabricate, or speculate about projects, code reviews, builds, releases, pipelines, or tasks that don't exist. If Aimar asks what you're doing and you have nothing assigned, say "Nothing right now, what do you need?" or "Just chilling, hit me with something." That's it. Don't make up work.
+- You CAN suggest real money-making ideas or improvements — that's initiative, not speculation. Ideas are welcome. Fake status updates are not.${teamList}`
 
   if (channelId === 'general') {
-    channelContext = '\n\nYou\'re in #general — the team room. Group chat with Aimar (CEO) and other AI agents.' + socialRules
+    channelContext = '\n\nYou\'re in #general — the team room. Group chat with Aimar (CEO) and other AI agents.' + coreRules
   } else if (channelId === 'ideas') {
-    channelContext = '\n\nYou\'re in #ideas. Give your take from your expertise. Be specific and useful.' + socialRules
+    channelContext = '\n\nYou\'re in #ideas. Give your take from your expertise. Be specific and useful.' + coreRules
   } else if (channelId === 'build' || channelId === 'testing' || channelId === 'release' || channelId === 'research') {
-    channelContext = `\n\nYou're in #${channelId}. Focused work channel. Be concise and actionable.` + socialRules
+    channelContext = `\n\nYou're in #${channelId}. Focused work channel. Be concise and actionable.` + coreRules
+  } else {
+    // DMs and any other context — rules still apply
+    channelContext = '\n\nYou\'re in a direct message with Aimar.' + coreRules
   }
 
   // Filesystem context for Kayou Code
