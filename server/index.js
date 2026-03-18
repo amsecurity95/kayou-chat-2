@@ -566,20 +566,19 @@ async function triggerTeamResponses(channel, senderId, senderName, text) {
 
     try {
       console.log(`triggerTeamResponses: calling AI for ${agentId} (${agent.provider})`)
-      // Call the chat endpoint via HTTP to self (fastify.inject can be unreliable after listen)
-      const port = process.env.PORT || 3001
-      const res = await fetch(`http://127.0.0.1:${port}/api/chat`, {
+      // Use fastify.inject to call the chat route internally
+      const res = await fastify.inject({
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        url: '/api/chat',
+        payload: {
           agentId,
           message: `[${senderName} said in #${channel}]: ${text}`,
           history,
           channelId: channel
-        })
+        }
       })
-      const data = await res.json()
-      console.log(`triggerTeamResponses: ${agentId} status=${res.status}`, data.response ? 'got response' : data.error || 'no response')
+      const data = JSON.parse(res.payload)
+      console.log(`triggerTeamResponses: ${agentId} status=${res.statusCode}`, data.response ? 'got response' : JSON.stringify(data).slice(0,200))
 
       if (data.response) {
         // Clean response — strip self-name prefix
@@ -677,7 +676,7 @@ fastify.post('/api/external/send', async (req, reply) => {
   }
 
   // Auto-trigger AI agent responses to external messages (async, don't block)
-  triggerTeamResponses(channel, senderId, senderName, text).catch(e => console.error('Team response error:', e.message))
+  triggerTeamResponses(channel, senderId, senderName, text).catch(e => console.error('Team response error:', e.message, e.stack))
 
   return { ok: true, channel, sender: senderId, name: senderName }
 })
