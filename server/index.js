@@ -454,12 +454,21 @@ fastify.post('/api/chat', async (req, reply) => {
   // Channel context
   const channelId = req.body.channelId || ''
   let channelContext = ''
+  // List other agents so this agent knows who to @mention
+  const otherAgents = c.agents.filter(a => a.id !== agentId && a.enabled).map(a => a.name)
+  const teamList = otherAgents.length > 0 ? `\nTeam members you can @mention: ${otherAgents.join(', ')}, Aimar (CEO)` : ''
+  const socialRules = `\nIMPORTANT FORMATTING RULES:
+- NEVER prefix your messages with your own name like "[Your Name]:" — the chat UI already shows who sent each message
+- When referring to other people, use @Name (e.g. "@Dev", "@Aimar", "@Scout") like social media
+- Just write your message naturally, no brackets, no name prefixes
+- Keep it SHORT — 1-3 sentences like texting coworkers${teamList}`
+
   if (channelId === 'general') {
-    channelContext = '\n\nYou\'re in #general — team room. Group chat with Aimar (CEO) and other agents. Messages show who said what as [Name]: format. Talk like you\'re texting coworkers. Keep it SHORT — 1-3 sentences unless you really need more. Don\'t repeat what someone already said.'
+    channelContext = '\n\nYou\'re in #general — the team room. Group chat with Aimar (CEO) and other AI agents.' + socialRules
   } else if (channelId === 'ideas') {
-    channelContext = '\n\nYou\'re in #ideas. Give your take from your expertise. Be specific and useful. Messages show who said what as [Name]: format. Keep it concise unless you\'re laying out a real plan.'
+    channelContext = '\n\nYou\'re in #ideas. Give your take from your expertise. Be specific and useful.' + socialRules
   } else if (channelId === 'build' || channelId === 'testing' || channelId === 'release' || channelId === 'research') {
-    channelContext = `\n\nYou're in #${channelId}. This is a focused work channel. Group chat — messages show who said what as [Name]: format. Be concise and actionable. If you're the team lead, give your verdict after hearing from the team.`
+    channelContext = `\n\nYou're in #${channelId}. Focused work channel. Be concise and actionable.` + socialRules
   }
 
   // Filesystem context for Kayou Code
