@@ -202,6 +202,17 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .chat-send:disabled{opacity:.3;cursor:default}
 .chat-send .material-symbols-rounded{font-size:18px;color:#000}
 
+/* ── Attachments ── */
+.attachment-preview{display:flex;gap:8px;padding:8px 12px;flex-wrap:wrap}
+.attachment-preview:empty{display:none}
+.attachment-thumb{position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.attachment-thumb img{width:100%;height:100%;object-fit:cover}
+.attachment-thumb .att-remove{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;border:none;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center}
+.attachment-pdf-thumb{display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg-elevated);border-radius:8px;border:1px solid var(--border);font-size:11px;color:var(--text-secondary);position:relative;height:64px}
+.msg-attachment-img{max-width:300px;border-radius:8px;margin-top:6px;cursor:pointer}
+.msg-attachment-pdf{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;margin-top:6px;font-size:12px;color:var(--text-secondary)}
+.sidebar .avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+
 .typing-indicator{padding:3px 16px;font-size:12px;color:var(--text-muted);min-height:0;transition:all .2s}
 .typing-bubble{display:flex;align-items:center;gap:8px;animation:fadeUp .25s ease}
 .typing-bubble-avatar{width:24px;height:24px;border-radius:50%;flex-shrink:0;object-fit:cover}
@@ -319,7 +330,8 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
     <div class="nav-item" data-page="settings" onclick="navigate('settings')" title="Settings">
       <span class="material-symbols-rounded">settings</span>
     </div>
-    <div class="avatar" title="Aimar">A</div>
+    <div class="avatar" id="user-avatar" title="Click to change photo" onclick="document.getElementById('user-photo-input').click()" style="cursor:pointer">A</div>
+    <input type="file" accept="image/*" id="user-photo-input" style="display:none" onchange="handleUserPhotoUpload(this)">
   </div>
 </nav>
 
@@ -430,6 +442,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
       <div class="chat-input-area">
         <div class="mention-popup" id="mention-popup"></div>
         <div class="chat-input-wrap">
+          <div id="attachment-preview" class="attachment-preview"></div>
           <div class="chat-toolbar">
             <button title="Bold" onclick="wrapSelection('**','**')"><strong>B</strong></button>
             <button title="Italic" onclick="wrapSelection('*','*')"><em>I</em></button>
@@ -444,6 +457,8 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
             <div class="chat-bottom-left">
               <button title="Mention agent" onclick="insertAtCursor('@')"><span class="material-symbols-rounded">alternate_email</span></button>
               <button title="Tag project" onclick="insertAtCursor('#')"><span class="material-symbols-rounded">tag</span></button>
+              <button title="Attach file" onclick="document.getElementById('chat-file-input').click()"><span class="material-symbols-rounded">attach_file</span></button>
+              <input type="file" accept="image/*,.pdf" multiple id="chat-file-input" style="display:none" onchange="handleChatFileSelect(this)">
             </div>
           </div>
         </div>
@@ -606,6 +621,113 @@ let currentChannel = 'general';
 let channelMessages = {};
 let messageCount = 0;
 let sessionMessages = 0;
+let pendingAttachments = [];
+let userPhoto = '';
+
+// ═══════════════════════════════════════
+// IMAGE RESIZE HELPER
+// ═══════════════════════════════════════
+function resizeImage(base64, maxSize) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > maxSize || h > maxSize) {
+        const ratio = Math.min(maxSize / w, maxSize / h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', 0.8));
+    };
+    img.src = base64;
+  });
+}
+
+// ═══════════════════════════════════════
+// USER PROFILE PHOTO
+// ═══════════════════════════════════════
+async function loadUserPhoto() {
+  try {
+    const res = await fetch(API + '/api/user/photo');
+    const data = await res.json();
+    userPhoto = data.photo || '';
+    updateUserAvatar();
+  } catch(e) {}
+}
+
+function updateUserAvatar() {
+  const el = document.getElementById('user-avatar');
+  if (userPhoto) {
+    el.innerHTML = `<img src="${userPhoto}" alt="A">`;
+  } else {
+    el.innerHTML = 'A';
+  }
+}
+
+async function handleUserPhotoUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const resized = await resizeImage(e.target.result, 128);
+    userPhoto = resized;
+    updateUserAvatar();
+    await fetch(API + '/api/user/photo', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ photo: resized })
+    });
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+// ═══════════════════════════════════════
+// CHAT FILE ATTACHMENTS
+// ═══════════════════════════════════════
+function handleChatFileSelect(input) {
+  for (const file of input.files) {
+    const reader = new FileReader();
+    if (file.type.startsWith('image/')) {
+      reader.onload = async (e) => {
+        const resized = await resizeImage(e.target.result, 800);
+        pendingAttachments.push({ type: 'image', name: file.name, data: resized });
+        renderAttachmentPreview();
+        document.getElementById('chat-send').disabled = false;
+      };
+      reader.readAsDataURL(file);
+    } else if (file.type === 'application/pdf') {
+      reader.onload = (e) => {
+        pendingAttachments.push({ type: 'pdf', name: file.name, data: e.target.result });
+        renderAttachmentPreview();
+        document.getElementById('chat-send').disabled = false;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+  input.value = '';
+}
+
+function renderAttachmentPreview() {
+  const el = document.getElementById('attachment-preview');
+  el.innerHTML = pendingAttachments.map((att, i) => {
+    if (att.type === 'image') {
+      return `<div class="attachment-thumb"><img src="${att.data}"><button class="att-remove" onclick="removeAttachment(${i})">×</button></div>`;
+    } else {
+      return `<div class="attachment-pdf-thumb"><span class="material-symbols-rounded" style="font-size:18px;color:var(--red)">picture_as_pdf</span><span>${esc(att.name.slice(0,20))}</span><button class="att-remove" onclick="removeAttachment(${i})">×</button></div>`;
+    }
+  }).join('');
+}
+
+function removeAttachment(i) {
+  pendingAttachments.splice(i, 1);
+  renderAttachmentPreview();
+  const input = document.getElementById('chat-input');
+  document.getElementById('chat-send').disabled = !input.value.trim() && pendingAttachments.length === 0;
+}
 
 const CHANNELS = [
   { id: 'general', name: 'general', icon: 'tag', desc: "Team room — everyone's here" },
@@ -630,7 +752,7 @@ const CHANNEL_AGENTS = {
 // ═══════════════════════════════════════
 async function init() {
   try {
-    await Promise.all([loadAgents(), loadProjects(), loadRules(), loadGitHub()]);
+    await Promise.all([loadAgents(), loadProjects(), loadRules(), loadGitHub(), loadUserPhoto()]);
     renderChannelList();
     renderDMList();
     renderDashboard();
@@ -874,7 +996,7 @@ async function initChat() {
   const send = document.getElementById('chat-send');
 
   input.addEventListener('input', () => {
-    send.disabled = !input.value.trim();
+    send.disabled = !input.value.trim() && pendingAttachments.length === 0;
     input.style.height = 'auto';
     input.style.height = Math.min(input.scrollHeight, 140) + 'px';
 
@@ -936,10 +1058,10 @@ function addSystemMessage(channel, text) {
   channelMessages[channel].push({ id: Date.now(), sender: 'system', text: text, ts: new Date() });
 }
 
-async function addMessage(channel, senderId, senderName, text, color, photo) {
+async function addMessage(channel, senderId, senderName, text, color, photo, attachments) {
   if (!channelMessages[channel]) channelMessages[channel] = [];
   const ts = new Date();
-  channelMessages[channel].push({ id: Date.now() + Math.random(), sender: senderId, name: senderName, text: text, ts: ts, color: color, photo: photo });
+  channelMessages[channel].push({ id: Date.now() + Math.random(), sender: senderId, name: senderName, text: text, ts: ts, color: color, photo: photo, attachments: attachments || null });
   messageCount++;
   sessionMessages++;
 
@@ -948,7 +1070,7 @@ async function addMessage(channel, senderId, senderName, text, color, photo) {
     await fetch(API + '/api/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ channel, senderId, senderName, text, color, photo })
+      body: JSON.stringify({ channel, senderId, senderName, text, color, photo, attachments: attachments || null })
     });
   } catch(e) {}
 }
@@ -962,7 +1084,7 @@ async function loadChannelMessages(channel) {
     const msgs = await res.json();
     if (Array.isArray(msgs) && msgs.length > 0) {
       channelMessages[channel] = msgs.map(m => ({
-        ...m, ts: new Date(m.ts)
+        ...m, ts: new Date(m.ts), attachments: m.attachments || null
       }));
       messageCount = Object.values(channelMessages).reduce((s, arr) => s + arr.filter(m => m.sender !== 'system').length, 0);
       return true;
@@ -974,13 +1096,17 @@ async function loadChannelMessages(channel) {
 async function sendMessage() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
-  if (!text) return;
+  if (!text && pendingAttachments.length === 0) return;
+
+  const msgAttachments = pendingAttachments.length > 0 ? [...pendingAttachments] : null;
+  pendingAttachments = [];
+  renderAttachmentPreview();
 
   input.value = '';
   input.style.height = 'auto';
   document.getElementById('chat-send').disabled = true;
 
-  addMessage(currentChannel, 'aimar', 'Aimar', text, '#3b82f6');
+  addMessage(currentChannel, 'aimar', 'Aimar', text || '(attachment)', '#3b82f6', userPhoto || null, msgAttachments);
   renderMessages();
   scrollChat();
 
@@ -1027,7 +1153,7 @@ async function sendMessage() {
       const res = await fetch(API + '/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId: agentId, message: msgText, history: history, channelId: isDM ? '' : currentChannel })
+        body: JSON.stringify({ agentId: agentId, message: msgText, history: history, channelId: isDM ? '' : currentChannel, attachments: msgAttachments })
       });
 
       const data = await res.json();
@@ -1125,6 +1251,11 @@ function renderMessages() {
           </div>
           <div class="msg-bubble" style="background:${bubbleColor};border:${bubbleBorder}">
             <div class="msg-text">${formatMsg(m.text)}</div>
+            ${(m.attachments || []).map(att => {
+              if (att.type === 'image') return '<img class="msg-attachment-img" src="' + esc(att.data) + '" onclick="window.open(this.src)">';
+              if (att.type === 'pdf') return '<div class="msg-attachment-pdf"><span class="material-symbols-rounded" style="font-size:18px;color:var(--red)">picture_as_pdf</span>' + esc(att.name) + '</div>';
+              return '';
+            }).join('')}
           </div>
         </div>
       </div>
@@ -1389,14 +1520,10 @@ function previewAgentPhoto(input, agentId) {
 
 async function uploadAgentPhoto(agentId) {
   if (!pendingPhotoUpload || pendingPhotoUpload.agentId !== agentId) return null;
-  const res = await fetch(API + '/api/upload', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ image: pendingPhotoUpload.base64, filename: pendingPhotoUpload.filename })
-  });
-  const data = await res.json();
+  // Store as resized base64 directly (no filesystem — works on Railway)
+  const resized = await resizeImage(pendingPhotoUpload.base64, 200);
   pendingPhotoUpload = null;
-  return data.url;
+  return resized;
 }
 
 async function removeAgentPhoto(agentId) {

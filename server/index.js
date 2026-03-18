@@ -1,6 +1,6 @@
 const path = require('path')
 const fs = require('fs')
-const fastify = require('fastify')({ logger: true })
+const fastify = require('fastify')({ logger: true, bodyLimit: 10 * 1024 * 1024 })
 const cors = require('@fastify/cors')
 const fastifyStatic = require('@fastify/static')
 let Server; try { Server = require('socket.io').Server } catch(e) { /* socket.io optional */ }
@@ -41,6 +41,10 @@ async function initDB() {
     )
   `)
   await db.query(`CREATE INDEX IF NOT EXISTS idx_messages_channel ON messages(channel, created_at)`)
+  // Add attachments column if missing
+  await db.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachments JSONB DEFAULT NULL`)
+  // User settings table (profile photo etc)
+  await db.query(`CREATE TABLE IF NOT EXISTS user_settings (key VARCHAR(100) PRIMARY KEY, value TEXT NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW())`)
   console.log('Database connected — messages will persist')
   } catch(e) { console.error('Database connection failed:', e.message); db = null }
 }
@@ -336,6 +340,18 @@ fastify.delete('/api/config/services/:id', async (req) => {
   const c = loadConfig(); c.services = (c.services || []).filter(s => s.id !== req.params.id); saveConfig(c); return { ok: true }
 })
 
+// ══════════════ USER SETTINGS ══════════════
+fastify.get('/api/user/photo', async () => {
+  if (!db) return { photo: '' }
+  const { rows } = await db.query("SELECT value FROM user_settings WHERE key = 'user_photo'")
+  return { photo: rows[0]?.value || '' }
+})
+fastify.put('/api/user/photo', async (req) => {
+  if (!db) return { ok: false, reason: 'no database' }
+  await db.query("INSERT INTO user_settings (key, value) VALUES ('user_photo', $1) ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()", [req.body.photo || ''])
+  return { ok: true }
+})
+
 // ══════════════ MESSAGES (persistent) ══════════════
 fastify.get('/api/messages/:channel', async (req) => {
   if (!db) return []
@@ -345,16 +361,16 @@ fastify.get('/api/messages/:channel', async (req) => {
   )
   return rows.map(r => ({
     id: r.id, sender: r.sender_id, name: r.sender_name, text: r.text,
-    color: r.color, photo: r.photo, ts: r.created_at
+    color: r.color, photo: r.photo, ts: r.created_at, attachments: r.attachments || null
   }))
 })
 
 fastify.post('/api/messages', async (req) => {
   if (!db) return { ok: false, reason: 'no database' }
-  const { channel, senderId, senderName, text, color, photo } = req.body
+  const { channel, senderId, senderName, text, color, photo, attachments } = req.body
   const { rows } = await db.query(
-    'INSERT INTO messages (channel, sender_id, sender_name, text, color, photo) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, created_at',
-    [channel, senderId, senderName, text, color || null, photo || null]
+    'INSERT INTO messages (channel, sender_id, sender_name, text, color, photo, attachments) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, created_at',
+    [channel, senderId, senderName, text, color || null, photo || null, attachments ? JSON.stringify(attachments) : null]
   )
   return { ok: true, id: rows[0].id, ts: rows[0].created_at }
 })
@@ -404,7 +420,7 @@ fastify.post('/api/screenshot', async (req, reply) => {
 
 // ══════════════ AI CHAT ══════════════
 fastify.post('/api/chat', async (req, reply) => {
-  const { agentId, message, history, imageBase64 } = req.body
+  const { agentId, message, history, imageBase64, attachments } = req.body
   const c = loadConfig()
   const agent = c.agents.find(a => a.id === agentId)
   if (!agent) return reply.code(404).send({ error: 'Agent not found' })
@@ -469,11 +485,28 @@ fastify.post('/api/chat', async (req, reply) => {
 
   try {
     let responseText = ''
+    // Build vision content blocks from attachments
+    const buildVisionContent = (msg, atts) => {
+      if (!atts || atts.length === 0) return msg
+      const content = []
+      for (const att of atts) {
+        if (att.type === 'image' && att.data) {
+          const match = att.data.match(/^data:(image\/\w+);base64,(.+)$/)
+          if (match) content.push({ type: 'image', source: { type: 'base64', media_type: match[1], data: match[2] } })
+        } else if (att.type === 'pdf') {
+          content.push({ type: 'text', text: `[Attached PDF: ${att.name}]` })
+        }
+      }
+      content.push({ type: 'text', text: msg })
+      return content
+    }
+
     if (agent.provider === 'anthropic') {
+      const userContent = buildVisionContent(message, attachments)
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': agentApiKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: agent.model || 'claude-sonnet-4-20250514', max_tokens: 500, system: fullSystemPrompt, messages: [...(history || []).slice(-20), { role: 'user', content: message }] }),
+        body: JSON.stringify({ model: agent.model || 'claude-sonnet-4-20250514', max_tokens: 500, system: fullSystemPrompt, messages: [...(history || []).slice(-20), { role: 'user', content: userContent }] }),
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error.message)
@@ -499,10 +532,21 @@ fastify.post('/api/chat', async (req, reply) => {
       const data = await res.json()
       responseText = data.message?.content || 'No response'
     } else if (agent.provider === 'groq') {
+      // Groq uses OpenAI-compatible format with content arrays for vision
+      let userContent = message
+      if (attachments?.length) {
+        const parts = []
+        for (const att of attachments) {
+          if (att.type === 'image' && att.data) parts.push({ type: 'image_url', image_url: { url: att.data } })
+          else if (att.type === 'pdf') parts.push({ type: 'text', text: `[Attached PDF: ${att.name}]` })
+        }
+        parts.push({ type: 'text', text: message })
+        userContent = parts
+      }
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${agentApiKey}` },
-        body: JSON.stringify({ model: agent.model || 'llama-3.3-70b-versatile', max_tokens: 500, messages: [{ role: 'system', content: fullSystemPrompt }, ...(history || []).slice(-20), { role: 'user', content: message }] }),
+        body: JSON.stringify({ model: agent.model || 'llama-3.3-70b-versatile', max_tokens: 500, messages: [{ role: 'system', content: fullSystemPrompt }, ...(history || []).slice(-20), { role: 'user', content: userContent }] }),
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error.message || JSON.stringify(data.error))
