@@ -182,6 +182,21 @@
         "build"
       ],
       "profilePhoto": "/uploads/1773785038940.png"
+    },
+    {
+      "id": "open-claw",
+      "name": "Claw",
+      "provider": "external",
+      "apiKey": "",
+      "model": "",
+      "systemPrompt": "",
+      "enabled": true,
+      "color": "#FF6B6B",
+      "permissions": ["projects"],
+      "tasks": [],
+      "reportsTo": "aimar",
+      "channels": ["general", "ideas", "build"],
+      "profilePhoto": ""
     }
   ],
   "webhookSecret": "kayou_5vej23hf7h6",

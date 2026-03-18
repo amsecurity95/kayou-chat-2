@@ -858,7 +858,7 @@ function renderMiniChart(id, data) {
 }
 
 function providerColor(p) {
-  return { groq: 'blue', anthropic: 'orange', openai: 'green', webhook: 'purple', ollama: 'blue', custom: 'red' }[p] || 'blue';
+  return { groq: 'blue', anthropic: 'orange', openai: 'green', webhook: 'purple', ollama: 'blue', custom: 'red', external: 'cyan' }[p] || 'blue';
 }
 
 function agentAvatar(a, size) {
@@ -1051,6 +1051,7 @@ async function initChat() {
   }
   renderMessages();
   scrollChat();
+  startPolling();
 }
 
 function addSystemMessage(channel, text) {
@@ -1091,6 +1092,33 @@ async function loadChannelMessages(channel) {
     }
   } catch(e) { console.log('Could not load messages for', channel); }
   return false;
+}
+
+// ═══════════════════════════════════════
+// LIVE POLL — picks up external messages (Claw, etc)
+// ═══════════════════════════════════════
+let pollTimer = null;
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    if (currentPage !== 'chat') return;
+    try {
+      const res = await fetch(API + '/api/messages/' + currentChannel);
+      const msgs = await res.json();
+      if (!Array.isArray(msgs)) return;
+      const current = channelMessages[currentChannel] || [];
+      if (msgs.length > current.length) {
+        // New messages arrived — merge only the new ones
+        const newMsgs = msgs.slice(current.length).map(m => ({
+          ...m, ts: new Date(m.ts), attachments: m.attachments || null
+        }));
+        channelMessages[currentChannel] = [...current, ...newMsgs];
+        messageCount += newMsgs.filter(m => m.sender !== 'system').length;
+        renderMessages();
+        scrollChat();
+      }
+    } catch(e) {}
+  }, 4000); // every 4 seconds
 }
 
 async function sendMessage() {
@@ -1297,7 +1325,7 @@ function formatMsg(s) {
 // ═══════════════════════════════════════
 function renderAgents() {
   // Sort by team hierarchy: leads first, then their reports grouped together
-  const teamOrder = ['kayou-code', 'dev', 'ops', 'claude', 'sonic', 'kayou-kilo', 'scout', 'analyst'];
+  const teamOrder = ['kayou-code', 'dev', 'ops', 'claude', 'sonic', 'kayou-kilo', 'scout', 'analyst', 'open-claw'];
   const sorted = [...agents].sort((a, b) => {
     const ai = teamOrder.indexOf(a.id);
     const bi = teamOrder.indexOf(b.id);
@@ -1308,7 +1336,8 @@ function renderAgents() {
   const buildTeam = sorted.filter(a => ['kayou-code','dev','ops'].includes(a.id));
   const securityTeam = sorted.filter(a => ['claude','sonic'].includes(a.id));
   const researchTeam = sorted.filter(a => ['kayou-kilo','scout','analyst'].includes(a.id));
-  const others = sorted.filter(a => !['kayou-code','dev','ops','claude','sonic','kayou-kilo','scout','analyst'].includes(a.id));
+  const externalTeam = sorted.filter(a => a.provider === 'external');
+  const others = sorted.filter(a => !['kayou-code','dev','ops','claude','sonic','kayou-kilo','scout','analyst'].includes(a.id) && a.provider !== 'external');
 
   const renderTeam = (label, icon, team) => {
     if (team.length === 0) return '';
@@ -1324,6 +1353,7 @@ function renderAgents() {
     renderTeam('Build Team', 'construction', buildTeam) +
     renderTeam('Security Team', 'shield', securityTeam) +
     renderTeam('Research Team', 'query_stats', researchTeam) +
+    renderTeam('External', 'public', externalTeam) +
     (others.length > 0 ? renderTeam('Other', 'group', others) : '');
 }
 

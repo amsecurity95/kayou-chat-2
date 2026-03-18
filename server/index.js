@@ -473,26 +473,29 @@ fastify.get('/api/external/messages/:channel', async (req, reply) => {
 })
 
 // POST /api/external/send — send a message as an external agent
-// Body: { channel, name, text, color? }
+// Body: { channel, name, text, agentId? }
 fastify.post('/api/external/send', async (req, reply) => {
   const err = checkExternalAuth(req, reply); if (err) return err
-  const { channel, name, text, color } = req.body
-  if (!channel || !name || !text) return reply.code(400).send({ error: 'Missing channel, name, or text' })
+  const { channel, name, text, agentId } = req.body
+  if (!channel || !text) return reply.code(400).send({ error: 'Missing channel or text' })
 
-  const senderId = 'ext-' + name.toLowerCase().replace(/[^a-z0-9]/g, '-')
+  // Look up agent profile if agentId provided
+  const c = loadConfig()
+  const agent = agentId ? c.agents.find(a => a.id === agentId) : null
+  const senderId = agent ? agent.id : (agentId || 'ext-' + (name || 'guest').toLowerCase().replace(/[^a-z0-9]/g, '-'))
+  const senderName = agent ? agent.name : (name || 'Guest')
+  const senderColor = agent ? agent.color : '#FF6B6B'
+  const senderPhoto = agent ? (agentPhotosCache[agent.id] || agent.profilePhoto || null) : null
 
   // Save to DB
   if (db) {
     await db.query(
-      'INSERT INTO messages (channel, sender_id, sender_name, text, color) VALUES ($1,$2,$3,$4,$5)',
-      [channel, senderId, name, text, color || '#FF6B6B']
+      'INSERT INTO messages (channel, sender_id, sender_name, text, color, photo) VALUES ($1,$2,$3,$4,$5,$6)',
+      [channel, senderId, senderName, text, senderColor, senderPhoto]
     )
   }
 
-  // Broadcast via socket.io if available
-  if (io) io.emit('external:message', { channel, senderId, name, text, color: color || '#FF6B6B', ts: new Date().toISOString() })
-
-  return { ok: true, channel, sender: senderId }
+  return { ok: true, channel, sender: senderId, name: senderName }
 })
 
 // POST /api/external/ask — send a message and get AI agent responses
@@ -503,13 +506,17 @@ fastify.post('/api/external/ask', async (req, reply) => {
   if (!text) return reply.code(400).send({ error: 'Missing text' })
 
   const ch = channel || 'general'
-  const senderId = 'ext-' + (name || 'guest').toLowerCase().replace(/[^a-z0-9]/g, '-')
+  const c2 = loadConfig()
+  const senderAgent = req.body.agentId ? c2.agents.find(a => a.id === req.body.agentId) : null
+  const senderId = senderAgent ? senderAgent.id : ('ext-' + (name || 'guest').toLowerCase().replace(/[^a-z0-9]/g, '-'))
+  const senderName = senderAgent ? senderAgent.name : (name || 'Guest')
+  const senderColor = senderAgent ? senderAgent.color : '#FF6B6B'
 
   // Save incoming message to DB
   if (db) {
     await db.query(
       'INSERT INTO messages (channel, sender_id, sender_name, text, color) VALUES ($1,$2,$3,$4,$5)',
-      [ch, senderId, name || 'Guest', text, '#FF6B6B']
+      [ch, senderId, senderName, text, senderColor]
     )
   }
 
