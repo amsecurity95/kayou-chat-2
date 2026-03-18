@@ -1400,7 +1400,22 @@ fastify.post('/api/chat', async (req, reply) => {
         })
         captureGroqRateLimit(res)
         const data = await res.json()
-        if (data.error) throw new Error(data.error.message || JSON.stringify(data.error))
+        if (data.error) {
+          // If rate limited, try Kilo webhook fallback
+          const kiloUrl = resolveEnv('KILO_WEBHOOK_URL')
+          if ((data.error.type === 'rate_limit_error' || (data.error.message || '').includes('Rate limit')) && kiloUrl) {
+            console.log(`Groq rate limited for ${agentId}, falling back to Kilo webhook`)
+            const fallbackRes = await fetch(kiloUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ message, history: (history || []).slice(-20), systemPrompt: fullSystemPrompt, agentId, channelId })
+            })
+            const fallbackData = await fallbackRes.json()
+            responseText = fallbackData.response || fallbackData.content || fallbackData.message || fallbackData.choices?.[0]?.message?.content || ''
+            if (responseText) break
+          }
+          throw new Error(data.error.message || JSON.stringify(data.error))
+        }
 
         const choice = data.choices?.[0]
         if (choice?.finish_reason === 'tool_calls' && choice.message?.tool_calls?.length) {
