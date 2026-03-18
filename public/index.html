@@ -1983,11 +1983,15 @@ async function saveAgent(id) {
   if (key && !key.startsWith('••••')) body.apiKey = key;
   if (photoUrl) body.profilePhoto = photoUrl;
 
-  await fetch(API + '/api/config/agents/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-
-  // Save tools toggle
+  // Build permissions — preserve existing, toggle tools
+  const agent = agents.find(x => x.id === id);
+  const currentPerms = agent?.permissions ? [...agent.permissions] : [];
   const toolsOn = document.getElementById('edit-tools-toggle')?.classList.contains('on');
-  await fetch(API + '/api/agents/' + id + '/tools', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enable: toolsOn }) });
+  if (toolsOn && !currentPerms.includes('tools')) currentPerms.push('tools');
+  if (!toolsOn) body.permissions = currentPerms.filter(p => p !== 'tools');
+  else body.permissions = currentPerms;
+
+  await fetch(API + '/api/config/agents/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
   pendingPhotoUpload = null;
   closeModal();
