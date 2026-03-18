@@ -522,7 +522,7 @@ fastify.post('/api/external/ask', async (req, reply) => {
 
   // Get AI response from target agent or default
   const c = loadConfig()
-  const agentId = targetAgent || 'kayou-code'
+  const agentId = targetAgent || 'kayou'
   const agent = c.agents.find(a => a.id === agentId)
   if (!agent || !agent.enabled) return reply.code(400).send({ error: `Agent ${agentId} not found or disabled` })
 
@@ -627,7 +627,7 @@ fastify.post('/api/chat', async (req, reply) => {
 
   // Filesystem context for Kayou Code
   let filesystemContext = ''
-  if (perms.includes('filesystem') || agentId === 'kayou-code') {
+  if (perms.includes('filesystem') || agentId === 'kayou') {
     try {
       const apps = fs.readdirSync(MY_APPS_DIR, { withFileTypes: true })
         .filter(e => e.isDirectory() && !e.name.startsWith('.'))

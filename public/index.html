@@ -739,12 +739,12 @@ const CHANNELS = [
 ];
 
 const CHANNEL_AGENTS = {
-  general: ['kayou-code', 'kayou-kilo'],
+  general: ['kayou', 'kayou-kilo'],
   ideas: ['kayou-kilo', 'scout', 'analyst'],
   research: ['kayou-kilo', 'scout', 'analyst'],
-  build: ['kayou-code', 'dev', 'ops', 'sonic'],
-  testing: ['kayou-code', 'dev', 'claude', 'sonic'],
-  release: ['kayou-code', 'ops', 'claude', 'sonic'],
+  build: ['kayou', 'dev', 'ops', 'sonic'],
+  testing: ['kayou', 'dev', 'claude', 'sonic'],
+  release: ['kayou', 'ops', 'claude', 'sonic'],
 };
 
 // ═══════════════════════════════════════
@@ -1325,7 +1325,7 @@ function formatMsg(s) {
 // ═══════════════════════════════════════
 function renderAgents() {
   // Sort by team hierarchy: leads first, then their reports grouped together
-  const teamOrder = ['kayou-code', 'dev', 'ops', 'claude', 'sonic', 'kayou-kilo', 'scout', 'analyst', 'open-claw'];
+  const teamOrder = ['kayou', 'dev', 'ops', 'claude', 'sonic', 'kayou-code', 'kayou-kilo', 'scout', 'analyst'];
   const sorted = [...agents].sort((a, b) => {
     const ai = teamOrder.indexOf(a.id);
     const bi = teamOrder.indexOf(b.id);
@@ -1333,11 +1333,10 @@ function renderAgents() {
   });
 
   // Group into teams
-  const buildTeam = sorted.filter(a => ['kayou-code','dev','ops'].includes(a.id));
-  const securityTeam = sorted.filter(a => ['claude','sonic'].includes(a.id));
+  const buildTeam = sorted.filter(a => ['kayou','dev','ops'].includes(a.id));
+  const securityTeam = sorted.filter(a => ['claude','sonic','kayou-code'].includes(a.id));
   const researchTeam = sorted.filter(a => ['kayou-kilo','scout','analyst'].includes(a.id));
-  const externalTeam = sorted.filter(a => a.provider === 'external');
-  const others = sorted.filter(a => !['kayou-code','dev','ops','claude','sonic','kayou-kilo','scout','analyst'].includes(a.id) && a.provider !== 'external');
+  const others = sorted.filter(a => !['kayou','dev','ops','claude','sonic','kayou-code','kayou-kilo','scout','analyst'].includes(a.id));
 
   const renderTeam = (label, icon, team) => {
     if (team.length === 0) return '';
@@ -1353,7 +1352,6 @@ function renderAgents() {
     renderTeam('Build Team', 'construction', buildTeam) +
     renderTeam('Security Team', 'shield', securityTeam) +
     renderTeam('Research Team', 'query_stats', researchTeam) +
-    renderTeam('External', 'public', externalTeam) +
     (others.length > 0 ? renderTeam('Other', 'group', others) : '');
 }
 
