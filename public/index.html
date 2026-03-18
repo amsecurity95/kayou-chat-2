@@ -1161,6 +1161,7 @@ function startPolling() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(async () => {
     if (currentPage !== 'chat') return;
+    if (currentChannel === 'office') return; // office has its own rendering
     try {
       const res = await fetch(API + '/api/messages/' + currentChannel);
       const msgs = await res.json();
@@ -1424,7 +1425,7 @@ async function renderOffice() {
       const photo = m.photo || agent?.profilePhoto || '';
       const avatar = photo ? '<img class="msg-avatar" src="' + esc(photo) + '">' : '<div class="msg-avatar-text" style="background:' + color + '">' + esc((m.name || '?')[0]) + '</div>';
       const time = m.ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      return '<div class="msg msg-left"><' + avatar + '><div class="msg-body"><div class="msg-header"><span class="msg-name" style="color:' + color + '">' + esc(m.name) + '</span><span class="msg-time">' + time + '</span></div><div class="msg-bubble" style="background:' + color + '25;border:1px solid ' + color + '40"><div class="msg-text">' + formatMsg(m.text) + '</div></div></div></div>';
+      return '<div class="msg msg-left">' + avatar + '<div class="msg-body"><div class="msg-header"><span class="msg-name" style="color:' + color + '">' + esc(m.name) + '</span><span class="msg-time">' + time + '</span></div><div class="msg-bubble" style="background:' + color + '25;border:1px solid ' + color + '40"><div class="msg-text">' + formatMsg(m.text) + '</div></div></div></div>';
     }).join('');
     container.innerHTML += '<div style="padding:0 16px">' + msgsHTML + '</div>';
   }
