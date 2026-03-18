@@ -188,19 +188,14 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .reply-bar .reply-text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .reply-bar .reply-close{width:24px;height:24px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .reply-bar .reply-close:hover{background:var(--bg-elevated);color:var(--text-primary)}
-/* iMessage context menu */
-.msg-ctx-overlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.5);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
-.msg-ctx-overlay.show{opacity:1;pointer-events:all}
-.msg-ctx{display:flex;flex-direction:column;align-items:center;gap:10px;max-width:90%;animation:fadeUp .2s ease}
-.msg-ctx-bubble{padding:10px 16px;border-radius:16px;max-width:360px;word-break:break-word;font-size:14px;line-height:1.45;box-shadow:0 8px 32px rgba(0,0,0,.4)}
-.msg-ctx-reactions{display:flex;gap:4px;background:var(--bg-card);border:1px solid var(--border);border-radius:24px;padding:6px 10px}
-.msg-ctx-reactions button{width:36px;height:36px;border:none;background:transparent;border-radius:50%;cursor:pointer;font-size:20px;transition:transform .15s;display:flex;align-items:center;justify-content:center}
-.msg-ctx-reactions button:hover{transform:scale(1.3)}
-.msg-ctx-actions{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden;min-width:200px}
-.msg-ctx-actions button{display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;border:none;background:transparent;color:var(--text-primary);font-size:14px;font-family:inherit;cursor:pointer;transition:background .1s;text-align:left}
-.msg-ctx-actions button:hover{background:var(--bg-elevated)}
-.msg-ctx-actions button:not(:last-child){border-bottom:1px solid var(--border)}
-.msg-ctx-actions .material-symbols-rounded{font-size:18px;color:var(--text-muted)}
+/* iMessage inline reaction bar — floats above the bubble */
+.msg-ctx-bar{position:absolute;bottom:100%;margin-bottom:4px;display:flex;gap:2px;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:4px 6px;z-index:20;box-shadow:0 4px 16px rgba(0,0,0,.4);animation:fadeUp .15s ease}
+.msg-left .msg-ctx-bar{left:36px}
+.msg-right .msg-ctx-bar{right:0}
+.msg-ctx-bar button{width:30px;height:30px;border:none;background:transparent;border-radius:50%;cursor:pointer;font-size:17px;transition:transform .12s;display:flex;align-items:center;justify-content:center}
+.msg-ctx-bar button:hover{transform:scale(1.3)}
+.msg-ctx-bar .ctx-action{font-size:14px;color:var(--text-muted);width:28px;height:28px}
+.msg-ctx-bar .ctx-action:hover{color:var(--text-primary)}
 
 /* ── Mention Autocomplete ── */
 .mention-popup{position:absolute;bottom:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;max-height:220px;overflow-y:auto;display:none;z-index:20;box-shadow:0 -4px 20px rgba(0,0,0,.4)}
@@ -627,10 +622,6 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
   <div class="modal" id="modal" onclick="event.stopPropagation()"></div>
 </div>
 
-<!-- iMessage Context Menu -->
-<div class="msg-ctx-overlay" id="msg-ctx-overlay" onclick="closeMsgCtx()">
-  <div class="msg-ctx" onclick="event.stopPropagation()" id="msg-ctx"></div>
-</div>
 
 <script>
 // ═══════════════════════════════════════
@@ -690,30 +681,36 @@ async function doLogin() {
 let ctxMsgIndex = null;
 const REACTIONS = ['❤️','👍','👎','😂','😮','🔥'];
 
-function openMsgCtx(idx) {
+function openMsgCtx(idx, event) {
+  event?.stopPropagation();
+  // Close any existing bar
+  closeMsgCtx();
   const msgs = channelMessages[currentChannel] || [];
   const m = msgs[idx];
   if (!m || m.sender === 'system') return;
   ctxMsgIndex = idx;
-  const isUser = m.sender === 'aimar';
-  const bubbleColor = isUser ? '#2563eb' : (m.color ? m.color + '25' : '#6366F125');
-  const textColor = isUser ? '#fff' : '#e8e8ef';
-  const existing = m.reactions || {};
 
-  document.getElementById('msg-ctx').innerHTML = `
-    <div class="msg-ctx-reactions">
-      ${REACTIONS.map(r => `<button onclick="addReaction(${idx},'${r}')">${r}</button>`).join('')}
-    </div>
-    <div class="msg-ctx-bubble" style="background:${bubbleColor};color:${textColor}">${formatMsg(m.text)}</div>
-    <div class="msg-ctx-actions">
-      <button onclick="doReply(${idx})"><span class="material-symbols-rounded">reply</span> Reply</button>
-      <button onclick="copyMsgText(${idx})"><span class="material-symbols-rounded">content_copy</span> Copy</button>
-    </div>`;
-  document.getElementById('msg-ctx-overlay').classList.add('show');
+  const msgEl = document.querySelector(`[data-msg-idx="${idx}"]`);
+  if (!msgEl) return;
+
+  // Create bar inline above the bubble
+  const bar = document.createElement('div');
+  bar.className = 'msg-ctx-bar';
+  bar.id = 'active-ctx-bar';
+  bar.innerHTML = REACTIONS.map(r => `<button onclick="event.stopPropagation();addReaction(${idx},'${r}')">${r}</button>`).join('') +
+    `<button class="ctx-action" onclick="event.stopPropagation();doReply(${idx})" title="Reply"><span class="material-symbols-rounded" style="font-size:16px">reply</span></button>` +
+    `<button class="ctx-action" onclick="event.stopPropagation();copyMsgText(${idx})" title="Copy"><span class="material-symbols-rounded" style="font-size:16px">content_copy</span></button>`;
+
+  const body = msgEl.querySelector('.msg-body');
+  if (body) { body.style.position = 'relative'; body.appendChild(bar); }
+
+  // Close on click outside
+  setTimeout(() => document.addEventListener('click', closeMsgCtx, { once: true }), 10);
 }
 
 function closeMsgCtx() {
-  document.getElementById('msg-ctx-overlay').classList.remove('show');
+  const bar = document.getElementById('active-ctx-bar');
+  if (bar) bar.remove();
   ctxMsgIndex = null;
 }
 
@@ -1539,7 +1536,7 @@ function renderMessages() {
       : '';
 
     return `
-      <div class="msg ${side} ${isGroup ? 'msg-group' : ''} msg-wrap" data-msg-idx="${i}" ondblclick="openMsgCtx(${i})">
+      <div class="msg ${side} ${isGroup ? 'msg-group' : ''} msg-wrap" data-msg-idx="${i}" onclick="openMsgCtx(${i},event)">
         ${avatarHTML}
         <div class="msg-body">
           <div class="msg-header">
