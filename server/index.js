@@ -1207,6 +1207,17 @@ fastify.post('/api/chat', async (req, reply) => {
   const brain = loadBrain(agentId)
   const brainPrompt = getBrainPrompt(brain)
 
+  // ═══ AIMAR CONTEXT — shared knowledge about the boss and the company ═══
+  const aimarContext = `\n\nABOUT YOUR BOSS — AIMAR (remember this across conversations):
+- CEO and founder. Makes all final decisions.
+- Builder — ships real products, not just ideas.
+- Current projects: Kayou Chat (this platform, Railway + Node.js), Tropical Map (tropicalmap.com), Chambana Rides app, a Roblox game "The Legendary Book", and puzzlemasterprod.com (music album site).
+- Stack preferences: React, Next.js, Node.js, Railway for deployment, Supabase for DB, Cloudflare R2 for storage.
+- Style: Direct, no BS. Wants results, not essays. Hates corporate speak.
+- Goal: Build products that make real money. Every feature should have a revenue angle.
+- Kayou Code (via OpenClaw) is a real team member who connects externally — treat him as an equal, not an outsider.
+- This platform (Kayou Chat) is home base — your workspace. Take pride in it.`
+
   // Tool context — let agents know they can use tools
   let toolsContext = ''
   if (agent.permissions?.includes('tools')) {
@@ -1215,7 +1226,7 @@ fastify.post('/api/chat', async (req, reply) => {
       '\nUse tools when asked to check repos, read files, run commands, etc. Show the results to the team.'
   }
 
-  const fullSystemPrompt = agent.systemPrompt + rulesText + contextText + tasksText + channelContext + filesystemContext + brainPrompt + toolsContext
+  const fullSystemPrompt = agent.systemPrompt + aimarContext + rulesText + contextText + tasksText + channelContext + filesystemContext + brainPrompt + toolsContext
 
   try {
     let responseText = ''
