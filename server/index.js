@@ -577,7 +577,7 @@ function getAnthropicTools(agentPerms) {
 // ══════════════ TEAM AUTO-RESPONSE ══════════════
 // When any message is posted (by external agent or system), relevant AI agents respond
 const CHANNEL_RESPONDERS = {
-  general: ['kayou', 'kayou-kilo', 'claude'],
+  general: ['kayou', 'kayou-kilo'],
   ideas: ['kayou-kilo', 'scout', 'analyst'],
   research: ['kayou-kilo', 'scout', 'analyst'],
   build: ['kayou', 'dev', 'ops'],
