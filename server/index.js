@@ -16,9 +16,32 @@ if (fs.existsSync(envPath)) {
   })
 }
 
+const { Pool } = require('pg')
+
 const CONFIG_PATH = path.join(__dirname, '..', 'kayou-config.json')
 const BRAINS_DIR = path.join(__dirname, '..', 'brains')
 if (!fs.existsSync(BRAINS_DIR)) fs.mkdirSync(BRAINS_DIR, { recursive: true })
+
+// ══════════════ DATABASE ══════════════
+let db = null
+async function initDB() {
+  if (!process.env.DATABASE_URL) { console.log('No DATABASE_URL — messages will not persist'); return }
+  db = new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false })
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS messages (
+      id SERIAL PRIMARY KEY,
+      channel VARCHAR(100) NOT NULL,
+      sender_id VARCHAR(100) NOT NULL,
+      sender_name VARCHAR(200),
+      text TEXT NOT NULL,
+      color VARCHAR(20),
+      photo TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `)
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_messages_channel ON messages(channel, created_at)`)
+  console.log('Database connected — messages will persist')
+}
 
 // Resolve ENV: references in config values
 function resolveEnv(val) {
@@ -311,6 +334,35 @@ fastify.delete('/api/config/services/:id', async (req) => {
   const c = loadConfig(); c.services = (c.services || []).filter(s => s.id !== req.params.id); saveConfig(c); return { ok: true }
 })
 
+// ══════════════ MESSAGES (persistent) ══════════════
+fastify.get('/api/messages/:channel', async (req) => {
+  if (!db) return []
+  const { rows } = await db.query(
+    'SELECT * FROM messages WHERE channel = $1 ORDER BY created_at ASC LIMIT 200',
+    [req.params.channel]
+  )
+  return rows.map(r => ({
+    id: r.id, sender: r.sender_id, name: r.sender_name, text: r.text,
+    color: r.color, photo: r.photo, ts: r.created_at
+  }))
+})
+
+fastify.post('/api/messages', async (req) => {
+  if (!db) return { ok: false, reason: 'no database' }
+  const { channel, senderId, senderName, text, color, photo } = req.body
+  const { rows } = await db.query(
+    'INSERT INTO messages (channel, sender_id, sender_name, text, color, photo) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, created_at',
+    [channel, senderId, senderName, text, color || null, photo || null]
+  )
+  return { ok: true, id: rows[0].id, ts: rows[0].created_at }
+})
+
+fastify.delete('/api/messages/:channel', async (req) => {
+  if (!db) return { ok: false }
+  await db.query('DELETE FROM messages WHERE channel = $1', [req.params.channel])
+  return { ok: true }
+})
+
 // ══════════════ WEBHOOK ══════════════
 fastify.get('/api/config/webhook', async () => {
   const c = loadConfig(); return { secret: c.webhookSecret, url: '/api/webhook/message' }
@@ -491,9 +543,10 @@ const start = async () => {
         socket.on('disconnect', () => console.log('Client disconnected:', socket.id))
       })
     }
+    await initDB()
     const c = loadConfig()
     console.log(`Server running on http://localhost:${port}`)
-    console.log(`Agents: ${c.agents.length} | Projects: ${(c.projects||[]).length} | Brains: ${fs.readdirSync(BRAINS_DIR).length}`)
+    console.log(`Agents: ${c.agents.length} | Projects: ${(c.projects||[]).length} | Brains: ${fs.readdirSync(BRAINS_DIR).length} | DB: ${db ? 'connected' : 'none'}`)
   } catch (err) { fastify.log.error(err); process.exit(1) }
 }
 start()

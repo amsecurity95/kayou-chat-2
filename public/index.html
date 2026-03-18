@@ -774,7 +774,7 @@ function renderDMList() {
   `).join('');
 }
 
-function switchChannel(id) {
+async function switchChannel(id) {
   currentChannel = id;
   document.querySelectorAll('.channel-item').forEach(el => el.classList.toggle('active', el.dataset.channel === id));
 
@@ -787,7 +787,12 @@ function switchChannel(id) {
   document.getElementById('chat-channel-desc').textContent = isDM ? (agent?.enabled ? 'Online' : 'Offline') : (ch?.desc || '');
   document.getElementById('chat-input').placeholder = `Message ${isDM ? (agent?.name || '') : '#' + (ch?.name || id)}... (@ to tag)`;
 
+  // Load messages from DB if not already loaded
+  if (!channelMessages[id] || channelMessages[id].length === 0) {
+    await loadChannelMessages(id);
+  }
   renderMessages();
+  scrollChat();
 }
 
 let mentionActive = false;
@@ -916,8 +921,13 @@ function initChat() {
 
   send.addEventListener('click', sendMessage);
 
-  addSystemMessage('general', 'Welcome to Kayou Chat. Your AI team is ready.');
+  // Load persisted messages, fallback to welcome
+  const loaded = await loadChannelMessages('general');
+  if (!loaded) {
+    addSystemMessage('general', 'Welcome to Kayou Chat. Your AI team is ready.');
+  }
   renderMessages();
+  scrollChat();
 }
 
 function addSystemMessage(channel, text) {
@@ -925,11 +935,35 @@ function addSystemMessage(channel, text) {
   channelMessages[channel].push({ id: Date.now(), sender: 'system', text: text, ts: new Date() });
 }
 
-function addMessage(channel, senderId, senderName, text, color, photo) {
+async function addMessage(channel, senderId, senderName, text, color, photo) {
   if (!channelMessages[channel]) channelMessages[channel] = [];
-  channelMessages[channel].push({ id: Date.now() + Math.random(), sender: senderId, name: senderName, text: text, ts: new Date(), color: color, photo: photo });
+  const ts = new Date();
+  channelMessages[channel].push({ id: Date.now() + Math.random(), sender: senderId, name: senderName, text: text, ts: ts, color: color, photo: photo });
   messageCount++;
   sessionMessages++;
+
+  // Persist to database
+  try {
+    await fetch(API + '/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel, senderId, senderName, text, color, photo })
+    });
+  } catch(e) {}
+}
+
+async function loadChannelMessages(channel) {
+  try {
+    const msgs = await (await fetch(API + '/api/messages/' + channel)).json();
+    if (Array.isArray(msgs) && msgs.length > 0) {
+      channelMessages[channel] = msgs.map(m => ({
+        ...m, ts: new Date(m.ts)
+      }));
+      messageCount = Object.values(channelMessages).reduce((s, arr) => s + arr.filter(m => m.sender !== 'system').length, 0);
+      return true;
+    }
+  } catch(e) {}
+  return false;
 }
 
 async function sendMessage() {
@@ -1054,7 +1088,12 @@ function renderMessages() {
 
     const prev = msgs[i - 1];
     const isGroup = prev && prev.sender === m.sender && prev.sender !== 'system' && (m.ts - prev.ts) < 120000;
-    const time = m.ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const now = new Date();
+    const msgDate = m.ts;
+    const isToday = msgDate.toDateString() === now.toDateString();
+    const time = isToday
+      ? msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : msgDate.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const isUser = m.sender === 'aimar';
     const side = isUser ? 'msg-right' : 'msg-left';
 
