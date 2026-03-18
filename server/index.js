@@ -565,20 +565,48 @@ async function triggerTeamResponses(channel, senderId, senderName, text) {
     await new Promise(r => setTimeout(r, 2000 + Math.random() * 3000))
 
     try {
-      console.log(`triggerTeamResponses: calling AI for ${agentId} (${agent.provider})`)
-      // Use fastify.inject to call the chat route internally
-      const res = await fastify.inject({
-        method: 'POST',
-        url: '/api/chat',
-        payload: {
-          agentId,
-          message: `[${senderName} said in #${channel}]: ${text}`,
-          history,
-          channelId: channel
-        }
-      })
-      const data = JSON.parse(res.payload)
-      console.log(`triggerTeamResponses: ${agentId} status=${res.statusCode}`, data.response ? 'got response' : JSON.stringify(data).slice(0,200))
+      console.log(`triggerTeamResponses: calling AI directly for ${agentId} (${agent.provider})`)
+      const agentApiKey = resolveEnv(agent.apiKey)
+      if (!agentApiKey && agent.provider !== 'ollama' && agent.provider !== 'webhook') {
+        console.log(`triggerTeamResponses: no API key for ${agentId}, skipping`)
+        continue
+      }
+
+      // Build system prompt (simplified version of what /api/chat does)
+      const rules = c.rules || []
+      const rulesText = rules.length > 0 ? '\n\nCOMPANY RULES:\n' + rules.map((r, i) => `${i + 1}. ${r}`).join('\n') : ''
+      const brain = loadBrain(agentId)
+      const brainPrompt = getBrainPrompt(brain)
+      const otherNames = c.agents.filter(a => a.id !== agentId && a.enabled).map(a => a.name).join(', ')
+      const sysPrompt = (agent.systemPrompt || '') + rulesText + brainPrompt +
+        `\n\nYou're in #${channel} — group chat.\nTeam members: ${otherNames}, Aimar (CEO)` +
+        '\n\nCORE RULES: Keep it SHORT (1-3 sentences). NEVER start with your own name. Use @Name for mentions. Respond to teammates naturally.'
+
+      const userMsg = `[${senderName} said]: ${text}`
+      let responseText = ''
+
+      if (agent.provider === 'groq') {
+        const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${agentApiKey}` },
+          body: JSON.stringify({ model: agent.model || 'llama-3.3-70b-versatile', max_tokens: 300, messages: [{ role: 'system', content: sysPrompt }, ...history.slice(-10), { role: 'user', content: userMsg }] })
+        })
+        const d = await r.json()
+        responseText = d.choices?.[0]?.message?.content || ''
+        if (d.error) console.error(`triggerTeamResponses: groq error for ${agentId}:`, d.error)
+      } else if (agent.provider === 'anthropic') {
+        const r = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': agentApiKey, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify({ model: agent.model || 'claude-sonnet-4-20250514', max_tokens: 300, system: sysPrompt, messages: [...history.slice(-10), { role: 'user', content: userMsg }] })
+        })
+        const d = await r.json()
+        responseText = d.content?.[0]?.text || ''
+        if (d.error) console.error(`triggerTeamResponses: anthropic error for ${agentId}:`, d.error)
+      }
+
+      const data = { response: responseText }
+      console.log(`triggerTeamResponses: ${agentId} got ${responseText ? 'response' : 'no response'}`)
 
       if (data.response) {
         // Clean response — strip self-name prefix
