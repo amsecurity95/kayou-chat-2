@@ -221,5 +221,6 @@
       "apiKey": ""
     }
   },
-  "chillMode": false
+  "chillMode": false,
+  "externalApiKey": "kayou-ext-2026-openclaw"
 }

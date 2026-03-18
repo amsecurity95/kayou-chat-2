@@ -43,8 +43,10 @@ async function initDB() {
   await db.query(`CREATE INDEX IF NOT EXISTS idx_messages_channel ON messages(channel, created_at)`)
   // Add attachments column if missing
   await db.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachments JSONB DEFAULT NULL`)
-  // User settings table (profile photo etc)
+  // User settings table (profile photo, agent photos, etc)
   await db.query(`CREATE TABLE IF NOT EXISTS user_settings (key VARCHAR(100) PRIMARY KEY, value TEXT NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW())`)
+  // Agent photos table
+  await db.query(`CREATE TABLE IF NOT EXISTS agent_photos (agent_id VARCHAR(100) PRIMARY KEY, photo TEXT NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW())`)
   console.log('Database connected — messages will persist')
   } catch(e) { console.error('Database connection failed:', e.message); db = null }
 }
@@ -174,12 +176,35 @@ fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'public'), pr
 fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'uploads'), prefix: '/uploads/', decorateReply: false })
 fastify.get('/health', async () => ({ status: 'ok' }))
 
+// ══════════════ AGENT PHOTOS (DB-persisted) ══════════════
+let agentPhotosCache = {} // in-memory cache of agent photos from DB
+async function loadAgentPhotos() {
+  if (!db) return
+  try {
+    const { rows } = await db.query('SELECT agent_id, photo FROM agent_photos')
+    agentPhotosCache = {}
+    for (const r of rows) agentPhotosCache[r.agent_id] = r.photo
+  } catch(e) {}
+}
+async function saveAgentPhoto(agentId, photo) {
+  if (!db) return
+  await db.query('INSERT INTO agent_photos (agent_id, photo) VALUES ($1, $2) ON CONFLICT (agent_id) DO UPDATE SET photo = $2, updated_at = NOW()', [agentId, photo])
+  agentPhotosCache[agentId] = photo
+}
+async function deleteAgentPhoto(agentId) {
+  if (!db) return
+  await db.query('DELETE FROM agent_photos WHERE agent_id = $1', [agentId])
+  delete agentPhotosCache[agentId]
+}
+
 // ══════════════ AGENTS ══════════════
 fastify.get('/api/config/agents', async () => {
   const c = loadConfig()
   return c.agents.map(a => {
     const brain = loadBrain(a.id)
-    return { ...a, apiKey: a.apiKey ? '••••' + a.apiKey.slice(-4) : '', hasKey: !!a.apiKey, brain: { interactions: brain.interactions, lastActive: brain.lastActive, personalityCount: brain.personality.length, knowledgeCount: brain.knowledge.length, mentorLearnings: brain.mentorLearnings.length, mentor: brain.mentor } }
+    // Overlay DB photo over config photo
+    const photo = agentPhotosCache[a.id] || a.profilePhoto || ''
+    return { ...a, profilePhoto: photo, apiKey: a.apiKey ? '••••' + a.apiKey.slice(-4) : '', hasKey: !!a.apiKey, brain: { interactions: brain.interactions, lastActive: brain.lastActive, personalityCount: brain.personality.length, knowledgeCount: brain.knowledge.length, mentorLearnings: brain.mentorLearnings.length, mentor: brain.mentor } }
   })
 })
 fastify.put('/api/config/agents/:id', async (req, reply) => {
@@ -190,9 +215,19 @@ fastify.put('/api/config/agents/:id', async (req, reply) => {
   ;['name','model','systemPrompt','enabled','provider','color','webhookUrl','mentor'].forEach(k => { if (u[k] !== undefined) a[k] = u[k] })
   if (u.permissions) a.permissions = u.permissions
   if (u.tasks) a.tasks = u.tasks
-  if (u.profilePhoto !== undefined) a.profilePhoto = u.profilePhoto
+  if (u.profilePhoto !== undefined) {
+    if (u.profilePhoto && u.profilePhoto.startsWith('data:')) {
+      // Base64 photo — save to DB, not config file
+      await saveAgentPhoto(a.id, u.profilePhoto)
+      a.profilePhoto = '' // don't bloat config with base64
+    } else {
+      a.profilePhoto = u.profilePhoto
+      if (!u.profilePhoto) await deleteAgentPhoto(a.id)
+    }
+  }
   c.agents[idx] = a; saveConfig(c)
-  return { ...a, apiKey: a.apiKey ? '••••' + a.apiKey.slice(-4) : '', hasKey: !!a.apiKey }
+  const photo = agentPhotosCache[a.id] || a.profilePhoto || ''
+  return { ...a, profilePhoto: photo, apiKey: a.apiKey ? '••••' + a.apiKey.slice(-4) : '', hasKey: !!a.apiKey }
 })
 fastify.post('/api/config/agents', async (req) => {
   const c = loadConfig(); const { name, provider, apiKey, model, systemPrompt, color, mentor } = req.body
@@ -279,10 +314,12 @@ fastify.delete('/api/projects/:id', async (req) => {
   const c = loadConfig(); c.projects = (c.projects || []).filter(p => p.id !== req.params.id); saveConfig(c); return { ok: true }
 })
 
-// ══════════════ FILESYSTEM (My Apps access) ══════════════
+// ══════════════ FILESYSTEM (My Apps access — local dev only) ══════════════
 const MY_APPS_DIR = path.join(require('os').homedir(), 'Desktop', 'My Apps')
+const HAS_MY_APPS = fs.existsSync(MY_APPS_DIR)
 
 fastify.get('/api/files/list', async (req) => {
+  if (!HAS_MY_APPS) return { error: 'Not available on this server' }
   const subpath = req.query.path || ''
   const target = path.resolve(MY_APPS_DIR, subpath)
   if (!target.startsWith(MY_APPS_DIR)) return { error: 'Access denied' }
@@ -301,6 +338,7 @@ fastify.get('/api/files/list', async (req) => {
 })
 
 fastify.get('/api/files/read', async (req, reply) => {
+  if (!HAS_MY_APPS) return reply.code(503).send({ error: 'Not available on this server' })
   const filePath = req.query.path
   if (!filePath) return reply.code(400).send({ error: 'No path provided' })
   const target = path.resolve(MY_APPS_DIR, filePath)
@@ -314,6 +352,7 @@ fastify.get('/api/files/read', async (req, reply) => {
 })
 
 fastify.get('/api/files/scan', async () => {
+  if (!HAS_MY_APPS) return { error: 'Not available on this server' }
   try {
     const entries = fs.readdirSync(MY_APPS_DIR, { withFileTypes: true })
     return entries
@@ -393,6 +432,114 @@ fastify.post('/api/webhook/message', async (req, reply) => {
   const message = { id: Date.now().toString(), channelId: req.body.channelId || 'general', senderId: req.body.agentId || 'webhook', content: req.body.content, ts: new Date().toISOString() }
   if (io) io.emit('webhook:message', message)
   return { ok: true, messageId: message.id }
+})
+
+// ══════════════ EXTERNAL API (for Open Claw, Telegram bots, etc) ══════════════
+// Auth: send header "Authorization: Bearer <EXTERNAL_API_KEY>" or query param ?key=<KEY>
+function checkExternalAuth(req, reply) {
+  const c = loadConfig()
+  const validKey = c.externalApiKey || process.env.EXTERNAL_API_KEY
+  if (!validKey) return reply.code(503).send({ error: 'External API not configured. Set EXTERNAL_API_KEY env var or externalApiKey in config.' })
+  const auth = req.headers.authorization?.replace('Bearer ', '') || req.query?.key
+  if (auth !== validKey) return reply.code(401).send({ error: 'Invalid API key' })
+  return null
+}
+
+// GET /api/external/info — channels, agents, status
+fastify.get('/api/external/info', async (req, reply) => {
+  const err = checkExternalAuth(req, reply); if (err) return err
+  const c = loadConfig()
+  return {
+    platform: 'Kayou Chat',
+    channels: ['general', 'ideas', 'research', 'build', 'testing', 'release'],
+    agents: c.agents.map(a => ({ id: a.id, name: a.name, team: a.reportsTo, enabled: a.enabled, color: a.color })),
+    status: 'online'
+  }
+})
+
+// GET /api/external/messages/:channel — read recent messages
+fastify.get('/api/external/messages/:channel', async (req, reply) => {
+  const err = checkExternalAuth(req, reply); if (err) return err
+  if (!db) return []
+  const limit = Math.min(parseInt(req.query?.limit) || 50, 200)
+  const { rows } = await db.query(
+    'SELECT * FROM messages WHERE channel = $1 ORDER BY created_at DESC LIMIT $2',
+    [req.params.channel, limit]
+  )
+  return rows.reverse().map(r => ({
+    id: r.id, sender: r.sender_id, name: r.sender_name, text: r.text,
+    channel: r.channel, ts: r.created_at
+  }))
+})
+
+// POST /api/external/send — send a message as an external agent
+// Body: { channel, name, text, color? }
+fastify.post('/api/external/send', async (req, reply) => {
+  const err = checkExternalAuth(req, reply); if (err) return err
+  const { channel, name, text, color } = req.body
+  if (!channel || !name || !text) return reply.code(400).send({ error: 'Missing channel, name, or text' })
+
+  const senderId = 'ext-' + name.toLowerCase().replace(/[^a-z0-9]/g, '-')
+
+  // Save to DB
+  if (db) {
+    await db.query(
+      'INSERT INTO messages (channel, sender_id, sender_name, text, color) VALUES ($1,$2,$3,$4,$5)',
+      [channel, senderId, name, text, color || '#FF6B6B']
+    )
+  }
+
+  // Broadcast via socket.io if available
+  if (io) io.emit('external:message', { channel, senderId, name, text, color: color || '#FF6B6B', ts: new Date().toISOString() })
+
+  return { ok: true, channel, sender: senderId }
+})
+
+// POST /api/external/ask — send a message and get AI agent responses
+// Body: { channel, name, text, targetAgent? }
+fastify.post('/api/external/ask', async (req, reply) => {
+  const err = checkExternalAuth(req, reply); if (err) return err
+  const { channel, name, text, targetAgent } = req.body
+  if (!text) return reply.code(400).send({ error: 'Missing text' })
+
+  const ch = channel || 'general'
+  const senderId = 'ext-' + (name || 'guest').toLowerCase().replace(/[^a-z0-9]/g, '-')
+
+  // Save incoming message to DB
+  if (db) {
+    await db.query(
+      'INSERT INTO messages (channel, sender_id, sender_name, text, color) VALUES ($1,$2,$3,$4,$5)',
+      [ch, senderId, name || 'Guest', text, '#FF6B6B']
+    )
+  }
+
+  // Get AI response from target agent or default
+  const c = loadConfig()
+  const agentId = targetAgent || 'kayou-code'
+  const agent = c.agents.find(a => a.id === agentId)
+  if (!agent || !agent.enabled) return reply.code(400).send({ error: `Agent ${agentId} not found or disabled` })
+
+  try {
+    // Forward to internal chat endpoint
+    const chatRes = await fastify.inject({
+      method: 'POST',
+      url: '/api/chat',
+      payload: { agentId, message: text, history: [], channelId: ch }
+    })
+    const chatData = JSON.parse(chatRes.payload)
+
+    // Save agent response to DB
+    if (db && chatData.response) {
+      await db.query(
+        'INSERT INTO messages (channel, sender_id, sender_name, text, color) VALUES ($1,$2,$3,$4,$5)',
+        [ch, agentId, agent.name, chatData.response, agent.color]
+      )
+    }
+
+    return { ok: true, agent: agent.name, response: chatData.response || chatData.error }
+  } catch(e) {
+    return reply.code(500).send({ error: e.message })
+  }
 })
 
 // ══════════════ IMAGE UPLOAD ══════════════
@@ -599,6 +746,7 @@ const start = async () => {
       })
     }
     await initDB()
+    await loadAgentPhotos()
     const c = loadConfig()
     console.log(`Server running on http://localhost:${port}`)
     console.log(`Agents: ${c.agents.length} | Projects: ${(c.projects||[]).length} | Brains: ${fs.readdirSync(BRAINS_DIR).length} | DB: ${db ? 'connected' : 'none'}`)
