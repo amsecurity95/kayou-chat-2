@@ -61,8 +61,24 @@ if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true })
 
 function loadConfig() {
   try {
-    if (fs.existsSync(CONFIG_PATH)) return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'))
     const examplePath = path.join(__dirname, '..', 'kayou-config.example.json')
+    if (fs.existsSync(CONFIG_PATH)) {
+      const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'))
+      // Auto-refresh from example if example has agents that config doesn't
+      if (fs.existsSync(examplePath)) {
+        const example = JSON.parse(fs.readFileSync(examplePath, 'utf-8'))
+        const configIds = new Set(config.agents.map(a => a.id))
+        const exampleIds = new Set(example.agents.map(a => a.id))
+        // If example has new agents or IDs changed, re-bootstrap
+        const missing = [...exampleIds].filter(id => !configIds.has(id))
+        if (missing.length > 0) {
+          console.log('Config outdated — re-bootstrapping from example (new agents:', missing.join(', ') + ')')
+          fs.writeFileSync(CONFIG_PATH, JSON.stringify(example, null, 2))
+          return example
+        }
+      }
+      return config
+    }
     if (fs.existsSync(examplePath)) {
       const example = fs.readFileSync(examplePath, 'utf-8')
       fs.writeFileSync(CONFIG_PATH, example)
