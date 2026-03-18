@@ -174,20 +174,33 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .msg-group.msg-left .msg-bubble{border-radius:4px 16px 16px 4px}
 .msg-group.msg-right .msg-bubble{border-radius:16px 4px 4px 16px}
 .msg-group{padding:1px 16px}
-.msg-actions{display:none;position:absolute;top:50%;transform:translateY(-50%);right:-32px;z-index:5}
-.msg-right .msg-actions{right:auto;left:-32px}
 .msg-wrap{position:relative}
-.msg-wrap:hover .msg-actions{display:flex}
-.msg-actions button{width:24px;height:24px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:all .1s;opacity:.5}
-.msg-actions button:hover{color:var(--text-primary);opacity:1}
-.msg-reply-ref{font-size:11px;color:var(--text-muted);padding:4px 12px 2px;display:flex;align-items:center;gap:4px;cursor:pointer}
-.msg-reply-ref::before{content:'';width:2px;height:12px;border-radius:1px;flex-shrink:0}
-.msg-reply-ref span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px}
-.reply-bar{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--bg-surface);border-left:3px solid var(--accent);margin:0 2px;border-radius:0 8px 0 0;font-size:12px;color:var(--text-secondary)}
+.msg-reactions{display:flex;gap:2px;margin-top:2px;flex-wrap:wrap}
+.msg-reactions .rxn{display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:12px;font-size:13px;background:var(--bg-elevated);border:1px solid var(--border);cursor:pointer;transition:all .12s}
+.msg-reactions .rxn:hover{border-color:var(--border-light);transform:scale(1.1)}
+.msg-reactions .rxn.mine{border-color:var(--blue);background:var(--blue-dim)}
+.msg-reply-ref{font-size:11px;padding:4px 12px 2px;display:flex;align-items:center;gap:6px;cursor:pointer;opacity:.7}
+.msg-reply-ref:hover{opacity:1}
+.msg-reply-ref .ref-bar{width:2px;height:14px;border-radius:1px;flex-shrink:0}
+.msg-reply-ref .ref-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px}
+.reply-bar{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--bg-surface);border-left:3px solid var(--accent);margin:0 2px;border-radius:8px 8px 0 0;font-size:12px;color:var(--text-secondary)}
 .reply-bar .reply-name{font-weight:600;color:var(--text-primary)}
 .reply-bar .reply-text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .reply-bar .reply-close{width:24px;height:24px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .reply-bar .reply-close:hover{background:var(--bg-elevated);color:var(--text-primary)}
+/* iMessage context menu */
+.msg-ctx-overlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.5);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.msg-ctx-overlay.show{opacity:1;pointer-events:all}
+.msg-ctx{display:flex;flex-direction:column;align-items:center;gap:10px;max-width:90%;animation:fadeUp .2s ease}
+.msg-ctx-bubble{padding:10px 16px;border-radius:16px;max-width:360px;word-break:break-word;font-size:14px;line-height:1.45;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.msg-ctx-reactions{display:flex;gap:4px;background:var(--bg-card);border:1px solid var(--border);border-radius:24px;padding:6px 10px}
+.msg-ctx-reactions button{width:36px;height:36px;border:none;background:transparent;border-radius:50%;cursor:pointer;font-size:20px;transition:transform .15s;display:flex;align-items:center;justify-content:center}
+.msg-ctx-reactions button:hover{transform:scale(1.3)}
+.msg-ctx-actions{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden;min-width:200px}
+.msg-ctx-actions button{display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;border:none;background:transparent;color:var(--text-primary);font-size:14px;font-family:inherit;cursor:pointer;transition:background .1s;text-align:left}
+.msg-ctx-actions button:hover{background:var(--bg-elevated)}
+.msg-ctx-actions button:not(:last-child){border-bottom:1px solid var(--border)}
+.msg-ctx-actions .material-symbols-rounded{font-size:18px;color:var(--text-muted)}
 
 /* ── Mention Autocomplete ── */
 .mention-popup{position:absolute;bottom:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;max-height:220px;overflow-y:auto;display:none;z-index:20;box-shadow:0 -4px 20px rgba(0,0,0,.4)}
@@ -614,6 +627,11 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
   <div class="modal" id="modal" onclick="event.stopPropagation()"></div>
 </div>
 
+<!-- iMessage Context Menu -->
+<div class="msg-ctx-overlay" id="msg-ctx-overlay" onclick="closeMsgCtx()">
+  <div class="msg-ctx" onclick="event.stopPropagation()" id="msg-ctx"></div>
+</div>
+
 <script>
 // ═══════════════════════════════════════
 // STATE
@@ -669,8 +687,54 @@ async function doLogin() {
   }
 }
 
-function setReply(name, text, color, msgIndex) {
-  replyTo = { name, text: text.slice(0, 120), color: color || 'var(--text-primary)', msgIndex };
+let ctxMsgIndex = null;
+const REACTIONS = ['❤️','👍','👎','😂','😮','🔥'];
+
+function openMsgCtx(idx) {
+  const msgs = channelMessages[currentChannel] || [];
+  const m = msgs[idx];
+  if (!m || m.sender === 'system') return;
+  ctxMsgIndex = idx;
+  const isUser = m.sender === 'aimar';
+  const bubbleColor = isUser ? '#2563eb' : (m.color ? m.color + '25' : '#6366F125');
+  const textColor = isUser ? '#fff' : '#e8e8ef';
+  const existing = m.reactions || {};
+
+  document.getElementById('msg-ctx').innerHTML = `
+    <div class="msg-ctx-reactions">
+      ${REACTIONS.map(r => `<button onclick="addReaction(${idx},'${r}')">${r}</button>`).join('')}
+    </div>
+    <div class="msg-ctx-bubble" style="background:${bubbleColor};color:${textColor}">${formatMsg(m.text)}</div>
+    <div class="msg-ctx-actions">
+      <button onclick="doReply(${idx})"><span class="material-symbols-rounded">reply</span> Reply</button>
+      <button onclick="copyMsgText(${idx})"><span class="material-symbols-rounded">content_copy</span> Copy</button>
+    </div>`;
+  document.getElementById('msg-ctx-overlay').classList.add('show');
+}
+
+function closeMsgCtx() {
+  document.getElementById('msg-ctx-overlay').classList.remove('show');
+  ctxMsgIndex = null;
+}
+
+function addReaction(idx, emoji) {
+  const msgs = channelMessages[currentChannel] || [];
+  const m = msgs[idx];
+  if (!m) return;
+  if (!m.reactions) m.reactions = {};
+  if (m.reactions[emoji]) { delete m.reactions[emoji]; }
+  else { m.reactions[emoji] = 'aimar'; }
+  closeMsgCtx();
+  renderMessages();
+  scrollChat();
+}
+
+function doReply(idx) {
+  const msgs = channelMessages[currentChannel] || [];
+  const m = msgs[idx];
+  if (!m) return;
+  closeMsgCtx();
+  replyTo = { name: m.name, text: m.text.slice(0, 120), color: m.color || 'var(--text-primary)', msgIndex: idx };
   document.getElementById('reply-bar').innerHTML = `
     <div class="reply-bar" style="border-left-color:${replyTo.color}">
       <span class="material-symbols-rounded" style="font-size:16px;color:var(--text-muted)">reply</span>
@@ -680,6 +744,14 @@ function setReply(name, text, color, msgIndex) {
     </div>`;
   document.getElementById('chat-input').focus();
 }
+
+function copyMsgText(idx) {
+  const msgs = channelMessages[currentChannel] || [];
+  const m = msgs[idx];
+  if (m) navigator.clipboard.writeText(m.text);
+  closeMsgCtx();
+}
+
 function clearReply() {
   replyTo = null;
   document.getElementById('reply-bar').innerHTML = '';
@@ -1456,11 +1528,18 @@ function renderMessages() {
     let replyHTML = '';
     if (m.replyTo) {
       const refColor = m.replyTo.color || 'var(--text-muted)';
-      replyHTML = `<div class="msg-reply-ref" style="color:${refColor}" onclick="scrollToMsg(${m.replyTo.msgIndex || 0})"><span style="background:${refColor}" class="msg-reply-ref::before"></span><span style="font-weight:600">${esc(m.replyTo.name)}</span> <span>${esc(m.replyTo.text)}</span></div>`;
+      replyHTML = `<div class="msg-reply-ref" onclick="scrollToMsg(${m.replyTo.msgIndex || 0})"><div class="ref-bar" style="background:${refColor}"></div><span style="font-weight:600;color:${refColor}">${esc(m.replyTo.name)}</span><span class="ref-text">${esc(m.replyTo.text)}</span></div>`;
     }
 
+    // Reactions
+    const rxns = m.reactions || {};
+    const rxnKeys = Object.keys(rxns);
+    const reactionsHTML = rxnKeys.length > 0
+      ? `<div class="msg-reactions">${rxnKeys.map(r => `<span class="rxn ${rxns[r]==='aimar'?'mine':''}" onclick="event.stopPropagation();addReaction(${i},'${r}')">${r}</span>`).join('')}</div>`
+      : '';
+
     return `
-      <div class="msg ${side} ${isGroup ? 'msg-group' : ''} msg-wrap" data-msg-idx="${i}">
+      <div class="msg ${side} ${isGroup ? 'msg-group' : ''} msg-wrap" data-msg-idx="${i}" ondblclick="openMsgCtx(${i})">
         ${avatarHTML}
         <div class="msg-body">
           <div class="msg-header">
@@ -1476,7 +1555,7 @@ function renderMessages() {
               return '';
             }).join('')}
           </div>
-          <div class="msg-actions"><button title="Reply" onclick="event.stopPropagation();setReply('${esc(m.name).replace(/'/g,"\\'")}','${esc(m.text).replace(/'/g,"\\'").replace(/\n/g,' ')}','${m.color || ''}',${i})"><span class="material-symbols-rounded" style="font-size:16px">reply</span></button></div>
+          ${reactionsHTML}
         </div>
       </div>
     `;
