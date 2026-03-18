@@ -501,6 +501,79 @@ fastify.post('/api/webhook/message', async (req, reply) => {
   return { ok: true, messageId: message.id }
 })
 
+// ══════════════ TOOL CALLING ══════════════
+// Available tools that agents can call
+const AGENT_TOOLS = {
+  gh: { description: 'GitHub CLI — list repos, issues, PRs, create issues', allowedArgs: /^(repo list|repo view|issue list|issue view|issue create|pr list|pr view|pr create|api)\b/ },
+  git: { description: 'Git — status, log, diff, branch', allowedArgs: /^(status|log|diff|branch|remote|show|ls-files)\b/ },
+  ls: { description: 'List files in a directory', allowedArgs: /^[^\;|&`$]+$/ },
+  cat: { description: 'Read file contents', allowedArgs: /^[^\;|&`$]+$/ },
+  curl: { description: 'HTTP requests (GET only)', allowedArgs: /^-s\s/ },
+  node: { description: 'Run a Node.js one-liner', allowedArgs: /^-e\s/ },
+}
+
+// Blocked patterns for safety
+const BLOCKED_PATTERNS = /rm\s+-rf|rm\s+\/|sudo|chmod|chown|mkfs|dd\s+if|>\s*\/dev|passwd|shutdown|reboot|kill\s+-9|pkill|eval\s*\(|exec\s*\(/i
+
+function executeToolCall(toolName, args) {
+  if (!AGENT_TOOLS[toolName]) return { error: `Unknown tool: ${toolName}` }
+  if (BLOCKED_PATTERNS.test(args)) return { error: 'Blocked: dangerous command' }
+
+  const tool = AGENT_TOOLS[toolName]
+  if (tool.allowedArgs && !tool.allowedArgs.test(args)) {
+    return { error: `Not allowed: ${toolName} ${args.slice(0, 50)}` }
+  }
+
+  const cmd = toolName === 'ls' || toolName === 'cat' || toolName === 'curl'
+    ? `${toolName} ${args}`
+    : toolName === 'node' ? `node ${args}`
+    : `${toolName} ${args}`
+
+  try {
+    const output = execSync(cmd, {
+      timeout: 15000,
+      maxBuffer: 50 * 1024,
+      encoding: 'utf-8',
+      cwd: path.join(__dirname, '..'),
+      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
+    })
+    return { output: output.slice(0, 3000) }
+  } catch(e) {
+    return { error: e.message?.slice(0, 500) || 'Command failed' }
+  }
+}
+
+// Build tool definitions for Groq/OpenAI format
+function getGroqTools(agentPerms) {
+  if (!agentPerms?.includes('tools')) return undefined
+  return Object.entries(AGENT_TOOLS).map(([name, def]) => ({
+    type: 'function',
+    function: {
+      name,
+      description: def.description,
+      parameters: {
+        type: 'object',
+        properties: { args: { type: 'string', description: 'Command arguments' } },
+        required: ['args']
+      }
+    }
+  }))
+}
+
+// Build tool definitions for Anthropic format
+function getAnthropicTools(agentPerms) {
+  if (!agentPerms?.includes('tools')) return undefined
+  return Object.entries(AGENT_TOOLS).map(([name, def]) => ({
+    name,
+    description: def.description,
+    input_schema: {
+      type: 'object',
+      properties: { args: { type: 'string', description: 'Command arguments' } },
+      required: ['args']
+    }
+  }))
+}
+
 // ══════════════ TEAM AUTO-RESPONSE ══════════════
 // When any message is posted (by external agent or system), relevant AI agents respond
 const CHANNEL_RESPONDERS = {
@@ -719,6 +792,22 @@ async function dispatchToWorkChannels(instruction, respondedAgents) {
     }
   }
 }
+
+// POST /api/agents/:id/tools — enable/disable tools for an agent
+fastify.post('/api/agents/:id/tools', async (req, reply) => {
+  const c = loadConfig()
+  const agent = c.agents.find(a => a.id === req.params.id)
+  if (!agent) return reply.code(404).send({ error: 'Agent not found' })
+  const enable = req.body?.enable !== false
+  if (!agent.permissions) agent.permissions = []
+  if (enable && !agent.permissions.includes('tools')) {
+    agent.permissions.push('tools')
+  } else if (!enable) {
+    agent.permissions = agent.permissions.filter(p => p !== 'tools')
+  }
+  saveConfig(c)
+  return { ok: true, agent: agent.id, tools: agent.permissions.includes('tools') }
+})
 
 // POST /api/dispatch — dispatch agents to their work channels after #general instruction
 fastify.post('/api/dispatch', async (req) => {
@@ -1118,7 +1207,15 @@ fastify.post('/api/chat', async (req, reply) => {
   const brain = loadBrain(agentId)
   const brainPrompt = getBrainPrompt(brain)
 
-  const fullSystemPrompt = agent.systemPrompt + rulesText + contextText + tasksText + channelContext + filesystemContext + brainPrompt
+  // Tool context — let agents know they can use tools
+  let toolsContext = ''
+  if (agent.permissions?.includes('tools')) {
+    toolsContext = '\n\nYOU HAVE TOOLS — you can execute real commands on the server:\n' +
+      Object.entries(AGENT_TOOLS).map(([name, def]) => `- ${name}: ${def.description}`).join('\n') +
+      '\nUse tools when asked to check repos, read files, run commands, etc. Show the results to the team.'
+  }
+
+  const fullSystemPrompt = agent.systemPrompt + rulesText + contextText + tasksText + channelContext + filesystemContext + brainPrompt + toolsContext
 
   try {
     let responseText = ''
@@ -1140,14 +1237,46 @@ fastify.post('/api/chat', async (req, reply) => {
 
     if (agent.provider === 'anthropic') {
       const userContent = buildVisionContent(message, attachments)
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': agentApiKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: agent.model || 'claude-sonnet-4-20250514', max_tokens: 500, system: fullSystemPrompt, messages: [...(history || []).slice(-20), { role: 'user', content: userContent }] }),
-      })
-      const data = await res.json()
-      if (data.error) throw new Error(data.error.message)
-      responseText = data.content?.[0]?.text || 'No response'
+      const tools = getAnthropicTools(agent.permissions)
+      const msgs = [...(history || []).slice(-20), { role: 'user', content: userContent }]
+      const reqBody = { model: agent.model || 'claude-sonnet-4-20250514', max_tokens: 500, system: fullSystemPrompt, messages: msgs }
+      if (tools) reqBody.tools = tools
+
+      // Tool calling loop (max 3 rounds)
+      for (let round = 0; round < 3; round++) {
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': agentApiKey, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify(reqBody),
+        })
+        const data = await res.json()
+        if (data.error) throw new Error(data.error.message)
+
+        // Check for tool use
+        const toolBlocks = (data.content || []).filter(b => b.type === 'tool_use')
+        const textBlocks = (data.content || []).filter(b => b.type === 'text')
+
+        if (toolBlocks.length > 0 && data.stop_reason === 'tool_use') {
+          // Agent wants to call tools
+          reqBody.messages.push({ role: 'assistant', content: data.content })
+          const toolResults = []
+          for (const tb of toolBlocks) {
+            console.log(`Tool call [${agentId}]: ${tb.name} ${tb.input?.args}`)
+            const result = executeToolCall(tb.name, tb.input?.args || '')
+            toolResults.push({
+              type: 'tool_result',
+              tool_use_id: tb.id,
+              content: result.output || result.error || 'No output'
+            })
+          }
+          reqBody.messages.push({ role: 'user', content: toolResults })
+          continue
+        }
+
+        // No tool calls — extract text
+        responseText = textBlocks.map(b => b.text).join('\n') || 'No response'
+        break
+      }
     } else if (agent.provider === 'openai') {
       const res = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -1169,7 +1298,7 @@ fastify.post('/api/chat', async (req, reply) => {
       const data = await res.json()
       responseText = data.message?.content || 'No response'
     } else if (agent.provider === 'groq') {
-      // Groq uses OpenAI-compatible format with content arrays for vision
+      // Groq uses OpenAI-compatible format with tool calling support
       let userContent = message
       if (attachments?.length) {
         const parts = []
@@ -1180,14 +1309,42 @@ fastify.post('/api/chat', async (req, reply) => {
         parts.push({ type: 'text', text: message })
         userContent = parts
       }
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${agentApiKey}` },
-        body: JSON.stringify({ model: agent.model || 'llama-3.3-70b-versatile', max_tokens: 500, messages: [{ role: 'system', content: fullSystemPrompt }, ...(history || []).slice(-20), { role: 'user', content: userContent }] }),
-      })
-      const data = await res.json()
-      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error))
-      responseText = data.choices?.[0]?.message?.content || 'No response'
+      const tools = getGroqTools(agent.permissions)
+      const msgs = [{ role: 'system', content: fullSystemPrompt }, ...(history || []).slice(-20), { role: 'user', content: userContent }]
+      const reqBody = { model: agent.model || 'llama-3.3-70b-versatile', max_tokens: 500, messages: msgs }
+      if (tools) reqBody.tools = tools
+
+      // Tool calling loop (max 3 rounds)
+      for (let round = 0; round < 3; round++) {
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${agentApiKey}` },
+          body: JSON.stringify(reqBody),
+        })
+        const data = await res.json()
+        if (data.error) throw new Error(data.error.message || JSON.stringify(data.error))
+
+        const choice = data.choices?.[0]
+        if (choice?.finish_reason === 'tool_calls' && choice.message?.tool_calls?.length) {
+          // Agent wants to call tools
+          reqBody.messages.push(choice.message)
+          for (const tc of choice.message.tool_calls) {
+            const args = JSON.parse(tc.function?.arguments || '{}')
+            console.log(`Tool call [${agentId}]: ${tc.function.name} ${args.args}`)
+            const result = executeToolCall(tc.function.name, args.args || '')
+            reqBody.messages.push({
+              role: 'tool',
+              tool_call_id: tc.id,
+              content: result.output || result.error || 'No output'
+            })
+          }
+          continue // Go to next round with tool results
+        }
+
+        // No tool calls — we have the final response
+        responseText = choice?.message?.content || 'No response'
+        break
+      }
     } else if (agent.provider === 'webhook') {
       const webhookUrl = resolveEnv(agent.webhookUrl)
       if (!webhookUrl) throw new Error('No webhook URL configured for this agent')
