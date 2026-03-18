@@ -1378,7 +1378,11 @@ fastify.post('/api/chat', async (req, reply) => {
     return { response: responseText }
   } catch (err) {
     console.error(`Agent ${agentId} error:`, err.message)
-    return reply.code(500).send({ error: err.message })
+    // Clean up error messages for the user
+    const msg = err.message || 'Something went wrong'
+    if (msg.includes('Rate limit')) return reply.code(429).send({ error: 'Taking a breather — too many messages. Try again in a minute.' })
+    if (msg.includes('Failed to call a function')) return reply.code(500).send({ error: 'Tool call failed — try rephrasing your message.' })
+    return reply.code(500).send({ error: msg.length > 100 ? msg.slice(0, 100) + '...' : msg })
   }
 })
 
