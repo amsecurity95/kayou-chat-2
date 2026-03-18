@@ -1618,6 +1618,7 @@ function renderAgentCard(a) {
         <div class="agent-meta">
           <span class="tag tag-${providerColor(a.provider)}">${esc(a.provider)}</span>
           <span class="tag ${a.enabled ? 'tag-green' : 'tag-red'}">${a.enabled ? 'Active' : 'Inactive'}</span>
+          ${a.permissions?.includes('tools') ? '<span class="tag tag-orange" title="Tools enabled">🔧</span>' : ''}
           ${b.interactions > 0 ? `<span class="tag tag-purple" title="Brain: ${b.knowledgeCount || 0} knowledge, ${b.mentorLearnings || 0} mentor learnings">🧠 ${b.interactions}</span>` : '<span class="tag" style="background:var(--bg-elevated);color:var(--text-muted)">🧠 New</span>'}
         </div>
       </div>
@@ -1686,6 +1687,22 @@ async function showAgentDetail(id) {
         ${brain.lastActive ? ' · Last active: ' + new Date(brain.lastActive).toLocaleDateString() : ''}
       </div>
       <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="showBrainEditor('${id}')">Edit Brain</button>
+    </div>
+
+    <!-- Tools Section -->
+    <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span style="font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px">
+          <span class="material-symbols-rounded" style="font-size:18px;color:var(--orange)">build</span> Tools
+        </span>
+        <div class="toggle ${a.permissions?.includes('tools') ? 'on' : ''}" id="edit-tools-toggle" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">
+        ${a.permissions?.includes('tools') ? '<span style="color:var(--accent)">Active</span> — agent can execute real commands' : '<span style="color:var(--text-muted)">Disabled</span> — agent can only chat'}
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">
+        ${['gh','git','ls','cat','curl','node'].map(t => `<span class="tag ${a.permissions?.includes('tools') ? 'tag-orange' : ''}" style="font-size:10px;${a.permissions?.includes('tools') ? '' : 'opacity:.4'}">${t}</span>`).join('')}
+      </div>
     </div>
 
     <div class="form-group">
@@ -1844,6 +1861,11 @@ async function saveAgent(id) {
   if (photoUrl) body.profilePhoto = photoUrl;
 
   await fetch(API + '/api/config/agents/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+  // Save tools toggle
+  const toolsOn = document.getElementById('edit-tools-toggle')?.classList.contains('on');
+  await fetch(API + '/api/agents/' + id + '/tools', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enable: toolsOn }) });
+
   pendingPhotoUpload = null;
   closeModal();
   await loadAgents();
