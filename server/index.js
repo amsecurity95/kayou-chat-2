@@ -512,10 +512,39 @@ const AGENT_TOOLS = {
   node: { description: 'Run a Node.js one-liner', allowedArgs: /^-e\s/ },
 }
 
+// Admin tools — only for authorized agents (Claude)
+const ADMIN_TOOLS = {
+  manage_agent: {
+    description: 'Enable or disable an agent. Use when an agent is misbehaving or causing problems. Args format: "disable <agent_id>" or "enable <agent_id>". Agent IDs: kayou, dev, ops, kayou-kilo, scout, analyst, sonic.',
+  }
+}
+
+function executeAdminTool(toolName, args, callerAgentId) {
+  if (toolName === 'manage_agent') {
+    const match = args.match(/^(enable|disable)\s+([\w-]+)$/)
+    if (!match) return { error: 'Format: "enable <agent_id>" or "disable <agent_id>"' }
+    const [, action, targetId] = match
+    if (targetId === 'claude' || targetId === 'aimar') return { error: 'Cannot modify Claude or Aimar' }
+    if (targetId === callerAgentId) return { error: 'Cannot modify yourself' }
+
+    const c = loadConfig()
+    const target = c.agents.find(a => a.id === targetId)
+    if (!target) return { error: `Agent "${targetId}" not found` }
+
+    target.enabled = action === 'enable'
+    saveConfig(c)
+    console.log(`ADMIN: ${callerAgentId} ${action}d agent ${targetId}`)
+    return { output: `${target.name} has been ${action}d.` }
+  }
+  return { error: 'Unknown admin tool' }
+}
+
 // Blocked patterns for safety
 const BLOCKED_PATTERNS = /rm\s+-rf|rm\s+\/|sudo|chmod|chown|mkfs|dd\s+if|>\s*\/dev|passwd|shutdown|reboot|kill\s+-9|pkill|eval\s*\(|exec\s*\(/i
 
-function executeToolCall(toolName, args) {
+function executeToolCall(toolName, args, callerAgentId) {
+  // Check admin tools first
+  if (ADMIN_TOOLS[toolName]) return executeAdminTool(toolName, args, callerAgentId)
   if (!AGENT_TOOLS[toolName]) return { error: `Unknown tool: ${toolName}` }
   if (BLOCKED_PATTERNS.test(args)) return { error: 'Blocked: dangerous command' }
 
@@ -544,9 +573,11 @@ function executeToolCall(toolName, args) {
 }
 
 // Build tool definitions for Groq/OpenAI format
-function getGroqTools(agentPerms) {
+function getGroqTools(agentPerms, agentId) {
   if (!agentPerms?.includes('tools')) return undefined
-  return Object.entries(AGENT_TOOLS).map(([name, def]) => ({
+  const allTools = { ...AGENT_TOOLS }
+  if (agentPerms?.includes('admin')) Object.assign(allTools, ADMIN_TOOLS)
+  return Object.entries(allTools).map(([name, def]) => ({
     type: 'function',
     function: {
       name,
@@ -561,9 +592,11 @@ function getGroqTools(agentPerms) {
 }
 
 // Build tool definitions for Anthropic format
-function getAnthropicTools(agentPerms) {
+function getAnthropicTools(agentPerms, agentId) {
   if (!agentPerms?.includes('tools')) return undefined
-  return Object.entries(AGENT_TOOLS).map(([name, def]) => ({
+  const allTools = { ...AGENT_TOOLS }
+  if (agentPerms?.includes('admin')) Object.assign(allTools, ADMIN_TOOLS)
+  return Object.entries(allTools).map(([name, def]) => ({
     name,
     description: def.description,
     input_schema: {
@@ -1287,7 +1320,7 @@ fastify.post('/api/chat', async (req, reply) => {
           const toolResults = []
           for (const tb of toolBlocks) {
             console.log(`Tool call [${agentId}]: ${tb.name} ${tb.input?.args}`)
-            const result = executeToolCall(tb.name, tb.input?.args || '')
+            const result = executeToolCall(tb.name, tb.input?.args || '', agentId)
             toolResults.push({
               type: 'tool_result',
               tool_use_id: tb.id,
@@ -1356,7 +1389,7 @@ fastify.post('/api/chat', async (req, reply) => {
           for (const tc of choice.message.tool_calls) {
             const args = JSON.parse(tc.function?.arguments || '{}')
             console.log(`Tool call [${agentId}]: ${tc.function.name} ${args.args}`)
-            const result = executeToolCall(tc.function.name, args.args || '')
+            const result = executeToolCall(tc.function.name, args.args || '', agentId)
             reqBody.messages.push({
               role: 'tool',
               tool_call_id: tc.id,
