@@ -720,6 +720,14 @@ async function dispatchToWorkChannels(instruction, respondedAgents) {
   }
 }
 
+// POST /api/dispatch — dispatch agents to their work channels after #general instruction
+fastify.post('/api/dispatch', async (req) => {
+  const { instruction, agents: agentIds } = req.body
+  if (!instruction || !agentIds?.length) return { ok: false }
+  dispatchToWorkChannels(instruction, agentIds).catch(e => console.error('Dispatch error:', e.message))
+  return { ok: true, dispatching: agentIds }
+})
+
 // ══════════════ EXTERNAL API (for Open Claw, Telegram bots, etc) ══════════════
 // Auth: send header "Authorization: Bearer <EXTERNAL_API_KEY>" or query param ?key=<KEY>
 function checkExternalAuth(req, reply) {
@@ -1198,13 +1206,6 @@ fastify.post('/api/chat', async (req, reply) => {
 
     // ═══ BRAIN LEARNING — runs after every response ═══
     updateBrain(agentId, message, responseText)
-
-    // If responding in #general to an instruction/task, dispatch to work channel (async)
-    const channelId = req.body.channelId || ''
-    const isInstruction = /\b(go|check|build|create|fix|work on|start|deploy|test|review|scan|look at|investigate|set up|implement|make|do|ship|push|update|handle|run|launch|prepare|analyze|research|find)\b/i.test(message)
-    if (channelId === 'general' && responseText && isInstruction) {
-      dispatchToWorkChannels(message, [agentId]).catch(e => console.error('Dispatch error:', e.message))
-    }
 
     return { response: responseText }
   } catch (err) {

@@ -1342,6 +1342,18 @@ async function sendMessage() {
     }
   }
 
+  // Dispatch agents to their work channels if this was an instruction in #general
+  if (currentChannel === 'general' && !isDM && agentIds.length > 0) {
+    const isInstruction = /\b(go|check|build|create|fix|work on|start|deploy|test|review|scan|look at|investigate|set up|implement|make|do|ship|push|update|handle|run|launch|prepare|analyze|research|find)\b/i.test(text);
+    if (isInstruction) {
+      fetch(API + '/api/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instruction: text, agents: agentIds.filter(id => agents.find(a => a.id === id)?.provider !== 'external') })
+      }).catch(e => console.error('Dispatch error:', e));
+    }
+  }
+
   renderDashboard();
 }
 
