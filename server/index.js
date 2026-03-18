@@ -597,6 +597,84 @@ fastify.post('/api/external/ask', async (req, reply) => {
   }
 })
 
+// ══════════════ HEARTBEAT — agents auto-research ══════════════
+let heartbeatTimer = null
+const HEARTBEAT_TOPICS = [
+  'Find a trending micro-SaaS idea that can make $5k/mo with low competition. Be specific — name, pricing, target audience.',
+  'What\'s a digital product or tool creators are begging for on Twitter/TikTok right now? Something we could build in a week.',
+  'Find a gap in the market — an existing product category where all options are mediocre. We could build a better version.',
+  'What AI-powered tool could we build and sell to small businesses? Focus on something that saves them time or money.',
+  'Research a passive income idea that uses automation. Something that makes money while we sleep.',
+  'What\'s an underserved niche on Gumroad, Lemonsqueezy, or similar platforms? Find a product gap.',
+  'Find a real business opportunity in the API economy. What API service is missing that developers would pay for?',
+]
+
+function startHeartbeat() {
+  if (heartbeatTimer) clearInterval(heartbeatTimer)
+  // Run every 30 minutes
+  heartbeatTimer = setInterval(async () => {
+    if (!db) return
+    const c = loadConfig()
+    // Pick a random research topic
+    const topic = HEARTBEAT_TOPICS[Math.floor(Math.random() * HEARTBEAT_TOPICS.length)]
+    // Kayou Kilo leads research
+    const kilo = c.agents.find(a => a.id === 'kayou-kilo' && a.enabled)
+    if (!kilo) return
+
+    try {
+      // Have Kilo research
+      const res = await fastify.inject({ method: 'POST', url: '/api/chat', payload: { agentId: 'kayou-kilo', message: topic, history: [], channelId: 'office' } })
+      const data = JSON.parse(res.payload)
+      if (data.response) {
+        await db.query('INSERT INTO messages (channel, sender_id, sender_name, text, color) VALUES ($1,$2,$3,$4,$5)', ['office', 'kayou-kilo', kilo.name, data.response, kilo.color])
+        // Log activity
+        await db.query("INSERT INTO user_settings (key, value) VALUES ('last_heartbeat', $1) ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()", [new Date().toISOString()])
+      }
+    } catch(e) { console.error('Heartbeat error:', e.message) }
+  }, 30 * 60 * 1000) // 30 minutes
+  console.log('Heartbeat started — agents will auto-research every 30 min')
+}
+
+// Agent activity / status endpoint for office
+fastify.get('/api/agents/activity', async () => {
+  const c = loadConfig()
+  const agentActivity = []
+  for (const a of c.agents) {
+    const brain = loadBrain(a.id)
+    let lastMsg = null
+    if (db) {
+      const { rows } = await db.query('SELECT text, created_at FROM messages WHERE sender_id = $1 ORDER BY created_at DESC LIMIT 1', [a.id])
+      if (rows[0]) lastMsg = { text: rows[0].text.slice(0, 100), ts: rows[0].created_at }
+    }
+    const photo = agentPhotosCache[a.id] || a.profilePhoto || ''
+    agentActivity.push({
+      id: a.id, name: a.name, color: a.color, provider: a.provider,
+      enabled: a.enabled, photo, reportsTo: a.reportsTo,
+      interactions: brain.interactions, lastActive: brain.lastActive,
+      lastMessage: lastMsg
+    })
+  }
+  return agentActivity
+})
+
+// Manual heartbeat trigger
+fastify.post('/api/heartbeat', async (req) => {
+  if (!db) return { ok: false, reason: 'no database' }
+  const c = loadConfig()
+  const topic = req.body?.topic || HEARTBEAT_TOPICS[Math.floor(Math.random() * HEARTBEAT_TOPICS.length)]
+  const agentId = req.body?.agentId || 'kayou-kilo'
+  const agent = c.agents.find(a => a.id === agentId)
+  if (!agent || !agent.enabled) return { error: 'Agent not available' }
+
+  const res = await fastify.inject({ method: 'POST', url: '/api/chat', payload: { agentId, message: topic, history: [], channelId: 'office' } })
+  const data = JSON.parse(res.payload)
+  if (data.response) {
+    await db.query('INSERT INTO messages (channel, sender_id, sender_name, text, color) VALUES ($1,$2,$3,$4,$5)', ['office', agentId, agent.name, data.response, agent.color])
+    return { ok: true, agent: agent.name, response: data.response }
+  }
+  return { ok: false, error: data.error }
+})
+
 // ══════════════ IMAGE UPLOAD ══════════════
 fastify.post('/api/upload', async (req, reply) => {
   const { image, filename } = req.body
@@ -802,6 +880,7 @@ const start = async () => {
     }
     await initDB()
     await loadAgentPhotos()
+    startHeartbeat()
     const c = loadConfig()
     console.log(`Server running on http://localhost:${port}`)
     console.log(`Agents: ${c.agents.length} | Projects: ${(c.projects||[]).length} | Brains: ${fs.readdirSync(BRAINS_DIR).length} | DB: ${db ? 'connected' : 'none'}`)

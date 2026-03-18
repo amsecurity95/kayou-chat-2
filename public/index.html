@@ -182,7 +182,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .mention-item:hover,.mention-item.active{background:var(--bg-elevated);color:var(--text-primary)}
 .mention-item img{width:22px;height:22px;border-radius:50%;object-fit:cover}
 .mention-dot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;flex-shrink:0}
-.mention-tag{display:inline;padding:1px 4px;border-radius:4px;font-weight:600;font-size:13px}
+.mention-tag{display:inline;padding:2px 6px;border-radius:4px;font-weight:600;font-size:13px;background:#F59E0B30;color:#F59E0B}
 
 .chat-input-area{padding:10px 16px 14px;flex-shrink:0;position:relative}
 .chat-input-wrap{display:flex;flex-direction:column;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
@@ -787,6 +787,7 @@ const CHANNELS = [
   { id: 'build', name: 'build', icon: 'construction', desc: 'Development & engineering' },
   { id: 'testing', name: 'testing', icon: 'bug_report', desc: 'QA & testing' },
   { id: 'release', name: 'release', icon: 'rocket_launch', desc: 'Deployments & releases' },
+  { id: 'office', name: 'office', icon: 'business_center', desc: 'Agent workspace — see who\'s working' },
 ];
 
 const CHANNEL_AGENTS = {
@@ -965,8 +966,12 @@ async function switchChannel(id) {
   if (!channelMessages[id] || channelMessages[id].length === 0) {
     await loadChannelMessages(id);
   }
-  renderMessages();
-  scrollChat();
+  if (id === 'office') {
+    renderOffice();
+  } else {
+    renderMessages();
+    scrollChat();
+  }
 }
 
 let mentionActive = false;
@@ -1262,6 +1267,24 @@ async function sendMessage() {
     hideTyping();
     renderMessages();
     scrollChat();
+
+    // Chain response — if this agent @mentioned other agents, they respond too
+    if (data.response && !isDM) {
+      const chainMentions = [];
+      const chainRegex = /@([\w\s-]+)/g;
+      let cm;
+      while ((cm = chainRegex.exec(data.response)) !== null) {
+        const tagName = cm[1].trim().toLowerCase();
+        const found = agents.find(a => a.name.toLowerCase() === tagName || a.id === tagName);
+        if (found && found.id !== agentId && found.id !== 'aimar' && found.enabled && found.provider !== 'external' && !agentIds.includes(found.id)) {
+          chainMentions.push(found.id);
+        }
+      }
+      // Queue chain responses (max 2 to prevent infinite loops)
+      for (const chainId of chainMentions.slice(0, 2)) {
+        if (!agentIds.includes(chainId)) agentIds.push(chainId);
+      }
+    }
   }
 
   renderDashboard();
@@ -1355,6 +1378,79 @@ function scrollChat() {
   setTimeout(() => el.scrollTop = el.scrollHeight, 50);
 }
 
+async function renderOffice() {
+  const container = document.getElementById('chat-messages');
+  let activityData = [];
+  try { activityData = await (await fetch(API + '/api/agents/activity')).json(); } catch(e) {}
+
+  // Also load office messages
+  const msgs = channelMessages['office'] || [];
+
+  container.innerHTML = `
+    <div style="padding:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <h3 style="font-size:16px;font-weight:700">Agent Workspace</h3>
+        <button class="btn btn-primary btn-sm" onclick="triggerHeartbeat()">
+          <span class="material-symbols-rounded" style="font-size:16px">neurology</span> Research Now
+        </button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:24px">
+        ${activityData.filter(a => a.enabled).map(a => {
+          const timeSince = a.lastMessage ? timeAgo(new Date(a.lastMessage.ts)) : 'Never';
+          const isActive = a.lastMessage && (Date.now() - new Date(a.lastMessage.ts).getTime()) < 30 * 60 * 1000;
+          const photo = a.photo;
+          return `<div class="card" style="padding:14px;text-align:center">
+            <div style="position:relative;display:inline-block;margin-bottom:8px">
+              ${photo ? '<img src="' + esc(photo) + '" style="width:40px;height:40px;border-radius:50%;object-fit:cover">' : '<div style="width:40px;height:40px;border-radius:50%;background:' + a.color + ';display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;margin:0 auto">' + esc(a.name[0]) + '</div>'}
+              <div style="position:absolute;bottom:0;right:0;width:12px;height:12px;border-radius:50%;border:2px solid var(--bg-card);background:${isActive ? 'var(--accent)' : 'var(--text-muted)'}"></div>
+            </div>
+            <div style="font-size:13px;font-weight:600">${esc(a.name)}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${esc(a.provider)} · ${a.interactions} chats</div>
+            <div style="font-size:10px;color:${isActive ? 'var(--accent)' : 'var(--text-muted)'};margin-top:4px">${isActive ? '● Active' : '○ ' + timeSince}</div>
+            ${a.lastMessage ? '<div style="font-size:11px;color:var(--text-secondary);margin-top:6px;background:var(--bg-surface);padding:6px 8px;border-radius:6px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(a.lastMessage.text.slice(0, 60)) + '</div>' : ''}
+          </div>`;
+        }).join('')}
+      </div>
+      ${msgs.length > 0 ? '<h4 style="font-size:14px;font-weight:600;margin-bottom:12px">Research Feed</h4>' : ''}
+    </div>
+  `;
+
+  // Render office messages below the grid
+  if (msgs.length > 0) {
+    const msgsHTML = msgs.map(m => {
+      if (m.sender === 'system') return '';
+      const agent = agents.find(a => a.id === m.sender);
+      const color = m.color || agent?.color || '#6366F1';
+      const photo = m.photo || agent?.profilePhoto || '';
+      const avatar = photo ? '<img class="msg-avatar" src="' + esc(photo) + '">' : '<div class="msg-avatar-text" style="background:' + color + '">' + esc((m.name || '?')[0]) + '</div>';
+      const time = m.ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return '<div class="msg msg-left"><' + avatar + '><div class="msg-body"><div class="msg-header"><span class="msg-name" style="color:' + color + '">' + esc(m.name) + '</span><span class="msg-time">' + time + '</span></div><div class="msg-bubble" style="background:' + color + '25;border:1px solid ' + color + '40"><div class="msg-text">' + formatMsg(m.text) + '</div></div></div></div>';
+    }).join('');
+    container.innerHTML += '<div style="padding:0 16px">' + msgsHTML + '</div>';
+  }
+}
+
+function timeAgo(date) {
+  const s = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (s < 60) return 'Just now';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago';
+  return Math.floor(s/86400) + 'd ago';
+}
+
+async function triggerHeartbeat() {
+  const btn = event.target.closest('button');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="material-symbols-rounded" style="font-size:16px">hourglass_empty</span> Thinking...';
+  try {
+    await fetch(API + '/api/heartbeat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    await loadChannelMessages('office');
+    renderOffice();
+  } catch(e) {}
+  btn.disabled = false;
+  btn.innerHTML = '<span class="material-symbols-rounded" style="font-size:16px">neurology</span> Research Now';
+}
+
 function formatMsg(s) {
   let out = esc(s)
     .replace(/`([^`]+)`/g, '<code>$1</code>')
@@ -1363,7 +1459,7 @@ function formatMsg(s) {
   // Highlight @agent mentions
   out = out.replace(/@([\w\s-]+?)(?=\s|$|[.,!?])/g, (match, name) => {
     const agent = agents.find(a => a.name.toLowerCase() === name.trim().toLowerCase() || a.id === name.trim().toLowerCase());
-    if (agent) return `<span class="mention-tag" style="background:${agent.color}30;color:${agent.color}">@${esc(agent.name)}</span>`;
+    if (agent) return `<span class="mention-tag">@${esc(agent.name)}</span>`;
     return match;
   });
 
