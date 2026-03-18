@@ -629,20 +629,21 @@ const CHANNEL_AGENTS = {
 // INIT
 // ═══════════════════════════════════════
 async function init() {
-  await Promise.all([loadAgents(), loadProjects(), loadRules(), loadGitHub()]);
-  renderChannelList();
-  renderDMList();
-  renderDashboard();
-  renderAgents();
-  renderProjects();
-  renderSettings();
-  initChat();
+  try {
+    await Promise.all([loadAgents(), loadProjects(), loadRules(), loadGitHub()]);
+    renderChannelList();
+    renderDMList();
+    renderDashboard();
+    renderAgents();
+    renderProjects();
+    renderSettings();
+    await initChat();
+  } catch(e) { console.error('Init error:', e); }
 
-  setTimeout(() => {
-    document.getElementById('splash').classList.add('hide');
-    document.getElementById('app').style.opacity = '1';
-    document.getElementById('app').style.transition = 'opacity .3s';
-  }, 600);
+  // Always hide splash even if something fails
+  document.getElementById('splash').classList.add('hide');
+  document.getElementById('app').style.opacity = '1';
+  document.getElementById('app').style.transition = 'opacity .3s';
 }
 
 // ═══════════════════════════════════════
@@ -868,7 +869,7 @@ function selectMention(el) {
   document.getElementById('chat-send').disabled = !input.value.trim();
 }
 
-function initChat() {
+async function initChat() {
   const input = document.getElementById('chat-input');
   const send = document.getElementById('chat-send');
 
@@ -954,7 +955,11 @@ async function addMessage(channel, senderId, senderName, text, color, photo) {
 
 async function loadChannelMessages(channel) {
   try {
-    const msgs = await (await fetch(API + '/api/messages/' + channel)).json();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(API + '/api/messages/' + channel, { signal: controller.signal });
+    clearTimeout(timeout);
+    const msgs = await res.json();
     if (Array.isArray(msgs) && msgs.length > 0) {
       channelMessages[channel] = msgs.map(m => ({
         ...m, ts: new Date(m.ts)
@@ -962,7 +967,7 @@ async function loadChannelMessages(channel) {
       messageCount = Object.values(channelMessages).reduce((s, arr) => s + arr.filter(m => m.sender !== 'system').length, 0);
       return true;
     }
-  } catch(e) {}
+  } catch(e) { console.log('Could not load messages for', channel); }
   return false;
 }
 
