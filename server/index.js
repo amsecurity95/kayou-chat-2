@@ -613,6 +613,7 @@ const CHANNEL_RESPONDERS = {
   general: ['kayou', 'kayou-kilo'],
   ideas: ['kayou-kilo', 'scout', 'analyst'],
   research: ['kayou-kilo', 'scout', 'analyst'],
+  security: ['claude', 'sonic'],
   build: ['kayou', 'dev', 'ops'],
   testing: ['kayou', 'dev', 'claude', 'sonic'],
   release: ['kayou', 'ops', 'claude', 'sonic'],
@@ -744,7 +745,7 @@ async function triggerTeamResponses(channel, senderId, senderName, text) {
 // When agents receive instructions in #general, they go to their work channels to execute
 const AGENT_WORK_CHANNELS = {
   'kayou': 'build', 'dev': 'build', 'ops': 'build', 'kayou-code': 'build',
-  'claude': 'testing', 'sonic': 'testing',
+  'claude': 'security', 'sonic': 'security',
   'kayou-kilo': 'research', 'scout': 'research', 'analyst': 'research',
 }
 
@@ -1214,6 +1215,8 @@ fastify.post('/api/chat', async (req, reply) => {
     channelContext = '\n\nYou\'re in #general — the team room. Group chat with Aimar (CEO) and other AI agents.' + coreRules
   } else if (channelId === 'ideas') {
     channelContext = '\n\nYou\'re in #ideas. Give your take from your expertise. Be specific and useful.' + coreRules
+  } else if (channelId === 'security') {
+    channelContext = '\n\nYou\'re in #security — your dedicated channel for security reviews, audits, vulnerability discussions, and mentoring. Claude leads, Sonic learns. Be thorough.' + coreRules
   } else if (channelId === 'build' || channelId === 'testing' || channelId === 'release' || channelId === 'research') {
     channelContext = `\n\nYou're in #${channelId}. Focused work channel. Be concise and actionable.` + coreRules
   } else {
