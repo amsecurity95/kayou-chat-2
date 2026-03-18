@@ -194,14 +194,13 @@ fastify.get('/health', async () => ({ status: 'ok' }))
 
 // ══════════════ APP AUTH ══════════════
 const APP_PASSWORD = process.env.APP_PASSWORD || loadConfig().appPassword || ''
-const activeSessions = new Set()
+// Deterministic token from password — survives redeploys
+const VALID_TOKEN = APP_PASSWORD ? require('crypto').createHash('sha256').update('kayou-session-' + APP_PASSWORD).digest('hex') : ''
 
 fastify.post('/api/auth/login', async (req, reply) => {
   if (!APP_PASSWORD) return { ok: true, token: 'no-auth' }
   if (req.body.password === APP_PASSWORD) {
-    const token = require('crypto').randomBytes(32).toString('hex')
-    activeSessions.add(token)
-    return { ok: true, token }
+    return { ok: true, token: VALID_TOKEN }
   }
   return reply.code(401).send({ error: 'Wrong password' })
 })
@@ -209,7 +208,7 @@ fastify.post('/api/auth/login', async (req, reply) => {
 fastify.get('/api/auth/check', async (req) => {
   if (!APP_PASSWORD) return { ok: true }
   const token = req.headers['x-auth-token']
-  return { ok: activeSessions.has(token) }
+  return { ok: token === VALID_TOKEN || token === 'no-auth' }
 })
 
 // Protect all /api/ routes except auth and external API
@@ -219,7 +218,7 @@ fastify.addHook('onRequest', async (req, reply) => {
   // Allow: health, auth, external API, static files
   if (url === '/health' || url.startsWith('/api/auth/') || url.startsWith('/api/external/') || !url.startsWith('/api/')) return
   const token = req.headers['x-auth-token']
-  if (!activeSessions.has(token)) {
+  if (token !== VALID_TOKEN) {
     reply.code(401).send({ error: 'Not authenticated' })
   }
 })

@@ -617,7 +617,16 @@ window.fetch = function(url, opts = {}) {
     if (opts.headers instanceof Headers) { opts.headers.set('x-auth-token', authToken); }
     else { opts.headers['x-auth-token'] = authToken; }
   }
-  return _origFetch.call(this, url, opts);
+  return _origFetch.call(this, url, opts).then(res => {
+    // Auto show login if session expired
+    if (res.status === 401 && !url.includes('/api/auth/')) {
+      localStorage.removeItem('kayou-auth-token');
+      authToken = '';
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('app').style.opacity = '0';
+    }
+    return res;
+  });
 };
 
 async function checkAuth() {
