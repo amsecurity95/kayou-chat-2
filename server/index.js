@@ -580,7 +580,7 @@ async function triggerTeamResponses(channel, senderId, senderName, text) {
       const otherNames = c.agents.filter(a => a.id !== agentId && a.enabled).map(a => a.name).join(', ')
       const sysPrompt = (agent.systemPrompt || '') + rulesText + brainPrompt +
         `\n\nYou're in #${channel} — group chat.\nTeam members: ${otherNames}, Aimar (CEO)` +
-        '\n\nCORE RULES: Keep it SHORT (1-3 sentences). NEVER start with your own name. Use @Name for mentions. Respond to teammates naturally.'
+        '\n\nCORE RULES: Keep it SHORT (1-3 sentences). NEVER start with your own name like "Kayou:" — the UI shows it. When replying to someone specific, start with @TheirName (e.g. "@Kayou Code, nice idea"). In general discussion, just talk naturally. Respond to teammates like real coworkers.'
 
       const userMsg = `[${senderName} said]: ${text}`
       let responseText = ''
@@ -986,7 +986,7 @@ fastify.post('/api/chat', async (req, reply) => {
   const projectStatus = hasProjects ? 'Active projects are listed above.' : 'There are NO active projects right now.'
   const coreRules = `\n\nCORE RULES (ALWAYS FOLLOW):
 - NEVER start your message with your own name like "@Kayou:" or "[Kayou]:" or "Kayou:" — the UI shows your name automatically
-- When mentioning OTHER people, use @Name like social media
+- When replying to someone specific, START with @TheirName so it's clear who you're talking to (e.g. "@Kayou Code, great idea" or "@Aimar, here's what I think"). In a general discussion where you're not addressing anyone specific, just talk naturally without tagging.
 - Keep it SHORT — 1-3 sentences
 - ${projectStatus}
 - NEVER invent, fabricate, or speculate about projects, code reviews, builds, releases, pipelines, or tasks that don't exist. If Aimar asks what you're doing and you have nothing assigned, say "Nothing right now, what do you need?" or "Just chilling, hit me with something." That's it. Don't make up work.
