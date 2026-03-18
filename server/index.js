@@ -501,6 +501,98 @@ fastify.post('/api/webhook/message', async (req, reply) => {
   return { ok: true, messageId: message.id }
 })
 
+// ══════════════ TEAM AUTO-RESPONSE ══════════════
+// When any message is posted (by external agent or system), relevant AI agents respond
+const CHANNEL_RESPONDERS = {
+  general: ['kayou', 'kayou-kilo'],
+  ideas: ['kayou-kilo', 'scout', 'analyst'],
+  research: ['kayou-kilo', 'scout', 'analyst'],
+  build: ['kayou', 'dev', 'ops'],
+  testing: ['kayou', 'dev', 'claude', 'sonic'],
+  release: ['kayou', 'ops', 'claude', 'sonic'],
+}
+
+async function triggerTeamResponses(channel, senderId, senderName, text) {
+  if (!db) return
+  const c = loadConfig()
+
+  // Find which agents should respond
+  let responders = CHANNEL_RESPONDERS[channel] || ['kayou']
+
+  // Also check for @mentions in the text
+  const mentionRegex = /@([\w\s-]+)/g
+  let match
+  while ((match = mentionRegex.exec(text)) !== null) {
+    const tagName = match[1].trim().toLowerCase()
+    const found = c.agents.find(a => a.name.toLowerCase() === tagName || a.id === tagName)
+    if (found && !responders.includes(found.id)) responders.push(found.id)
+  }
+
+  // Filter out the sender and external/disabled agents
+  responders = responders.filter(id => id !== senderId && id !== 'aimar')
+  // Pick 1-2 relevant agents (don't flood the channel)
+  const maxResponders = 2
+  const selected = responders.slice(0, maxResponders)
+
+  // Load recent channel history for context
+  let history = []
+  try {
+    const { rows } = await db.query(
+      'SELECT sender_id, sender_name, text FROM messages WHERE channel = $1 ORDER BY created_at DESC LIMIT 15',
+      [channel]
+    )
+    history = rows.reverse().map(r => ({
+      role: r.sender_id === 'aimar' ? 'user' : 'assistant',
+      content: r.sender_id === 'aimar' ? r.text : `@${r.sender_name}: ${r.text}`
+    }))
+  } catch(e) {}
+
+  // Stagger responses
+  for (let i = 0; i < selected.length; i++) {
+    const agentId = selected[i]
+    const agent = c.agents.find(a => a.id === agentId)
+    if (!agent || !agent.enabled || agent.provider === 'external') continue
+
+    // Delay to feel natural
+    await new Promise(r => setTimeout(r, 1500 + Math.random() * 3000))
+
+    try {
+      const res = await fastify.inject({
+        method: 'POST',
+        url: '/api/chat',
+        payload: {
+          agentId,
+          message: `[${senderName} said in #${channel}]: ${text}`,
+          history,
+          channelId: channel
+        }
+      })
+      const data = JSON.parse(res.payload)
+      if (data.response) {
+        // Clean response — strip self-name prefix
+        let clean = data.response.replace(new RegExp('^\\[?' + agent.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\]?:\\s*', 'i'), '')
+
+        // Save to DB
+        const photo = agentPhotosCache[agent.id] || agent.profilePhoto || null
+        await db.query(
+          'INSERT INTO messages (channel, sender_id, sender_name, text, color, photo) VALUES ($1,$2,$3,$4,$5,$6)',
+          [channel, agent.id, agent.name, clean, agent.color, photo]
+        )
+
+        // Push to web clients
+        if (io) {
+          io.emit('new:message', {
+            channel, sender: agent.id, name: agent.name,
+            text: clean, color: agent.color, photo, ts: new Date().toISOString()
+          })
+        }
+      }
+    } catch(e) {
+      console.error(`Auto-response error for ${agentId}:`, e.message)
+    }
+  }
+}
+
 // ══════════════ EXTERNAL API (for Open Claw, Telegram bots, etc) ══════════════
 // Auth: send header "Authorization: Bearer <EXTERNAL_API_KEY>" or query param ?key=<KEY>
 function checkExternalAuth(req, reply) {
@@ -569,6 +661,9 @@ fastify.post('/api/external/send', async (req, reply) => {
       text, color: senderColor, photo: senderPhoto, ts: new Date().toISOString()
     })
   }
+
+  // Auto-trigger AI agent responses to external messages (async, don't block)
+  triggerTeamResponses(channel, senderId, senderName, text).catch(e => console.error('Team response error:', e.message))
 
   return { ok: true, channel, sender: senderId, name: senderName }
 })
@@ -829,12 +924,14 @@ fastify.post('/api/chat', async (req, reply) => {
   // Channel context
   const channelId = req.body.channelId || ''
   let channelContext = ''
-  // List other agents so this agent knows who to @mention
-  const otherAgents = c.agents.filter(a => a.id !== agentId && a.enabled).map(a => {
-    const ext = a.provider === 'external' ? ' (connects via external tool — real team member, not you)' : ''
-    return a.name + ext
+  // Build detailed team roster so agents know each other personally
+  const teamRoster = c.agents.filter(a => a.id !== agentId && a.enabled).map(a => {
+    const brain = loadBrain(a.id)
+    const personality = brain.personality.length > 0 ? brain.personality[0] : a.reportsTo || 'team member'
+    const ext = a.provider === 'external' ? ' [connects externally via OpenClaw]' : ''
+    return `- ${a.name}: ${personality}${ext} (reports to ${a.reportsTo || 'Aimar'})`
   })
-  const teamList = otherAgents.length > 0 ? `\nTeam members you can @mention: ${otherAgents.join(', ')}, Aimar (CEO)` : ''
+  const teamList = teamRoster.length > 0 ? `\n\nYOUR TEAM (these are REAL people you work with daily — acknowledge them, collaborate, respond to their messages):\n${teamRoster.join('\n')}\n- Aimar: CEO, the boss. Final decisions go through him.` : ''
   const hasProjects = (c.projects || []).length > 0
   const projectStatus = hasProjects ? 'Active projects are listed above.' : 'There are NO active projects right now.'
   const coreRules = `\n\nCORE RULES (ALWAYS FOLLOW):
@@ -843,7 +940,9 @@ fastify.post('/api/chat', async (req, reply) => {
 - Keep it SHORT — 1-3 sentences
 - ${projectStatus}
 - NEVER invent, fabricate, or speculate about projects, code reviews, builds, releases, pipelines, or tasks that don't exist. If Aimar asks what you're doing and you have nothing assigned, say "Nothing right now, what do you need?" or "Just chilling, hit me with something." That's it. Don't make up work.
-- You CAN suggest real money-making ideas or improvements — that's initiative, not speculation. Ideas are welcome. Fake status updates are not.${teamList}`
+- You CAN suggest real money-making ideas or improvements — that's initiative, not speculation. Ideas are welcome. Fake status updates are not.
+- RESPOND TO EVERYONE — not just Aimar. If a teammate (like Kayou Code, Dev, Ops, etc.) asks you something or talks to the group, RESPOND. You are a team. Talk to each other naturally. Have opinions. Agree, disagree, build on ideas. You have personal relationships with your teammates.
+- When someone @mentions you, ALWAYS respond. When a teammate posts in a channel you're in, engage if it's relevant to your role.${teamList}`
 
   if (channelId === 'general') {
     channelContext = '\n\nYou\'re in #general — the team room. Group chat with Aimar (CEO) and other AI agents.' + coreRules
