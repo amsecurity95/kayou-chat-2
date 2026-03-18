@@ -445,6 +445,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
     </div>
     <div class="chat-main">
       <div class="chat-header">
+        <span id="chat-header-avatar"></span>
         <span class="material-symbols-rounded" style="font-size:20px;color:var(--text-muted)" id="chat-icon">tag</span>
         <span class="chat-header-title" id="chat-channel-name">general</span>
         <span class="chat-header-desc" id="chat-channel-desc"></span>
@@ -957,6 +958,18 @@ async function switchChannel(id) {
   const isDM = id.startsWith('dm-');
   const agent = isDM ? agents.find(a => a.id === id.slice(3)) : null;
 
+  // Show agent photo in header for DMs
+  const headerAvatar = document.getElementById('chat-header-avatar');
+  if (isDM && agent) {
+    const photo = agent.profilePhoto;
+    headerAvatar.innerHTML = photo
+      ? `<img src="${esc(photo)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover">`
+      : `<div style="width:28px;height:28px;border-radius:50%;background:${agent.color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600">${esc(agent.name[0])}</div>`;
+    document.getElementById('chat-icon').style.display = 'none';
+  } else {
+    headerAvatar.innerHTML = '';
+    document.getElementById('chat-icon').style.display = '';
+  }
   document.getElementById('chat-icon').textContent = isDM ? 'person' : (ch?.icon || 'tag');
   document.getElementById('chat-channel-name').textContent = isDM ? (agent?.name || id) : (ch?.name || id);
   document.getElementById('chat-channel-desc').textContent = isDM ? (agent?.enabled ? 'Online' : 'Offline') : (ch?.desc || '');
