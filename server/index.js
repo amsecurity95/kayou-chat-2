@@ -729,6 +729,7 @@ fastify.post('/api/chat', async (req, reply) => {
   const agent = c.agents.find(a => a.id === agentId)
   if (!agent) return reply.code(404).send({ error: 'Agent not found' })
   if (!agent.enabled) return reply.code(400).send({ error: 'Agent is disabled' })
+  if (agent.provider === 'external') return { response: null, external: true }
   const agentApiKey = resolveEnv(agent.apiKey)
   if (!agentApiKey && agent.provider !== 'ollama' && agent.provider !== 'webhook') return reply.code(400).send({ error: 'No API key' })
 

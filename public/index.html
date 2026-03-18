@@ -184,7 +184,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .mention-dot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;flex-shrink:0}
 .mention-tag{display:inline;padding:2px 6px;border-radius:4px;font-weight:600;font-size:13px;background:#F59E0B30;color:#F59E0B}
 
-.chat-input-area{padding:10px 16px 14px;flex-shrink:0;position:relative}
+.chat-input-area{padding:10px 16px 14px;flex-shrink:0;position:relative;padding-bottom:env(safe-area-inset-bottom,14px)}
 .chat-input-wrap{display:flex;flex-direction:column;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
 .chat-toolbar{display:flex;align-items:center;gap:2px;padding:6px 10px;border-bottom:1px solid var(--border)}
 .chat-toolbar button{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:var(--text-muted);border-radius:6px;cursor:pointer;font-size:14px;font-family:inherit;transition:all .12s}
@@ -291,7 +291,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .fade-in{animation:fadeIn .3s ease forwards}
 .page{display:none}
 .page.active{display:block}
-.page-chat.active{display:flex;height:100%}
+.page-chat.active{display:flex;height:100%;margin:-24px;width:calc(100% + 48px)}
 
 /* ── Mini charts ── */
 .mini-chart{display:flex;align-items:flex-end;gap:2px;height:32px}
