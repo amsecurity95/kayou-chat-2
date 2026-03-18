@@ -458,9 +458,16 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
           <div id="attachment-preview" class="attachment-preview"></div>
           <div class="chat-toolbar">
             <button title="Bold" onclick="wrapSelection('**','**')"><strong>B</strong></button>
-            <button title="Italic" onclick="wrapSelection('*','*')"><em>I</em></button>
-            <button title="Strikethrough" onclick="wrapSelection('~~','~~')"><s>S</s></button>
-            <button title="Code" onclick="wrapSelection('`','`')"><span style="font-family:monospace;font-size:13px">&lt;/&gt;</span></button>
+            <button title="Highlight" onclick="showHighlightPicker()" style="position:relative"><span class="material-symbols-rounded" style="font-size:18px;color:#F59E0B">format_ink_highlighter</span>
+              <div id="highlight-picker" style="display:none;position:absolute;bottom:100%;left:0;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:6px;gap:4px;display:none;flex-wrap:wrap;width:120px;z-index:100">
+                <div onclick="event.stopPropagation();applyHighlight('#FBBF24')" style="width:22px;height:22px;border-radius:4px;background:#FBBF24;cursor:pointer" title="Yellow"></div>
+                <div onclick="event.stopPropagation();applyHighlight('#34D399')" style="width:22px;height:22px;border-radius:4px;background:#34D399;cursor:pointer" title="Green"></div>
+                <div onclick="event.stopPropagation();applyHighlight('#60A5FA')" style="width:22px;height:22px;border-radius:4px;background:#60A5FA;cursor:pointer" title="Blue"></div>
+                <div onclick="event.stopPropagation();applyHighlight('#F472B6')" style="width:22px;height:22px;border-radius:4px;background:#F472B6;cursor:pointer" title="Pink"></div>
+                <div onclick="event.stopPropagation();applyHighlight('#FB923C')" style="width:22px;height:22px;border-radius:4px;background:#FB923C;cursor:pointer" title="Orange"></div>
+                <div onclick="event.stopPropagation();applyHighlight('#A78BFA')" style="width:22px;height:22px;border-radius:4px;background:#A78BFA;cursor:pointer" title="Purple"></div>
+              </div>
+            </button>
           </div>
           <div class="chat-input-row">
             <button title="Attach file" onclick="document.getElementById('chat-file-input').click()" style="width:32px;height:32px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span class="material-symbols-rounded" style="font-size:20px">attach_file</span></button>
@@ -650,6 +657,14 @@ async function doLogin() {
   }
 }
 
+function showHighlightPicker() {
+  const picker = document.getElementById('highlight-picker');
+  picker.style.display = picker.style.display === 'flex' ? 'none' : 'flex';
+}
+function applyHighlight(color) {
+  document.getElementById('highlight-picker').style.display = 'none';
+  wrapSelection('{{hl:' + color + '}}', '{{/hl}}');
+}
 function wrapSelection(before, after) {
   const input = document.getElementById('chat-input');
   const start = input.selectionStart;
@@ -1487,7 +1502,8 @@ async function triggerHeartbeat() {
 function formatMsg(s) {
   let out = esc(s)
     .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\{\{hl:(#[A-Fa-f0-9]+)\}\}(.+?)\{\{\/hl\}\}/g, '<span style="background:$130;color:$1;padding:1px 4px;border-radius:3px;font-weight:600">$2</span>');
 
   // Highlight @agent mentions
   out = out.replace(/@([\w\s-]+?)(?=\s|$|[.,!?])/g, (match, name) => {
