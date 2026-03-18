@@ -1186,6 +1186,20 @@ fastify.post('/api/chat', async (req, reply) => {
   } else {
     // DMs — talking directly to Aimar
     channelContext = '\n\nYou\'re in a PRIVATE DM with Aimar (the CEO). He is typing directly to you right now. Messages here are FROM HIM TO YOU — talk to him directly, say "you" not "@Aimar". This is a 1-on-1 conversation.' + coreRules
+
+    // Inject recent #general messages so agent can see what's happening
+    if (db) {
+      try {
+        const { rows } = await db.query(
+          'SELECT sender_name, text FROM messages WHERE channel = $1 ORDER BY created_at DESC LIMIT 15',
+          ['general']
+        )
+        if (rows.length > 0) {
+          const feed = rows.reverse().map(r => `${r.sender_name}: ${r.text.slice(0, 100)}`).join('\n')
+          channelContext += `\n\nRECENT #GENERAL CHAT (you can see this for context):\n${feed}`
+        }
+      } catch(e) {}
+    }
   }
 
   // Filesystem context for Kayou Code
