@@ -513,11 +513,11 @@ const CHANNEL_RESPONDERS = {
 }
 
 async function triggerTeamResponses(channel, senderId, senderName, text) {
-  if (!db) return
+  if (!db) { console.log('triggerTeamResponses: no db'); return }
   const c = loadConfig()
 
   // Find which agents should respond
-  let responders = CHANNEL_RESPONDERS[channel] || ['kayou']
+  let responders = [...(CHANNEL_RESPONDERS[channel] || ['kayou'])]
 
   // Also check for @mentions in the text
   const mentionRegex = /@([\w\s-]+)/g
@@ -528,11 +528,19 @@ async function triggerTeamResponses(channel, senderId, senderName, text) {
     if (found && !responders.includes(found.id)) responders.push(found.id)
   }
 
-  // Filter out the sender and external/disabled agents
-  responders = responders.filter(id => id !== senderId && id !== 'aimar')
+  // Filter out the sender, external, and disabled agents
+  responders = responders.filter(id => {
+    if (id === senderId || id === 'aimar') return false
+    const a = c.agents.find(x => x.id === id)
+    if (!a || !a.enabled || a.provider === 'external') return false
+    return true
+  })
+
+  console.log(`triggerTeamResponses: channel=${channel} sender=${senderId} responders=[${responders.join(',')}]`)
+  if (responders.length === 0) return
+
   // Pick 1-2 relevant agents (don't flood the channel)
-  const maxResponders = 2
-  const selected = responders.slice(0, maxResponders)
+  const selected = responders.slice(0, 2)
 
   // Load recent channel history for context
   let history = []
@@ -545,29 +553,30 @@ async function triggerTeamResponses(channel, senderId, senderName, text) {
       role: r.sender_id === 'aimar' ? 'user' : 'assistant',
       content: r.sender_id === 'aimar' ? r.text : `@${r.sender_name}: ${r.text}`
     }))
-  } catch(e) {}
+  } catch(e) { console.error('triggerTeamResponses history error:', e.message) }
 
   // Stagger responses
   for (let i = 0; i < selected.length; i++) {
     const agentId = selected[i]
     const agent = c.agents.find(a => a.id === agentId)
-    if (!agent || !agent.enabled || agent.provider === 'external') continue
+    if (!agent) continue
 
     // Delay to feel natural
-    await new Promise(r => setTimeout(r, 1500 + Math.random() * 3000))
+    await new Promise(r => setTimeout(r, 2000 + Math.random() * 3000))
 
     try {
-      const res = await fastify.inject({
-        method: 'POST',
-        url: '/api/chat',
-        payload: {
-          agentId,
-          message: `[${senderName} said in #${channel}]: ${text}`,
-          history,
-          channelId: channel
-        }
-      })
+      // Call the AI directly via the chat endpoint
+      const chatPayload = {
+        agentId,
+        message: `[${senderName} said in #${channel}]: ${text}`,
+        history,
+        channelId: channel
+      }
+      console.log(`triggerTeamResponses: calling /api/chat for ${agentId}`)
+      const res = await fastify.inject({ method: 'POST', url: '/api/chat', payload: chatPayload })
       const data = JSON.parse(res.payload)
+      console.log(`triggerTeamResponses: ${agentId} response status=${res.statusCode}`, data.response ? 'got response' : data.error || 'no response')
+
       if (data.response) {
         // Clean response — strip self-name prefix
         let clean = data.response.replace(new RegExp('^\\[?' + agent.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\]?:\\s*', 'i'), '')
@@ -586,9 +595,10 @@ async function triggerTeamResponses(channel, senderId, senderName, text) {
             text: clean, color: agent.color, photo, ts: new Date().toISOString()
           })
         }
+        console.log(`triggerTeamResponses: ${agent.name} responded in #${channel}`)
       }
     } catch(e) {
-      console.error(`Auto-response error for ${agentId}:`, e.message)
+      console.error(`Auto-response error for ${agentId}:`, e.message, e.stack)
     }
   }
 }
