@@ -951,8 +951,8 @@ fastify.post('/api/chat', async (req, reply) => {
   } else if (channelId === 'build' || channelId === 'testing' || channelId === 'release' || channelId === 'research') {
     channelContext = `\n\nYou're in #${channelId}. Focused work channel. Be concise and actionable.` + coreRules
   } else {
-    // DMs and any other context — rules still apply
-    channelContext = '\n\nYou\'re in a direct message with Aimar.' + coreRules
+    // DMs — talking directly to Aimar
+    channelContext = '\n\nYou\'re in a PRIVATE DM with Aimar (the CEO). He is typing directly to you right now. Messages here are FROM HIM TO YOU — talk to him directly, say "you" not "@Aimar". This is a 1-on-1 conversation.' + coreRules
   }
 
   // Filesystem context for Kayou Code
