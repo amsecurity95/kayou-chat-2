@@ -174,6 +174,20 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .msg-group.msg-left .msg-bubble{border-radius:4px 16px 16px 4px}
 .msg-group.msg-right .msg-bubble{border-radius:16px 4px 4px 16px}
 .msg-group{padding:1px 16px}
+.msg-actions{display:none;position:absolute;top:-8px;right:8px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:2px;z-index:5}
+.msg-right .msg-actions{right:auto;left:8px}
+.msg-wrap{position:relative}
+.msg-wrap:hover .msg-actions{display:flex}
+.msg-actions button{width:26px;height:26px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:all .1s}
+.msg-actions button:hover{background:var(--bg-card);color:var(--text-primary)}
+.msg-reply-ref{font-size:11px;color:var(--text-muted);padding:4px 12px 2px;display:flex;align-items:center;gap:4px;cursor:pointer}
+.msg-reply-ref::before{content:'';width:2px;height:12px;border-radius:1px;flex-shrink:0}
+.msg-reply-ref span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px}
+.reply-bar{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--bg-surface);border-left:3px solid var(--accent);margin:0 2px;border-radius:0 8px 0 0;font-size:12px;color:var(--text-secondary)}
+.reply-bar .reply-name{font-weight:600;color:var(--text-primary)}
+.reply-bar .reply-text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reply-bar .reply-close{width:24px;height:24px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.reply-bar .reply-close:hover{background:var(--bg-elevated);color:var(--text-primary)}
 
 /* ── Mention Autocomplete ── */
 .mention-popup{position:absolute;bottom:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;max-height:220px;overflow-y:auto;display:none;z-index:20;box-shadow:0 -4px 20px rgba(0,0,0,.4)}
@@ -451,6 +465,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
       <div class="typing-indicator" id="typing-indicator"></div>
       <div class="chat-input-area">
         <div class="mention-popup" id="mention-popup"></div>
+        <div id="reply-bar"></div>
         <div class="chat-input-wrap">
           <div id="attachment-preview" class="attachment-preview"></div>
           <div class="chat-input-row">
@@ -654,6 +669,22 @@ async function doLogin() {
   }
 }
 
+function setReply(name, text, color, msgIndex) {
+  replyTo = { name, text: text.slice(0, 120), color: color || 'var(--text-primary)', msgIndex };
+  document.getElementById('reply-bar').innerHTML = `
+    <div class="reply-bar" style="border-left-color:${replyTo.color}">
+      <span class="material-symbols-rounded" style="font-size:16px;color:var(--text-muted)">reply</span>
+      <span class="reply-name" style="color:${replyTo.color}">${esc(replyTo.name)}</span>
+      <span class="reply-text">${esc(replyTo.text)}</span>
+      <button class="reply-close" onclick="clearReply()"><span class="material-symbols-rounded" style="font-size:16px">close</span></button>
+    </div>`;
+  document.getElementById('chat-input').focus();
+}
+function clearReply() {
+  replyTo = null;
+  document.getElementById('reply-bar').innerHTML = '';
+}
+
 function showHighlightPicker() {
   const picker = document.getElementById('highlight-picker');
   picker.style.display = picker.style.display === 'flex' ? 'none' : 'flex';
@@ -690,6 +721,7 @@ let channelMessages = {};
 let messageCount = 0;
 let sessionMessages = 0;
 let pendingAttachments = [];
+let replyTo = null; // { name, text, color, msgIndex }
 let userPhoto = '';
 
 // ═══════════════════════════════════════
@@ -1165,10 +1197,10 @@ function addSystemMessage(channel, text) {
   channelMessages[channel].push({ id: Date.now(), sender: 'system', text: text, ts: new Date() });
 }
 
-async function addMessage(channel, senderId, senderName, text, color, photo, attachments) {
+async function addMessage(channel, senderId, senderName, text, color, photo, attachments, replyData) {
   if (!channelMessages[channel]) channelMessages[channel] = [];
   const ts = new Date();
-  const localMsg = { id: null, sender: senderId, name: senderName, text: text, ts: ts, color: color, photo: photo, attachments: attachments || null };
+  const localMsg = { id: null, sender: senderId, name: senderName, text: text, ts: ts, color: color, photo: photo, attachments: attachments || null, replyTo: replyData || null };
   channelMessages[channel].push(localMsg);
   messageCount++;
   sessionMessages++;
@@ -1240,14 +1272,16 @@ async function sendMessage() {
   if (!text && pendingAttachments.length === 0) return;
 
   const msgAttachments = pendingAttachments.length > 0 ? [...pendingAttachments] : null;
+  const msgReply = replyTo ? { ...replyTo } : null;
   pendingAttachments = [];
+  clearReply();
   renderAttachmentPreview();
 
   input.value = '';
   input.style.height = 'auto';
   document.getElementById('chat-send').disabled = true;
 
-  addMessage(currentChannel, 'aimar', 'Aimar', text || '(attachment)', '#3b82f6', userPhoto || null, msgAttachments);
+  addMessage(currentChannel, 'aimar', 'Aimar', text || '(attachment)', '#3b82f6', userPhoto || null, msgAttachments, msgReply);
   renderMessages();
   scrollChat();
 
@@ -1418,14 +1452,22 @@ function renderMessages() {
       }
     }
 
+    // Reply reference
+    let replyHTML = '';
+    if (m.replyTo) {
+      const refColor = m.replyTo.color || 'var(--text-muted)';
+      replyHTML = `<div class="msg-reply-ref" style="color:${refColor}" onclick="scrollToMsg(${m.replyTo.msgIndex || 0})"><span style="background:${refColor}" class="msg-reply-ref::before"></span><span style="font-weight:600">${esc(m.replyTo.name)}</span> <span>${esc(m.replyTo.text)}</span></div>`;
+    }
+
     return `
-      <div class="msg ${side} ${isGroup ? 'msg-group' : ''}">
+      <div class="msg ${side} ${isGroup ? 'msg-group' : ''} msg-wrap" data-msg-idx="${i}">
         ${avatarHTML}
         <div class="msg-body">
           <div class="msg-header">
             <span class="msg-name" style="color:${m.color || 'var(--text-primary)'}">${esc(m.name)}</span>
             <span class="msg-time">${time}</span>
           </div>
+          ${replyHTML}
           <div class="msg-bubble" style="background:${bubbleColor};border:${bubbleBorder}">
             <div class="msg-text">${formatMsg(m.text)}</div>
             ${(m.attachments || []).map(att => {
@@ -1434,6 +1476,7 @@ function renderMessages() {
               return '';
             }).join('')}
           </div>
+          <div class="msg-actions"><button title="Reply" onclick="event.stopPropagation();setReply('${esc(m.name).replace(/'/g,"\\'")}','${esc(m.text).replace(/'/g,"\\'").replace(/\n/g,' ')}','${m.color || ''}',${i})"><span class="material-symbols-rounded" style="font-size:16px">reply</span></button></div>
         </div>
       </div>
     `;
@@ -1443,6 +1486,10 @@ function renderMessages() {
 function scrollChat() {
   const el = document.getElementById('chat-messages');
   setTimeout(() => el.scrollTop = el.scrollHeight, 50);
+}
+function scrollToMsg(idx) {
+  const el = document.querySelector(`[data-msg-idx="${idx}"]`);
+  if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.style.background = 'rgba(255,255,255,.06)'; setTimeout(() => el.style.background = '', 1500); }
 }
 
 function getAgentStatus(a) {
