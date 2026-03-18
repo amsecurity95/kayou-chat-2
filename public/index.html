@@ -67,7 +67,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .content::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 
 /* ── Cards ── */
-.card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:20px;transition:border-color .15s}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:20px;transition:border-color .15s;overflow:hidden}
 .card:hover{border-color:var(--border-light)}
 .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
 .card-title{font-size:14px;font-weight:600;letter-spacing:-.01em}
@@ -870,10 +870,15 @@ function navigate(page) {
 // ═══════════════════════════════════════
 // DASHBOARD
 // ═══════════════════════════════════════
-function renderDashboard() {
+async function renderDashboard() {
   const enabled = agents.filter(a => a.enabled);
   document.getElementById('stat-agents').textContent = enabled.length;
   document.getElementById('stat-enabled').textContent = enabled.length + '/' + agents.length;
+  // Fetch real message count from DB
+  try {
+    const stats = await (await fetch(API + '/api/stats')).json();
+    messageCount = stats.messagesToday || messageCount;
+  } catch(e) {}
   document.getElementById('stat-messages').textContent = messageCount;
   document.getElementById('stat-session').textContent = sessionMessages;
   document.getElementById('stat-projects').textContent = projects.length;

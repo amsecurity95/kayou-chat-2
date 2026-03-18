@@ -793,6 +793,15 @@ const HEARTBEAT_TOPICS = [
   'Find a real business opportunity in the API economy. What API service is missing that developers would pay for?',
 ]
 
+// ══════════════ STATS ══════════════
+fastify.get('/api/stats', async () => {
+  if (!db) return { messagesToday: 0, messagesTotal: 0 }
+  const today = new Date(); today.setHours(0,0,0,0)
+  const { rows: [todayRow] } = await db.query('SELECT COUNT(*) as count FROM messages WHERE created_at >= $1', [today.toISOString()])
+  const { rows: [totalRow] } = await db.query('SELECT COUNT(*) as count FROM messages')
+  return { messagesToday: parseInt(todayRow.count), messagesTotal: parseInt(totalRow.count) }
+})
+
 function startHeartbeat() {
   if (heartbeatTimer) clearInterval(heartbeatTimer)
   // Run every 30 minutes
