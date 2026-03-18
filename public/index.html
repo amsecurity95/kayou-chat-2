@@ -300,6 +300,18 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 </head>
 <body>
 
+<!-- Login -->
+<div id="login-screen" style="display:none;position:fixed;inset:0;background:var(--bg-base);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px">
+  <img src="/kayou-logo.png" style="width:64px;height:64px;border-radius:16px">
+  <h2 style="font-size:20px;font-weight:700">Kayou Chat</h2>
+  <p style="font-size:13px;color:var(--text-muted)">Enter password to access the platform</p>
+  <div style="display:flex;gap:8px;width:300px">
+    <input class="input" id="login-password" type="password" placeholder="Password..." style="flex:1" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn btn-primary" onclick="doLogin()">Login</button>
+  </div>
+  <p id="login-error" style="font-size:12px;color:var(--red);display:none">Wrong password</p>
+</div>
+
 <!-- Splash -->
 <div class="splash" id="splash">
   <img src="/kayou-logo.png" alt="Kayou">
@@ -593,6 +605,45 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 // ═══════════════════════════════════════
 const API = '';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+let authToken = localStorage.getItem('kayou-auth-token') || '';
+
+// Add auth header to all fetch calls
+const _origFetch = window.fetch;
+window.fetch = function(url, opts = {}) {
+  if (typeof url === 'string' && url.startsWith(API + '/api/') && !url.includes('/api/auth/') && !url.includes('/api/external/')) {
+    if (!opts.headers) opts.headers = {};
+    if (opts.headers instanceof Headers) { opts.headers.set('x-auth-token', authToken); }
+    else { opts.headers['x-auth-token'] = authToken; }
+  }
+  return _origFetch.call(this, url, opts);
+};
+
+async function checkAuth() {
+  try {
+    const res = await _origFetch(API + '/api/auth/check', { headers: { 'x-auth-token': authToken } });
+    const data = await res.json();
+    if (data.ok) return true;
+  } catch(e) {}
+  return false;
+}
+
+async function doLogin() {
+  const pw = document.getElementById('login-password').value;
+  const res = await _origFetch(API + '/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: pw })
+  });
+  const data = await res.json();
+  if (data.ok) {
+    authToken = data.token;
+    localStorage.setItem('kayou-auth-token', authToken);
+    document.getElementById('login-screen').style.display = 'none';
+    init();
+  } else {
+    document.getElementById('login-error').style.display = 'block';
+  }
+}
 
 function wrapSelection(before, after) {
   const input = document.getElementById('chat-input');
@@ -2026,7 +2077,16 @@ function closeModal(e) {
 // ═══════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════
-init();
+(async () => {
+  const authed = await checkAuth();
+  if (authed) {
+    document.getElementById('login-screen').style.display = 'none';
+    init();
+  } else {
+    document.getElementById('splash').classList.add('hide');
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+})();
 </script>
 </body>
 </html>

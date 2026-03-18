@@ -237,5 +237,6 @@
     }
   },
   "chillMode": false,
-  "externalApiKey": "kayou-ext-2026-openclaw"
+  "externalApiKey": "kayou-ext-2026-openclaw",
+  "appPassword": "kayou2026"
 }

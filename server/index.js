@@ -192,6 +192,38 @@ fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'public'), pr
 fastify.register(fastifyStatic, { root: path.join(__dirname, '..', 'uploads'), prefix: '/uploads/', decorateReply: false })
 fastify.get('/health', async () => ({ status: 'ok' }))
 
+// ══════════════ APP AUTH ══════════════
+const APP_PASSWORD = process.env.APP_PASSWORD || loadConfig().appPassword || ''
+const activeSessions = new Set()
+
+fastify.post('/api/auth/login', async (req, reply) => {
+  if (!APP_PASSWORD) return { ok: true, token: 'no-auth' }
+  if (req.body.password === APP_PASSWORD) {
+    const token = require('crypto').randomBytes(32).toString('hex')
+    activeSessions.add(token)
+    return { ok: true, token }
+  }
+  return reply.code(401).send({ error: 'Wrong password' })
+})
+
+fastify.get('/api/auth/check', async (req) => {
+  if (!APP_PASSWORD) return { ok: true }
+  const token = req.headers['x-auth-token']
+  return { ok: activeSessions.has(token) }
+})
+
+// Protect all /api/ routes except auth and external API
+fastify.addHook('onRequest', async (req, reply) => {
+  if (!APP_PASSWORD) return
+  const url = req.url
+  // Allow: health, auth, external API, static files
+  if (url === '/health' || url.startsWith('/api/auth/') || url.startsWith('/api/external/') || !url.startsWith('/api/')) return
+  const token = req.headers['x-auth-token']
+  if (!activeSessions.has(token)) {
+    reply.code(401).send({ error: 'Not authenticated' })
+  }
+})
+
 // ══════════════ AGENT PHOTOS (DB-persisted) ══════════════
 let agentPhotosCache = {} // in-memory cache of agent photos from DB
 async function loadAgentPhotos() {
