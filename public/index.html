@@ -463,16 +463,10 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
             <button title="Code" onclick="wrapSelection('`','`')"><span style="font-family:monospace;font-size:13px">&lt;/&gt;</span></button>
           </div>
           <div class="chat-input-row">
+            <button title="Attach file" onclick="document.getElementById('chat-file-input').click()" style="width:32px;height:32px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span class="material-symbols-rounded" style="font-size:20px">attach_file</span></button>
+            <input type="file" accept="image/*,.pdf" multiple id="chat-file-input" style="display:none" onchange="handleChatFileSelect(this)">
             <textarea class="chat-input" id="chat-input" placeholder="Message #general..." rows="1"></textarea>
             <button class="chat-send" id="chat-send" disabled><span class="material-symbols-rounded">arrow_upward</span></button>
-          </div>
-          <div class="chat-bottom-row">
-            <div class="chat-bottom-left">
-              <button title="Mention agent" onclick="insertAtCursor('@')"><span class="material-symbols-rounded">alternate_email</span></button>
-              <button title="Tag project" onclick="insertAtCursor('#')"><span class="material-symbols-rounded">tag</span></button>
-              <button title="Attach file" onclick="document.getElementById('chat-file-input').click()"><span class="material-symbols-rounded">attach_file</span></button>
-              <input type="file" accept="image/*,.pdf" multiple id="chat-file-input" style="display:none" onchange="handleChatFileSelect(this)">
-            </div>
           </div>
         </div>
       </div>
