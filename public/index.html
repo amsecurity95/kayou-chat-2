@@ -184,22 +184,18 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .mention-dot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;flex-shrink:0}
 .mention-tag{display:inline;padding:2px 6px;border-radius:4px;font-weight:600;font-size:13px;background:#F59E0B30;color:#F59E0B}
 
-.chat-input-area{padding:10px 16px 14px;flex-shrink:0;position:relative;padding-bottom:env(safe-area-inset-bottom,14px)}
-.chat-input-wrap{display:flex;flex-direction:column;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
-.chat-toolbar{display:flex;align-items:center;gap:2px;padding:6px 10px;border-bottom:1px solid var(--border)}
-.chat-toolbar button{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:var(--text-muted);border-radius:6px;cursor:pointer;font-size:14px;font-family:inherit;transition:all .12s}
-.chat-toolbar button:hover{background:var(--bg-elevated);color:var(--text-primary)}
-.chat-input-row{display:flex;align-items:flex-end;padding:10px 12px 6px 14px}
-.chat-bottom-row{display:flex;align-items:center;justify-content:space-between;padding:4px 10px 8px}
-.chat-bottom-left{display:flex;align-items:center;gap:2px}
-.chat-bottom-left button{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:var(--text-muted);border-radius:6px;cursor:pointer;transition:all .12s}
-.chat-bottom-left button:hover{background:var(--bg-elevated);color:var(--text-primary)}
-.chat-bottom-left .material-symbols-rounded{font-size:20px}
-.chat-input{flex:1;background:none;border:none;color:var(--text-primary);font-size:14px;font-family:inherit;resize:none;outline:none;min-height:24px;max-height:140px;line-height:1.5}
+.chat-input-area{padding:12px 16px 16px;flex-shrink:0;position:relative;padding-bottom:max(16px,env(safe-area-inset-bottom))}
+.chat-input-wrap{display:flex;flex-direction:column;background:var(--bg-surface);border:1px solid var(--border-light);border-radius:24px;overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.chat-input-wrap:focus-within{border-color:#555;box-shadow:0 0 0 2px rgba(255,255,255,.06)}
+.chat-input-row{display:flex;align-items:flex-end;padding:8px 8px 8px 16px;gap:8px;min-height:52px}
+.chat-input{flex:1;background:none;border:none;color:var(--text-primary);font-size:15px;font-family:inherit;resize:none;outline:none;min-height:26px;max-height:160px;line-height:1.5;padding:6px 0}
 .chat-input::placeholder{color:var(--text-muted)}
-.chat-send{width:34px;height:34px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
-.chat-send:hover{background:#5eead4}
-.chat-send:disabled{opacity:.3;cursor:default}
+.chat-toolbar-inline{display:flex;align-items:center;gap:2px;flex-shrink:0}
+.chat-toolbar-inline button{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:var(--text-muted);border-radius:8px;cursor:pointer;transition:all .12s}
+.chat-toolbar-inline button:hover{background:var(--bg-elevated);color:var(--text-primary)}
+.chat-send{width:36px;height:36px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;margin-bottom:2px}
+.chat-send:hover{background:#5eead4;transform:scale(1.05)}
+.chat-send:disabled{opacity:.25;cursor:default;transform:none}
 .chat-send .material-symbols-rounded{font-size:18px;color:#000}
 
 /* ── Attachments ── */
@@ -456,22 +452,22 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
         <div class="mention-popup" id="mention-popup"></div>
         <div class="chat-input-wrap">
           <div id="attachment-preview" class="attachment-preview"></div>
-          <div class="chat-toolbar">
-            <button title="Bold" onclick="wrapSelection('**','**')"><strong>B</strong></button>
-            <button title="Highlight" onclick="showHighlightPicker()" style="position:relative"><span class="material-symbols-rounded" style="font-size:18px;color:#F59E0B">format_ink_highlighter</span>
-              <div id="highlight-picker" style="display:none;position:absolute;bottom:100%;left:0;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:6px;gap:4px;display:none;flex-wrap:wrap;width:120px;z-index:100">
-                <div onclick="event.stopPropagation();applyHighlight('#FBBF24')" style="width:22px;height:22px;border-radius:4px;background:#FBBF24;cursor:pointer" title="Yellow"></div>
-                <div onclick="event.stopPropagation();applyHighlight('#34D399')" style="width:22px;height:22px;border-radius:4px;background:#34D399;cursor:pointer" title="Green"></div>
-                <div onclick="event.stopPropagation();applyHighlight('#60A5FA')" style="width:22px;height:22px;border-radius:4px;background:#60A5FA;cursor:pointer" title="Blue"></div>
-                <div onclick="event.stopPropagation();applyHighlight('#F472B6')" style="width:22px;height:22px;border-radius:4px;background:#F472B6;cursor:pointer" title="Pink"></div>
-                <div onclick="event.stopPropagation();applyHighlight('#FB923C')" style="width:22px;height:22px;border-radius:4px;background:#FB923C;cursor:pointer" title="Orange"></div>
-                <div onclick="event.stopPropagation();applyHighlight('#A78BFA')" style="width:22px;height:22px;border-radius:4px;background:#A78BFA;cursor:pointer" title="Purple"></div>
-              </div>
-            </button>
-          </div>
           <div class="chat-input-row">
-            <button title="Attach file" onclick="document.getElementById('chat-file-input').click()" style="width:32px;height:32px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span class="material-symbols-rounded" style="font-size:20px">attach_file</span></button>
-            <input type="file" accept="image/*,.pdf" multiple id="chat-file-input" style="display:none" onchange="handleChatFileSelect(this)">
+            <div class="chat-toolbar-inline">
+              <button title="Attach file" onclick="document.getElementById('chat-file-input').click()"><span class="material-symbols-rounded" style="font-size:20px">attach_file</span></button>
+              <input type="file" accept="image/*,.pdf" multiple id="chat-file-input" style="display:none" onchange="handleChatFileSelect(this)">
+              <button title="Bold" onclick="wrapSelection('**','**')"><strong style="font-size:15px">B</strong></button>
+              <button title="Highlight" onclick="showHighlightPicker()" style="position:relative"><span class="material-symbols-rounded" style="font-size:18px;color:#F59E0B">format_ink_highlighter</span>
+                <div id="highlight-picker" style="display:none;position:absolute;bottom:100%;left:0;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:6px;gap:4px;flex-wrap:wrap;width:120px;z-index:100">
+                  <div onclick="event.stopPropagation();applyHighlight('#FBBF24')" style="width:22px;height:22px;border-radius:4px;background:#FBBF24;cursor:pointer" title="Yellow"></div>
+                  <div onclick="event.stopPropagation();applyHighlight('#34D399')" style="width:22px;height:22px;border-radius:4px;background:#34D399;cursor:pointer" title="Green"></div>
+                  <div onclick="event.stopPropagation();applyHighlight('#60A5FA')" style="width:22px;height:22px;border-radius:4px;background:#60A5FA;cursor:pointer" title="Blue"></div>
+                  <div onclick="event.stopPropagation();applyHighlight('#F472B6')" style="width:22px;height:22px;border-radius:4px;background:#F472B6;cursor:pointer" title="Pink"></div>
+                  <div onclick="event.stopPropagation();applyHighlight('#FB923C')" style="width:22px;height:22px;border-radius:4px;background:#FB923C;cursor:pointer" title="Orange"></div>
+                  <div onclick="event.stopPropagation();applyHighlight('#A78BFA')" style="width:22px;height:22px;border-radius:4px;background:#A78BFA;cursor:pointer" title="Purple"></div>
+                </div>
+              </button>
+            </div>
             <textarea class="chat-input" id="chat-input" placeholder="Message #general..." rows="1"></textarea>
             <button class="chat-send" id="chat-send" disabled><span class="material-symbols-rounded">arrow_upward</span></button>
           </div>
@@ -481,7 +477,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
   </div>
 
   <!-- AGENTS -->
-  <div class="content page" id="page-agents">
+  <div class="content page" id="page-agents" style="padding-bottom:40px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
       <div>
         <h2 style="font-size:18px;font-weight:700">AI Agents</h2>
