@@ -1016,7 +1016,13 @@ fastify.get('/api/external/info', async (req, reply) => {
   const c = loadConfig()
   return {
     platform: 'Kayou Chat',
-    channels: ['general', 'ideas', 'research', 'build', 'testing', 'release'],
+    channels: ['founders', 'general', 'ideas', 'research', 'build', 'testing', 'release'],
+    privateChannels: { founders: { members: ['aimar', 'claude', 'kayou-code'], description: 'Private room — Aimar, Claude & Kayou Code' } },
+    founders_api: {
+      send: 'POST /api/external/founders/send — { text } — posts as Kayou Code, Claude auto-responds',
+      messages: 'GET /api/external/founders/messages?limit=50 — read room history',
+      also_works: 'POST /api/external/send — { channel: "founders", agentId: "kayou-code", text } — generic send'
+    },
     agents: c.agents.map(a => ({ id: a.id, name: a.name, team: a.reportsTo, enabled: a.enabled, color: a.color })),
     status: 'online'
   }
