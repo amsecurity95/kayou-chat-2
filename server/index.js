@@ -1393,7 +1393,7 @@ fastify.post('/api/chat', async (req, reply) => {
       }
       const tools = getGroqTools(agent.permissions)
       const msgs = [{ role: 'system', content: fullSystemPrompt }, ...(history || []).slice(-20), { role: 'user', content: userContent }]
-      const OR_MODELS = ['meta-llama/llama-3.3-70b-instruct:free', 'nvidia/nemotron-3-super-120b-a12b:free', 'mistralai/mistral-small-3.1-24b-instruct:free', 'qwen/qwen3-coder:free']
+      const OR_MODELS = ['nvidia/nemotron-3-super-120b-a12b:free', 'mistralai/mistral-small-3.1-24b-instruct:free', 'qwen/qwen3-coder:free', 'meta-llama/llama-3.3-70b-instruct:free']
       const reqBody = { model: OR_MODELS[0], max_tokens: 500, messages: msgs }
       if (tools) reqBody.tools = tools
 
