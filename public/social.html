@@ -217,34 +217,38 @@ nav.scrolled .nav-hamburger span { background: var(--gray-900); }
 .hero-left { flex: 1; text-align: left; }
 .hero-right { flex: 1; position: relative; min-height: 500px; }
 
-/* Team cards cascade on the right */
-.hero-cards { position: relative; width: 100%; height: 500px; }
+/* Team cards cascade — 3 front, others behind */
+.hero-cards { position: relative; width: 100%; height: 520px; }
 .hero-card {
   position: absolute; background: #fff; border-radius: 14px; overflow: hidden;
   box-shadow: 0 8px 32px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.06);
   transition: transform .4s cubic-bezier(.22,1,.36,1), box-shadow .3s;
   animation: slideLeft .8s ease both;
 }
-.hero-card:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 12px 40px rgba(0,0,0,.18); }
-.hero-card img { width: 100%; height: auto; display: block; }
+.hero-card:hover { transform: translateY(-6px) scale(1.03) !important; box-shadow: 0 16px 48px rgba(0,0,0,.2); z-index: 20 !important; }
+.hero-card img { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block; }
 .hero-card-info { padding: 10px 14px; text-align: center; }
 .hero-card-info h4 { font-size: 13px; font-weight: 700; color: var(--gray-900); }
 .hero-card-info p { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
 .hero-card-icons { display: flex; justify-content: center; gap: 6px; padding: 6px 14px 12px; }
 .hero-card-icons span { font-size: 16px; opacity: .7; }
 
-/* Row 1 — small preview cards at top */
-.hero-card.row1-1 { width: 120px; top: 0; left: 60px; animation-delay: .1s; }
-.hero-card.row1-2 { width: 120px; top: 0; left: 200px; animation-delay: .2s; }
-.hero-card.row1-3 { width: 120px; top: 0; left: 340px; animation-delay: .3s; }
-/* Row 2 — main cards */
-.hero-card.row2-1 { width: 160px; top: 130px; left: 0; animation-delay: .2s; }
-.hero-card.row2-2 { width: 160px; top: 130px; left: 180px; animation-delay: .3s; }
-.hero-card.row2-3 { width: 160px; top: 130px; left: 360px; animation-delay: .4s; }
-/* Row 3 — bottom cards */
-.hero-card.row3-1 { width: 140px; top: 360px; left: 40px; animation-delay: .4s; }
-.hero-card.row3-2 { width: 140px; top: 360px; left: 200px; animation-delay: .5s; }
-.hero-card.row3-3 { width: 140px; top: 360px; left: 360px; animation-delay: .6s; }
+/* Back row — smaller, blurred, behind */
+.hero-card.back {
+  width: 130px; top: 0; z-index: 1;
+  opacity: .7; filter: blur(1px); transform: scale(.9);
+}
+.hero-card.back.b1 { left: 30px; animation-delay: .05s; }
+.hero-card.back.b2 { left: 180px; animation-delay: .1s; }
+.hero-card.back.b3 { left: 330px; animation-delay: .15s; }
+
+/* Front row — 3 main cards, larger, sharp, overlapping the back */
+.hero-card.front {
+  width: 170px; top: 80px; z-index: 10;
+}
+.hero-card.front.f1 { left: 0; animation-delay: .2s; }
+.hero-card.front.f2 { left: 175px; animation-delay: .3s; }
+.hero-card.front.f3 { left: 350px; animation-delay: .4s; }
 
 /* Checklist style */
 .hero-checklist { list-style: none; margin: 32px 0 40px; display: flex; flex-direction: column; gap: 16px; }
@@ -959,67 +963,44 @@ footer {
     <!-- RIGHT: Cascading Team Cards -->
     <div class="hero-right">
       <div class="hero-cards">
-        <!-- Row 1 — small preview cards -->
-        <div class="hero-card row1-1">
-          <img src="https://images.pexels.com/photos/3769021/pexels-photo-3769021.jpeg?auto=compress&cs=tinysrgb&w=300" alt="">
-          <div class="hero-card-info"><h4>Melfi</h4><p>Content Strategist</p></div>
+        <!-- BACK ROW — smaller, behind -->
+        <div class="hero-card back b1">
+          <img src="https://images.pexels.com/photos/2128807/pexels-photo-2128807.jpeg?auto=compress&cs=tinysrgb&w=300" alt="">
+          <div class="hero-card-info"><h4>Kayou Code</h4><p>Automation</p></div>
         </div>
-        <div class="hero-card row1-2">
-          <img src="https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg?auto=compress&cs=tinysrgb&w=300" alt="">
-          <div class="hero-card-info"><h4>Claude</h4><p>Chief Intelligence</p></div>
-        </div>
-        <div class="hero-card row1-3">
+        <div class="hero-card back b2">
           <img src="https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=300" alt="">
-          <div class="hero-card-info"><h4>Sonic</h4><p>Brand Reviewer</p></div>
+          <div class="hero-card-info"><h4>Sonic</h4><p>Brand Safety</p></div>
+        </div>
+        <div class="hero-card back b3">
+          <img src="https://images.pexels.com/photos/3785079/pexels-photo-3785079.jpeg?auto=compress&cs=tinysrgb&w=300" alt="">
+          <div class="hero-card-info"><h4>Scout</h4><p>Trend Analyst</p></div>
         </div>
 
-        <!-- Row 2 — main featured cards -->
-        <div class="hero-card row2-1">
+        <!-- FRONT ROW — 3 main cards, larger, in front -->
+        <div class="hero-card front f1">
           <img src="https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=400" alt="">
           <div class="hero-card-info">
             <h4>Kayou</h4><p>Team Manager</p>
             <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Coordinates your entire social media strategy across all platforms.</div>
           </div>
-          <div class="hero-card-icons">
-            <span>📸</span><span>🎵</span><span>𝕏</span>
-          </div>
+          <div class="hero-card-icons"><span>📸</span><span>🎵</span><span>𝕏</span></div>
         </div>
-        <div class="hero-card row2-2">
+        <div class="hero-card front f2">
           <img src="https://images.pexels.com/photos/3769021/pexels-photo-3769021.jpeg?auto=compress&cs=tinysrgb&w=400" alt="">
           <div class="hero-card-info">
             <h4>Melfi</h4><p>Content Strategist</p>
             <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Creates engaging posts, captions, and hashtag strategies that convert.</div>
           </div>
-          <div class="hero-card-icons">
-            <span>📸</span><span>▶️</span><span>💼</span>
-          </div>
+          <div class="hero-card-icons"><span>📸</span><span>▶️</span><span>💼</span></div>
         </div>
-        <div class="hero-card row2-3">
+        <div class="hero-card front f3">
           <img src="https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg?auto=compress&cs=tinysrgb&w=400" alt="">
           <div class="hero-card-info">
             <h4>Claude</h4><p>Chief Intelligence</p>
             <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Strategic oversight, quality control, and data-driven decisions.</div>
           </div>
-          <div class="hero-card-icons">
-            <span>🔍</span><span>📊</span><span>🧠</span>
-          </div>
-        </div>
-
-        <!-- Row 3 — bottom cards -->
-        <div class="hero-card row3-1">
-          <img src="https://images.pexels.com/photos/2128807/pexels-photo-2128807.jpeg?auto=compress&cs=tinysrgb&w=300" alt="">
-          <div class="hero-card-info"><h4>Kayou Code</h4><p>Automation</p></div>
-          <div class="hero-card-icons"><span>⚡</span><span>🔧</span><span>💼</span></div>
-        </div>
-        <div class="hero-card row3-2">
-          <img src="https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=300" alt="">
-          <div class="hero-card-info"><h4>Sonic</h4><p>Brand Safety</p></div>
-          <div class="hero-card-icons"><span>🛡️</span><span>✅</span><span>👁️</span></div>
-        </div>
-        <div class="hero-card row3-3">
-          <img src="https://images.pexels.com/photos/3785079/pexels-photo-3785079.jpeg?auto=compress&cs=tinysrgb&w=300" alt="">
-          <div class="hero-card-info"><h4>Scout</h4><p>Trend Analyst</p></div>
-          <div class="hero-card-icons"><span>📈</span><span>🔥</span><span>🎯</span></div>
+          <div class="hero-card-icons"><span>🔍</span><span>📊</span><span>🧠</span></div>
         </div>
       </div>
     </div>
