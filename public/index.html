@@ -1066,11 +1066,11 @@ function renderChannelList() {
 }
 
 function renderDMList() {
-  document.getElementById('dm-list').innerHTML = agents.map(a => `
+  document.getElementById('dm-list').innerHTML = agents.filter(a => a.enabled).map(a => `
     <div class="channel-item" data-channel="dm-${a.id}" onclick="switchChannel('dm-${a.id}')">
       ${agentAvatar(a, 24)}
       <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.name)}</span>
-      ${a.enabled ? '<span class="dot dot-green" style="margin-left:auto"></span>' : ''}
+      <span class="dot dot-green" style="margin-left:auto"></span>
     </div>
   `).join('');
 }
