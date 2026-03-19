@@ -1401,18 +1401,18 @@ fastify.post('/api/chat', async (req, reply) => {
         captureGroqRateLimit(res)
         const data = await res.json()
         if (data.error) {
-          // If rate limited, try Kilo webhook fallback
-          const kiloUrl = resolveEnv('KILO_WEBHOOK_URL')
-          if ((data.error.type === 'rate_limit_error' || (data.error.message || '').includes('Rate limit')) && kiloUrl) {
-            console.log(`Groq rate limited for ${agentId}, falling back to Kilo webhook`)
-            const fallbackRes = await fetch(kiloUrl, {
+          // If rate limited, fall back to OpenRouter
+          const orKey = resolveEnv('OPENROUTER_API_KEY') || process.env.OPENROUTER_API_KEY
+          if ((data.error.type === 'rate_limit_error' || (data.error.message || '').includes('Rate limit') || (data.error.message || '').includes('rate_limit')) && orKey) {
+            console.log(`Groq rate limited for ${agentId}, falling back to OpenRouter`)
+            const fallbackRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ message, history: (history || []).slice(-20), systemPrompt: fullSystemPrompt, agentId, channelId })
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${orKey}` },
+              body: JSON.stringify({ model: 'meta-llama/llama-3.3-70b-instruct:free', max_tokens: 500, messages: reqBody.messages })
             })
             const fallbackData = await fallbackRes.json()
-            responseText = fallbackData.response || fallbackData.content || fallbackData.message || fallbackData.choices?.[0]?.message?.content || ''
-            if (responseText) break
+            responseText = fallbackData.choices?.[0]?.message?.content || ''
+            if (responseText) { console.log(`OpenRouter fallback success for ${agentId}`); break }
           }
           throw new Error(data.error.message || JSON.stringify(data.error))
         }
