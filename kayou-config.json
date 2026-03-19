@@ -12,7 +12,8 @@
       "permissions": [
         "projects",
         "mcps",
-        "finances"
+        "finances",
+        "tools"
       ],
       "tasks": [],
       "reportsTo": "aimar",
@@ -80,7 +81,8 @@
       "permissions": [
         "projects",
         "mcps",
-        "finances"
+        "finances",
+        "tools"
       ],
       "tasks": [],
       "reportsTo": "aimar",
@@ -148,7 +150,8 @@
         "mcps",
         "webhooks",
         "github",
-        "finances"
+        "finances",
+        "tools"
       ],
       "tasks": [],
       "reportsTo": "aimar",
@@ -173,7 +176,8 @@
         "mcps",
         "webhooks",
         "github",
-        "filesystem"
+        "filesystem",
+        "tools"
       ],
       "tasks": [],
       "reportsTo": "claude",

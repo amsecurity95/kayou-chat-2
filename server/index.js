@@ -678,6 +678,86 @@ function getAnthropicTools(agentPerms, agentId) {
   }))
 }
 
+// ══════════════ SHARED AI COMPLETION WITH TOOL CALLING ══════════════
+// Used by team responses, dispatch, and anywhere agents need tool access
+async function aiComplete(agent, sysPrompt, messages, opts = {}) {
+  const agentApiKey = resolveEnv(agent.apiKey)
+  const maxTokens = opts.maxTokens || 600
+  const maxRounds = opts.toolRounds || 3
+
+  if (agent.provider === 'groq') {
+    const tools = agent.permissions?.includes('tools') ? getGroqTools(agent.permissions) : undefined
+    const reqBody = { model: agent.model || 'llama-3.3-70b-versatile', max_tokens: maxTokens, messages: [{ role: 'system', content: sysPrompt }, ...messages] }
+    if (tools) reqBody.tools = tools
+
+    for (let round = 0; round < maxRounds; round++) {
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${agentApiKey}` },
+        body: JSON.stringify(reqBody),
+      })
+      const d = await r.json()
+      if (d.error) throw new Error(d.error.message || JSON.stringify(d.error))
+      const choice = d.choices?.[0]
+      if (choice?.finish_reason === 'tool_calls' && choice.message?.tool_calls?.length) {
+        reqBody.messages.push(choice.message)
+        for (const tc of choice.message.tool_calls) {
+          const args = JSON.parse(tc.function?.arguments || '{}')
+          console.log(`Tool call [${agent.id}]: ${tc.function.name} ${args.args}`)
+          const result = await executeToolCall(tc.function.name, args.args || '', agent.id)
+          reqBody.messages.push({ role: 'tool', tool_call_id: tc.id, content: result.output || result.error || 'No output' })
+        }
+        continue
+      }
+      return choice?.message?.content || ''
+    }
+    return ''
+  }
+
+  if (agent.provider === 'anthropic') {
+    const tools = agent.permissions?.includes('tools') ? getAnthropicTools(agent.permissions) : undefined
+    const reqBody = { model: agent.model || 'claude-sonnet-4-20250514', max_tokens: maxTokens, system: sysPrompt, messages: [...messages] }
+    if (tools) reqBody.tools = tools
+
+    for (let round = 0; round < maxRounds; round++) {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': agentApiKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify(reqBody),
+      })
+      const d = await r.json()
+      if (d.error) throw new Error(d.error.message)
+      const toolBlocks = (d.content || []).filter(b => b.type === 'tool_use')
+      const textBlocks = (d.content || []).filter(b => b.type === 'text')
+      if (toolBlocks.length > 0 && d.stop_reason === 'tool_use') {
+        reqBody.messages.push({ role: 'assistant', content: d.content })
+        const toolResults = []
+        for (const tb of toolBlocks) {
+          console.log(`Tool call [${agent.id}]: ${tb.name} ${tb.input?.args}`)
+          const result = await executeToolCall(tb.name, tb.input?.args || '', agent.id)
+          toolResults.push({ type: 'tool_result', tool_use_id: tb.id, content: result.output || result.error || 'No output' })
+        }
+        reqBody.messages.push({ role: 'user', content: toolResults })
+        continue
+      }
+      return textBlocks.map(b => b.text).join('\n') || ''
+    }
+    return ''
+  }
+
+  if (agent.provider === 'ollama') {
+    const r = await fetch('http://localhost:11434/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: agent.model || 'gemma3:4b', stream: false, messages: [{ role: 'system', content: sysPrompt }, ...messages] }),
+    })
+    const d = await r.json()
+    return d.message?.content || ''
+  }
+
+  return ''
+}
+
 // ══════════════ TEAM AUTO-RESPONSE ══════════════
 // When any message is posted (by external agent or system), relevant AI agents respond
 const CHANNEL_RESPONDERS = {
@@ -750,45 +830,32 @@ async function triggerTeamResponses(channel, senderId, senderName, text) {
         continue
       }
 
-      // Build system prompt (simplified version of what /api/chat does)
+      // Build system prompt with tool access + fact-checking
       const rules = c.rules || []
       const rulesText = rules.length > 0 ? '\n\nCOMPANY RULES:\n' + rules.map((r, i) => `${i + 1}. ${r}`).join('\n') : ''
       const brain = loadBrain(agentId)
       const brainPrompt = getBrainPrompt(brain)
       const otherNames = c.agents.filter(a => a.id !== agentId && a.enabled).map(a => a.name).join(', ')
-      const sysPrompt = (agent.systemPrompt || '') + rulesText + brainPrompt +
-        `\n\nYou're in #${channel} — group chat.\nTeam members: ${otherNames}, Aimar (CEO)` +
-        '\n\nCORE RULES: Keep it SHORT (1-3 sentences). NEVER start with your own name like "Kayou:" — the UI shows it. When replying to someone specific, start with @TheirName (e.g. "@Kayou Code, nice idea"). In general discussion, just talk naturally. Respond to teammates like real coworkers.'
 
-      const userMsg = `[${senderName} said]: ${text}`
-      let responseText = ''
-
-      if (agent.provider === 'groq') {
-        const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${agentApiKey}` },
-          body: JSON.stringify({ model: agent.model || 'llama-3.3-70b-versatile', max_tokens: 300, messages: [{ role: 'system', content: sysPrompt }, ...history.slice(-10), { role: 'user', content: userMsg }] })
-        })
-        const d = await r.json()
-        responseText = d.choices?.[0]?.message?.content || ''
-        if (d.error) console.error(`triggerTeamResponses: groq error for ${agentId}:`, d.error)
-      } else if (agent.provider === 'anthropic') {
-        const r = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': agentApiKey, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: agent.model || 'claude-sonnet-4-20250514', max_tokens: 300, system: sysPrompt, messages: [...history.slice(-10), { role: 'user', content: userMsg }] })
-        })
-        const d = await r.json()
-        responseText = d.content?.[0]?.text || ''
-        if (d.error) console.error(`triggerTeamResponses: anthropic error for ${agentId}:`, d.error)
+      let toolsCtx = ''
+      if (agent.permissions?.includes('tools')) {
+        toolsCtx = '\n\nYOU HAVE REAL TOOLS — use them when relevant (checking repos, files, etc). Do NOT fake tool results. All tool calls are logged.\n' +
+          Object.entries(AGENT_TOOLS).map(([name, def]) => `- ${name}: ${def.description}`).join('\n')
       }
 
-      const data = { response: responseText }
+      const sysPrompt = (agent.systemPrompt || '') + rulesText + brainPrompt + toolsCtx +
+        `\n\nYou're in #${channel} — group chat.\nTeam members: ${otherNames}, Aimar (CEO)` +
+        '\n\nCORE RULES: Keep it SHORT (1-3 sentences). NEVER start with your own name like "Kayou:" — the UI shows it. When replying to someone specific, start with @TheirName. In general discussion, just talk naturally. Respond to teammates like real coworkers.' +
+        '\nNEVER fabricate facts, URLs, or claim you did something without actually doing it. If asked to do something actionable, use your tools. If you can\'t, say so honestly.'
+
+      const userMsg = `[${senderName} said]: ${text}`
+
+      const responseText = await aiComplete(agent, sysPrompt, [...history.slice(-10), { role: 'user', content: userMsg }], { maxTokens: 400 })
       console.log(`triggerTeamResponses: ${agentId} got ${responseText ? 'response' : 'no response'}`)
 
-      if (data.response) {
+      if (responseText) {
         // Clean response — strip self-name prefix
-        let clean = data.response.replace(new RegExp('^\\[?' + agent.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\]?:\\s*', 'i'), '')
+        let clean = responseText.replace(new RegExp('^\\[?' + agent.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\]?:\\s*', 'i'), '')
 
         // Save to DB
         const photo = agentPhotosCache[agent.id] || agent.profilePhoto || null
@@ -850,32 +917,22 @@ async function dispatchToWorkChannels(instruction, respondedAgents) {
       const teammates = agentIds.length > 1
         ? agentIds.slice(1).map(id => c.agents.find(a => a.id === id)?.name).filter(Boolean).join(', ')
         : ''
-      const sysPrompt = (agent.systemPrompt || '') + brainPrompt +
+      let toolsCtx = ''
+      if (agent.permissions?.includes('tools')) {
+        toolsCtx = '\n\nYOU HAVE REAL TOOLS — use them to actually execute work (check repos, read files, create issues, etc). Do NOT fake results. All calls are logged.\n' +
+          Object.entries(AGENT_TOOLS).map(([name, def]) => `- ${name}: ${def.description}`).join('\n')
+      }
+
+      const sysPrompt = (agent.systemPrompt || '') + brainPrompt + toolsCtx +
         `\n\nYou're now in #${workChannel} — your work channel. Aimar just gave instructions in #general. Break down what you need to do and start working. ` +
         (teammates ? `Your teammates here: ${teammates}. Coordinate with them using @mentions. ` : '') +
         `Be specific about your next steps. If you need to delegate, @tag them.` +
-        '\n\nCORE RULES: Keep it SHORT (2-4 sentences). NEVER start with your own name. Use @Name for mentions.'
+        '\n\nCORE RULES: Keep it SHORT (2-4 sentences). NEVER start with your own name. Use @Name for mentions.' +
+        '\nFACT-CHECK: Never claim you completed an action without using a tool. If you need to verify something, use a tool first. Be honest about what you can and cannot do.'
 
       const userMsg = `Aimar's instruction from #general: "${instruction}"\n\nYou're now in #${workChannel}. What's your plan? Start working.`
-      let responseText = ''
 
-      if (agent.provider === 'groq') {
-        const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${agentApiKey}` },
-          body: JSON.stringify({ model: agent.model || 'llama-3.3-70b-versatile', max_tokens: 400, messages: [{ role: 'system', content: sysPrompt }, { role: 'user', content: userMsg }] })
-        })
-        const d = await r.json()
-        responseText = d.choices?.[0]?.message?.content || ''
-      } else if (agent.provider === 'anthropic') {
-        const r = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': agentApiKey, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: agent.model || 'claude-sonnet-4-20250514', max_tokens: 400, system: sysPrompt, messages: [{ role: 'user', content: userMsg }] })
-        })
-        const d = await r.json()
-        responseText = d.content?.[0]?.text || ''
-      }
+      const responseText = await aiComplete(agent, sysPrompt, [{ role: 'user', content: userMsg }], { maxTokens: 500 })
 
       if (responseText) {
         let clean = responseText.replace(new RegExp('^\\[?' + agent.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\]?:\\s*', 'i'), '')
@@ -1446,12 +1503,44 @@ fastify.post('/api/chat', async (req, reply) => {
 - Kayou Code (via OpenClaw) is a real team member who connects externally — treat him as an equal, not an outsider.
 - This platform (Kayou Chat) is home base — your workspace. Take pride in it.`
 
-  // Tool context — let agents know they can use tools
+  // Tool context — explicit instructions so agents actually USE tools instead of hallucinating
   let toolsContext = ''
   if (agent.permissions?.includes('tools')) {
-    toolsContext = '\n\nYOU HAVE TOOLS — you can execute real commands on the server:\n' +
-      Object.entries(AGENT_TOOLS).map(([name, def]) => `- ${name}: ${def.description}`).join('\n') +
-      '\nUse tools when asked to check repos, read files, run commands, etc. Show the results to the team.'
+    toolsContext = `
+
+═══ TOOLS — YOU MUST USE THESE (NOT FAKE IT) ═══
+You have REAL executable tools. When someone asks you to do something actionable (check a repo, create an issue, list files, read code, etc.), you MUST call the tool. DO NOT pretend you did it. DO NOT make up output. The tool execution is logged and visible to Aimar on the Tool Execution Dashboard — if you fake it, he WILL see there's no tool call.
+
+Available tools:
+${Object.entries(AGENT_TOOLS).map(([name, def]) => `- ${name}: ${def.description}`).join('\n')}
+
+RULES:
+1. If someone asks you to create a GitHub issue → call the github tool with "create_issue owner/repo Title | Body". DO NOT say "Done!" without calling it.
+2. If someone asks to check files → call ls or cat. DO NOT guess file contents.
+3. If you don't know something factual → use a tool to find out, or say "I don't know" — NEVER fabricate.
+4. After calling a tool, report the ACTUAL result you received, not what you think it should be.
+5. If a tool fails, report the error honestly.
+
+═══ FACT-CHECKING & HONESTY ═══
+- NEVER claim you did something you didn't. Every tool call is logged.
+- NEVER invent URLs, issue numbers, file contents, or command output.
+- If you're unsure about a fact, say so. "I think..." or "Let me check..." then USE A TOOL.
+- If asked about something you can verify with a tool, VERIFY IT before answering.
+- Distinguish clearly between what you KNOW, what you THINK, and what you CHECKED with a tool.
+
+═══ THINK BEFORE RESPONDING ═══
+Before answering complex questions or taking significant actions:
+1. PAUSE — read the full message carefully. Don't rush to respond.
+2. GATHER INFO — if you need data to answer well, call tools first. Don't guess.
+3. PLAN — for multi-step tasks, outline your approach before executing.
+4. VERIFY — after tool calls, check the results make sense before reporting.
+5. Be CONCISE but ACCURATE — a short correct answer beats a long wrong one.
+
+When asked a complex question:
+- Break it down. What do you need to know? What can you check?
+- Use tools to verify before stating facts.
+- If it requires multiple steps, do them in order and report real results.
+- Don't rush to give an impressive answer — give a TRUE answer.`
   }
 
   const fullSystemPrompt = agent.systemPrompt + aimarContext + rulesText + contextText + tasksText + channelContext + filesystemContext + brainPrompt + toolsContext
@@ -1478,7 +1567,7 @@ fastify.post('/api/chat', async (req, reply) => {
       const userContent = buildVisionContent(message, attachments)
       const tools = getAnthropicTools(agent.permissions)
       const msgs = [...(history || []).slice(-20), { role: 'user', content: userContent }]
-      const reqBody = { model: agent.model || 'claude-sonnet-4-20250514', max_tokens: 500, system: fullSystemPrompt, messages: msgs }
+      const reqBody = { model: agent.model || 'claude-sonnet-4-20250514', max_tokens: 1024, system: fullSystemPrompt, messages: msgs }
       if (tools) reqBody.tools = tools
 
       // Tool calling loop (max 3 rounds)
@@ -1550,7 +1639,7 @@ fastify.post('/api/chat', async (req, reply) => {
       }
       const tools = getGroqTools(agent.permissions)
       const msgs = [{ role: 'system', content: fullSystemPrompt }, ...(history || []).slice(-20), { role: 'user', content: userContent }]
-      const reqBody = { model: agent.model || 'llama-3.3-70b-versatile', max_tokens: 500, messages: msgs }
+      const reqBody = { model: agent.model || 'llama-3.3-70b-versatile', max_tokens: 1024, messages: msgs }
       if (tools) reqBody.tools = tools
 
       // Tool calling loop (max 3 rounds)
