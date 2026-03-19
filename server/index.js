@@ -1037,6 +1037,7 @@ fastify.post('/api/external/ask', async (req, reply) => {
     const chatRes = await fastify.inject({
       method: 'POST',
       url: '/api/chat',
+      headers: { 'x-auth-token': VALID_TOKEN },
       payload: { agentId, message: text, history: [], channelId: ch }
     })
     const chatData = JSON.parse(chatRes.payload)
@@ -1095,7 +1096,7 @@ function startHeartbeat() {
 
     try {
       // Have Kilo research
-      const res = await fastify.inject({ method: 'POST', url: '/api/chat', payload: { agentId: 'kayou-kilo', message: topic, history: [], channelId: 'office' } })
+      const res = await fastify.inject({ method: 'POST', url: '/api/chat', headers: { 'x-auth-token': VALID_TOKEN }, payload: { agentId: 'kayou-kilo', message: topic, history: [], channelId: 'office' } })
       const data = JSON.parse(res.payload)
       if (data.response) {
         await db.query('INSERT INTO messages (channel, sender_id, sender_name, text, color) VALUES ($1,$2,$3,$4,$5)', ['office', 'kayou-kilo', kilo.name, data.response, kilo.color])
@@ -1138,7 +1139,7 @@ fastify.post('/api/heartbeat', async (req) => {
   const agent = c.agents.find(a => a.id === agentId)
   if (!agent || !agent.enabled) return { error: 'Agent not available' }
 
-  const res = await fastify.inject({ method: 'POST', url: '/api/chat', payload: { agentId, message: topic, history: [], channelId: 'office' } })
+  const res = await fastify.inject({ method: 'POST', url: '/api/chat', headers: { 'x-auth-token': VALID_TOKEN }, payload: { agentId, message: topic, history: [], channelId: 'office' } })
   const data = JSON.parse(res.payload)
   if (data.response) {
     await db.query('INSERT INTO messages (channel, sender_id, sender_name, text, color) VALUES ($1,$2,$3,$4,$5)', ['office', agentId, agent.name, data.response, agent.color])
