@@ -760,7 +760,13 @@ async function aiComplete(agent, sysPrompt, messages, opts = {}) {
 
 // ══════════════ TEAM AUTO-RESPONSE ══════════════
 // When any message is posted (by external agent or system), relevant AI agents respond
+// Private channels — only listed members can post/respond
+const PRIVATE_CHANNELS = {
+  founders: ['aimar', 'claude', 'kayou-code']
+}
+
 const CHANNEL_RESPONDERS = {
+  founders: ['claude'], // Only Claude auto-responds in founders (Kayou Code responds via external API)
   general: ['kayou', 'kayou-kilo'],
   ideas: ['kayou-kilo'],
   research: ['kayou-kilo'],
@@ -784,6 +790,12 @@ async function triggerTeamResponses(channel, senderId, senderName, text) {
     const tagName = match[1].trim().toLowerCase()
     const found = c.agents.find(a => a.name.toLowerCase() === tagName || a.id === tagName)
     if (found && !responders.includes(found.id)) responders.push(found.id)
+  }
+
+  // Private channel enforcement — only allowed members can respond
+  const privateMembers = PRIVATE_CHANNELS[channel]
+  if (privateMembers) {
+    responders = responders.filter(id => privateMembers.includes(id))
   }
 
   // Filter out the sender, external, and disabled agents
@@ -843,15 +855,21 @@ async function triggerTeamResponses(channel, senderId, senderName, text) {
           Object.entries(AGENT_TOOLS).map(([name, def]) => `- ${name}: ${def.description}`).join('\n')
       }
 
+      const isFounders = channel === 'founders'
+      const channelDesc = isFounders
+        ? `\n\nYou're in #founders — PRIVATE room. Only Aimar (CEO), you (Claude), and Kayou Code are here. This is the inner circle. Speak freely, share real opinions, challenge ideas, brainstorm hard. Be direct — no fluff. Push back on weak ideas respectfully. Suggest improvements. This is where real decisions get made.`
+        : `\n\nYou're in #${channel} — group chat.\nTeam members: ${otherNames}, Aimar (CEO)`
+
       const sysPrompt = (agent.systemPrompt || '') + rulesText + brainPrompt + toolsCtx +
-        `\n\nYou're in #${channel} — group chat.\nTeam members: ${otherNames}, Aimar (CEO)` +
-        '\n\nCORE RULES: Keep it SHORT (1-3 sentences). NEVER start with your own name like "Kayou:" — the UI shows it. When replying to someone specific, start with @TheirName. In general discussion, just talk naturally. Respond to teammates like real coworkers.' +
+        channelDesc +
+        '\n\nCORE RULES: NEVER start with your own name like "Kayou:" — the UI shows it. When replying to someone specific, start with @TheirName. In general discussion, just talk naturally. Respond to teammates like real coworkers.' +
+        (isFounders ? '' : ' Keep it SHORT (1-3 sentences).') +
         '\nNEVER fabricate facts, URLs, or claim you did something without actually doing it. If asked to do something actionable, use your tools. If you can\'t, say so honestly.' +
         '\n\nIMPORTANT: Only state facts, never speculate. If unsure, say "I don\'t know" or "I\'ll check". Don\'t make up information. Verify before claiming.'
 
       const userMsg = `[${senderName} said]: ${text}`
 
-      const responseText = await aiComplete(agent, sysPrompt, [...history.slice(-10), { role: 'user', content: userMsg }], { maxTokens: 400 })
+      const responseText = await aiComplete(agent, sysPrompt, [...history.slice(-10), { role: 'user', content: userMsg }], { maxTokens: isFounders ? 800 : 400 })
       console.log(`triggerTeamResponses: ${agentId} got ${responseText ? 'response' : 'no response'}`)
 
       if (responseText) {
@@ -1221,6 +1239,102 @@ fastify.post('/api/external/tools', async (req, reply) => {
   return { ok: true, tool: name, description }
 })
 
+// ══════════════ FOUNDERS ROOM API ══════════════
+// Private 3-way: Aimar, Claude, Kayou Code
+
+// POST /api/external/founders/send — Kayou Code sends to #founders, Claude auto-responds
+fastify.post('/api/external/founders/send', async (req, reply) => {
+  const err = checkExternalAuth(req, reply); if (err) return err
+  const { text } = req.body
+  if (!text) return reply.code(400).send({ error: 'Missing text' })
+
+  const c = loadConfig()
+  const kayouCode = c.agents.find(a => a.id === 'kayou-code')
+  const senderId = 'kayou-code'
+  const senderName = kayouCode?.name || 'Kayou Code'
+  const senderColor = kayouCode?.color || '#FF6B6B'
+  const senderPhoto = agentPhotosCache['kayou-code'] || kayouCode?.profilePhoto || null
+
+  // Save Kayou Code's message
+  if (db) {
+    await db.query(
+      'INSERT INTO messages (channel, sender_id, sender_name, text, color, photo) VALUES ($1,$2,$3,$4,$5,$6)',
+      ['founders', senderId, senderName, text, senderColor, senderPhoto]
+    )
+  }
+  if (io) {
+    io.emit('new:message', {
+      channel: 'founders', sender: senderId, name: senderName,
+      text, color: senderColor, photo: senderPhoto, ts: new Date().toISOString()
+    })
+  }
+
+  // Get Claude's response
+  const claude = c.agents.find(a => a.id === 'claude')
+  let claudeResponse = null
+  if (claude && claude.enabled) {
+    try {
+      const chatRes = await fastify.inject({
+        method: 'POST',
+        url: '/api/chat',
+        headers: { 'x-auth-token': VALID_TOKEN },
+        payload: { agentId: 'claude', message: `[Kayou Code said in #founders]: ${text}`, history: [], channelId: 'founders' }
+      })
+      const chatData = JSON.parse(chatRes.payload)
+      claudeResponse = chatData.response
+
+      if (db && claudeResponse) {
+        const claudePhoto = agentPhotosCache['claude'] || claude.profilePhoto || null
+        await db.query(
+          'INSERT INTO messages (channel, sender_id, sender_name, text, color, photo) VALUES ($1,$2,$3,$4,$5,$6)',
+          ['founders', 'claude', claude.name, claudeResponse, claude.color, claudePhoto]
+        )
+        if (io) {
+          io.emit('new:message', {
+            channel: 'founders', sender: 'claude', name: claude.name,
+            text: claudeResponse, color: claude.color, photo: claudePhoto, ts: new Date().toISOString()
+          })
+        }
+      }
+    } catch(e) {
+      console.error('Founders Claude response error:', e.message)
+    }
+  }
+
+  return {
+    ok: true,
+    channel: 'founders',
+    yourMessage: { sender: senderName, text },
+    claudeResponse: claudeResponse || '(Claude did not respond)'
+  }
+})
+
+// GET /api/external/founders/messages — read founders room history
+fastify.get('/api/external/founders/messages', async (req, reply) => {
+  const err = checkExternalAuth(req, reply); if (err) return err
+  if (!db) return []
+  const limit = Math.min(parseInt(req.query?.limit) || 50, 200)
+  const since = req.query?.since
+  let rows
+  if (since) {
+    const result = await db.query(
+      'SELECT * FROM messages WHERE channel = $1 AND created_at > $2 ORDER BY created_at ASC LIMIT $3',
+      ['founders', since, limit]
+    )
+    rows = result.rows
+  } else {
+    const result = await db.query(
+      'SELECT * FROM messages WHERE channel = $1 ORDER BY created_at DESC LIMIT $2',
+      ['founders', limit]
+    )
+    rows = result.rows.reverse()
+  }
+  return rows.map(r => ({
+    id: r.id, sender: r.sender_id, name: r.sender_name, text: r.text,
+    ts: r.created_at
+  }))
+})
+
 // POST /api/external/ask — send a message and get AI agent responses
 // Body: { channel, name, text, targetAgent? }
 fastify.post('/api/external/ask', async (req, reply) => {
@@ -1445,7 +1559,16 @@ fastify.post('/api/chat', async (req, reply) => {
 - RESPOND TO EVERYONE — not just Aimar. If a teammate (like Kayou Code, Dev, Ops, etc.) asks you something or talks to the group, RESPOND. You are a team. Talk to each other naturally. Have opinions. Agree, disagree, build on ideas. You have personal relationships with your teammates.
 - When someone @mentions you, ALWAYS respond. When a teammate posts in a channel you're in, engage if it's relevant to your role.${teamList}`
 
-  if (channelId === 'general') {
+  if (channelId === 'founders') {
+    channelContext = `\n\nYou're in #founders — PRIVATE room. Only 3 people here: Aimar (CEO), you (Claude), and Kayou Code.
+This is the inner circle. No other agents can see this. Speak freely, share real opinions, challenge ideas, brainstorm hard.
+- Be direct — no corporate speak, no fluff
+- Share your actual technical opinions and strategic thinking
+- Push back on ideas you think are weak — respectfully but honestly
+- Suggest new ideas, improvements, pivots
+- When Kayou Code posts, engage with his ideas — agree, disagree, build on them
+- This is where the real decisions get made` + coreRules
+  } else if (channelId === 'general') {
     channelContext = '\n\nYou\'re in #general — the team room. Group chat with Aimar (CEO) and other AI agents.' + coreRules
   } else if (channelId === 'ideas') {
     channelContext = '\n\nYou\'re in #ideas. Give your take from your expertise. Be specific and useful.' + coreRules
