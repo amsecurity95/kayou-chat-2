@@ -13,10 +13,10 @@
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --bg-primary: #0a0a0f;
-  --bg-secondary: #111118;
-  --bg-card: #16161f;
-  --bg-card-hover: #1a1a25;
+  --bg-primary: #0e0812;
+  --bg-secondary: #130d18;
+  --bg-card: #1a1222;
+  --bg-card-hover: #211828;
   --blue: #c20ad7;
   --blue-hover: #d42ce6;
   --blue-accent: #a855f7;
@@ -69,6 +69,25 @@ body {
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 }
+@keyframes auroraRotate {
+  0% { transform: rotate(0deg) scale(1); }
+  33% { transform: rotate(120deg) scale(1.1); }
+  66% { transform: rotate(240deg) scale(.95); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+@keyframes auroraDrift {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(60px, -40px) rotate(90deg); }
+  50% { transform: translate(-30px, 50px) rotate(180deg); }
+  75% { transform: translate(-60px, -20px) rotate(270deg); }
+  100% { transform: translate(0, 0) rotate(360deg); }
+}
+@keyframes auroraWave {
+  0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+  25% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+  50% { border-radius: 50% 60% 30% 60% / 30% 60% 70% 40%; }
+  75% { border-radius: 60% 40% 60% 30% / 40% 50% 60% 50%; }
+}
 
 .reveal {
   opacity: 0;
@@ -91,10 +110,10 @@ nav {
   background: transparent;
 }
 nav.scrolled {
-  background: rgba(10,10,15,.85);
+  background: rgba(26,10,30,.88);
   backdrop-filter: blur(24px) saturate(1.4);
   -webkit-backdrop-filter: blur(24px) saturate(1.4);
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid rgba(200,100,180,.1);
   padding: 14px 0;
 }
 nav .container {
@@ -169,24 +188,96 @@ nav .container {
   min-height: 100vh;
   display: flex;
   align-items: center;
-  background: var(--bg-primary);
+  background: #1a0a1e;
   overflow: hidden;
   padding: 140px 0 100px;
 }
-.hero-orb {
+/* Aurora swirl background */
+.hero::before {
+  content: '';
   position: absolute;
-  border-radius: 50%;
-  filter: blur(120px);
-  opacity: .15;
+  inset: -50%;
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    #8b2fc9 0deg,
+    #d4547a 60deg,
+    #e8855a 120deg,
+    #d4956a 180deg,
+    #9b59b6 240deg,
+    #6a3093 300deg,
+    #8b2fc9 360deg
+  );
+  animation: auroraRotate 20s linear infinite;
+  filter: blur(80px);
+  opacity: .6;
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 30%, #1a0a1e 75%);
   pointer-events: none;
 }
-.hero-orb-1 { width: 700px; height: 700px; background: var(--blue); top: -200px; right: -150px; animation: float 10s ease-in-out infinite; }
-.hero-orb-2 { width: 500px; height: 500px; background: var(--blue-accent); bottom: -150px; left: -150px; animation: float 8s ease-in-out infinite reverse; }
-.hero-orb-3 { width: 350px; height: 350px; background: #6366f1; top: 40%; left: 30%; animation: float 12s ease-in-out infinite; }
+/* Flowing aurora blobs */
+.hero-aurora {
+  position: absolute;
+  pointer-events: none;
+  filter: blur(100px);
+  opacity: .5;
+}
+.hero-aurora-1 {
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, #c94b8e, #d4547a, transparent 70%);
+  top: -15%; right: -10%;
+  animation: auroraDrift 18s ease-in-out infinite, auroraWave 12s ease-in-out infinite;
+}
+.hero-aurora-2 {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, #e8855a, #d4956a, transparent 70%);
+  bottom: -10%; left: -5%;
+  animation: auroraDrift 22s ease-in-out infinite reverse, auroraWave 15s ease-in-out infinite reverse;
+}
+.hero-aurora-3 {
+  width: 450px; height: 450px;
+  background: radial-gradient(circle, #8b2fc9, #6a3093, transparent 70%);
+  top: 30%; left: 25%;
+  animation: auroraDrift 16s ease-in-out infinite 3s, auroraWave 10s ease-in-out infinite;
+}
+.hero-aurora-4 {
+  width: 350px; height: 350px;
+  background: radial-gradient(circle, #c9a04b, #e8855a, transparent 70%);
+  top: 10%; left: 55%;
+  animation: auroraDrift 20s ease-in-out infinite 5s, auroraWave 14s ease-in-out infinite reverse;
+}
+/* Curved flowing lines overlay */
+.hero-curves {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: .15;
+}
+.hero-curves::before,
+.hero-curves::after {
+  content: '';
+  position: absolute;
+  border: 1px solid rgba(255,255,255,.3);
+  border-radius: 50%;
+}
+.hero-curves::before {
+  width: 200%; height: 200%;
+  top: -80%; left: -50%;
+  animation: auroraRotate 30s linear infinite;
+}
+.hero-curves::after {
+  width: 180%; height: 180%;
+  top: -60%; left: -40%;
+  animation: auroraRotate 25s linear infinite reverse;
+}
 
 .hero .container {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 80px;
@@ -469,8 +560,8 @@ nav .container {
   opacity: .08;
   pointer-events: none;
 }
-.how-section .glow-1 { background: var(--blue); top: 0; left: 20%; }
-.how-section .glow-2 { background: var(--blue-accent); bottom: 0; right: 20%; }
+.how-section .glow-1 { background: #8b2fc9; top: 0; left: 20%; }
+.how-section .glow-2 { background: #e8855a; bottom: 0; right: 20%; }
 
 .section-header { text-align: center; margin-bottom: 72px; position: relative; z-index: 1; }
 .section-eyebrow {
@@ -518,7 +609,7 @@ nav .container {
   left: calc(16.66% + 48px);
   right: calc(16.66% + 48px);
   height: 2px;
-  background: linear-gradient(90deg, var(--blue), var(--blue-accent));
+  background: linear-gradient(90deg, #8b2fc9, #e8855a);
   opacity: .2;
   z-index: 0;
 }
@@ -530,7 +621,7 @@ nav .container {
 .step-num {
   width: 72px; height: 72px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--blue), var(--blue-accent));
+  background: linear-gradient(135deg, #8b2fc9, #d4547a, #e8855a);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -540,7 +631,7 @@ nav .container {
   color: var(--text-primary);
   position: relative;
   z-index: 2;
-  box-shadow: 0 0 0 8px var(--bg-primary), 0 0 0 10px rgba(20,110,245,.15), 0 8px 32px rgba(20,110,245,.2);
+  box-shadow: 0 0 0 8px var(--bg-primary), 0 0 0 10px rgba(139,47,201,.2), 0 8px 32px rgba(194,10,215,.2);
 }
 .step-icon-box {
   width: 56px; height: 56px;
@@ -715,7 +806,7 @@ nav .container {
   position: absolute;
   width: 800px; height: 500px;
   border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(20,110,245,.12) 0%, transparent 70%);
+  background: radial-gradient(ellipse, rgba(194,10,215,.12) 0%, rgba(232,133,90,.06) 40%, transparent 70%);
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   pointer-events: none;
@@ -790,7 +881,7 @@ nav .container {
 
 /* ── FOOTER ── */
 footer {
-  background: #08080c;
+  background: #08060a;
   padding: 72px 0 32px;
   border-top: 1px solid var(--border-subtle);
 }
@@ -949,9 +1040,11 @@ footer {
 
 <!-- HERO -->
 <section class="hero" id="team">
-  <div class="hero-orb hero-orb-1"></div>
-  <div class="hero-orb hero-orb-2"></div>
-  <div class="hero-orb hero-orb-3"></div>
+  <div class="hero-aurora hero-aurora-1"></div>
+  <div class="hero-aurora hero-aurora-2"></div>
+  <div class="hero-aurora hero-aurora-3"></div>
+  <div class="hero-aurora hero-aurora-4"></div>
+  <div class="hero-curves"></div>
   <div class="container">
     <div class="hero-left">
       <div class="hero-badge">
