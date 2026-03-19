@@ -697,7 +697,15 @@ async function aiComplete(agent, sysPrompt, messages, opts = {}) {
         body: JSON.stringify(reqBody),
       })
       const d = await r.json()
-      if (d.error) throw new Error(d.error.message || JSON.stringify(d.error))
+      if (d.error) {
+        const errMsg = d.error.message || JSON.stringify(d.error)
+        if ((errMsg.includes('Failed to call a function') || errMsg.includes('tool')) && reqBody.tools) {
+          console.log(`aiComplete: Groq tool error for ${agent.id}, retrying without tools`)
+          delete reqBody.tools
+          continue
+        }
+        throw new Error(errMsg)
+      }
       const choice = d.choices?.[0]
       if (choice?.finish_reason === 'tool_calls' && choice.message?.tool_calls?.length) {
         reqBody.messages.push(choice.message)
@@ -1658,6 +1666,7 @@ When asked a complex question:
       if (tools) reqBody.tools = tools
 
       // Tool calling loop (max 3 rounds)
+      let groqToolError = false
       for (let round = 0; round < 3; round++) {
         const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
@@ -1665,7 +1674,17 @@ When asked a complex question:
           body: JSON.stringify(reqBody),
         })
         const data = await res.json()
-        if (data.error) throw new Error(data.error.message || JSON.stringify(data.error))
+        if (data.error) {
+          const errMsg = data.error.message || JSON.stringify(data.error)
+          // If tool-related error, retry without tools instead of crashing
+          if ((errMsg.includes('Failed to call a function') || errMsg.includes('tool')) && reqBody.tools) {
+            console.log(`Groq tool error for ${agentId}, retrying without tools: ${errMsg}`)
+            delete reqBody.tools
+            groqToolError = true
+            continue
+          }
+          throw new Error(errMsg)
+        }
 
         const choice = data.choices?.[0]
         if (choice?.finish_reason === 'tool_calls' && choice.message?.tool_calls?.length) {
