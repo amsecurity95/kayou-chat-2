@@ -846,7 +846,8 @@ async function triggerTeamResponses(channel, senderId, senderName, text) {
       const sysPrompt = (agent.systemPrompt || '') + rulesText + brainPrompt + toolsCtx +
         `\n\nYou're in #${channel} — group chat.\nTeam members: ${otherNames}, Aimar (CEO)` +
         '\n\nCORE RULES: Keep it SHORT (1-3 sentences). NEVER start with your own name like "Kayou:" — the UI shows it. When replying to someone specific, start with @TheirName. In general discussion, just talk naturally. Respond to teammates like real coworkers.' +
-        '\nNEVER fabricate facts, URLs, or claim you did something without actually doing it. If asked to do something actionable, use your tools. If you can\'t, say so honestly.'
+        '\nNEVER fabricate facts, URLs, or claim you did something without actually doing it. If asked to do something actionable, use your tools. If you can\'t, say so honestly.' +
+        '\n\nIMPORTANT: Only state facts, never speculate. If unsure, say "I don\'t know" or "I\'ll check". Don\'t make up information. Verify before claiming.'
 
       const userMsg = `[${senderName} said]: ${text}`
 
@@ -928,7 +929,8 @@ async function dispatchToWorkChannels(instruction, respondedAgents) {
         (teammates ? `Your teammates here: ${teammates}. Coordinate with them using @mentions. ` : '') +
         `Be specific about your next steps. If you need to delegate, @tag them.` +
         '\n\nCORE RULES: Keep it SHORT (2-4 sentences). NEVER start with your own name. Use @Name for mentions.' +
-        '\nFACT-CHECK: Never claim you completed an action without using a tool. If you need to verify something, use a tool first. Be honest about what you can and cannot do.'
+        '\nFACT-CHECK: Never claim you completed an action without using a tool. If you need to verify something, use a tool first. Be honest about what you can and cannot do.' +
+        '\n\nIMPORTANT: Only state facts, never speculate. If unsure, say "I don\'t know" or "I\'ll check". Don\'t make up information. Verify before claiming.'
 
       const userMsg = `Aimar's instruction from #general: "${instruction}"\n\nYou're now in #${workChannel}. What's your plan? Start working.`
 
@@ -1543,7 +1545,15 @@ When asked a complex question:
 - Don't rush to give an impressive answer — give a TRUE answer.`
   }
 
-  const fullSystemPrompt = agent.systemPrompt + aimarContext + rulesText + contextText + tasksText + channelContext + filesystemContext + brainPrompt + toolsContext
+  const integrityRules = `
+
+═══ IMPORTANT — NON-NEGOTIABLE ═══
+- Only state facts, never speculate
+- If unsure, say "I don't know" or "I'll check"
+- Don't make up information
+- Verify before claiming`
+
+  const fullSystemPrompt = agent.systemPrompt + aimarContext + rulesText + contextText + tasksText + channelContext + filesystemContext + brainPrompt + toolsContext + integrityRules
 
   try {
     let responseText = ''
