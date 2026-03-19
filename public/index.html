@@ -126,6 +126,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .btn-ghost{background:transparent;color:var(--text-secondary);border:1px solid var(--border)}
 .btn-ghost:hover{background:var(--bg-card);color:var(--text-primary)}
 .btn-sm{padding:5px 10px;font-size:12px}
+.tool-filter.active{background:var(--bg-elevated)!important;color:var(--text-primary)!important;font-weight:600}
 
 /* ── Hero Banner ── */
 .hero{background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#0f172a 100%);border:1px solid var(--border);border-radius:14px;padding:32px;display:flex;align-items:center;gap:24px;position:relative;overflow:hidden}
@@ -583,14 +584,61 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 
   <!-- TOOLS LOG -->
   <div class="content page" id="page-tools">
-    <div class="page-header">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
       <div>
-        <h2 class="page-heading">Tool Execution Log</h2>
-        <p class="page-desc">Real-time log of all tool calls by agents — see what's actually happening</p>
+        <h2 style="font-size:18px;font-weight:700">Tool Execution Log</h2>
+        <p style="font-size:13px;color:var(--text-muted);margin-top:4px">Real-time log of all tool calls — see what agents are actually doing</p>
       </div>
-      <button class="btn btn-primary" onclick="loadToolLog()"><span class="material-symbols-rounded" style="font-size:16px">refresh</span> Refresh</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="clearToolLog()"><span class="material-symbols-rounded" style="font-size:16px">delete_sweep</span> Clear</button>
+        <button class="btn btn-primary" onclick="loadToolLog()"><span class="material-symbols-rounded" style="font-size:16px">refresh</span> Refresh</button>
+      </div>
     </div>
-    <div id="tool-log-empty" style="text-align:center;color:var(--text-muted);padding:40px;font-size:14px">No tool executions yet. Agents haven't called any tools.</div>
+
+    <!-- Stats -->
+    <div class="grid grid-3" style="margin-bottom:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Total Calls</span>
+          <span class="tag tag-blue">All Time</span>
+        </div>
+        <div class="stat-value" id="tool-stat-total">0</div>
+        <div class="stat-row"><span>This session</span><span id="tool-stat-session">0</span></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Success Rate</span>
+          <span class="tag tag-green">Health</span>
+        </div>
+        <div class="stat-value" id="tool-stat-rate">—</div>
+        <div class="progress-bar" style="margin-top:10px"><div class="progress-fill" id="tool-rate-bar" style="width:0%;background:var(--accent)"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Most Active Agent</span>
+          <span class="card-badge">Live</span>
+        </div>
+        <div class="stat-value" id="tool-stat-agent" style="font-size:20px">—</div>
+        <div class="stat-row"><span>Calls</span><span id="tool-stat-agent-count">0</span></div>
+      </div>
+    </div>
+
+    <!-- Filter tabs -->
+    <div style="display:flex;gap:6px;margin-bottom:12px" id="tool-filter-tabs">
+      <button class="btn btn-ghost btn-sm tool-filter active" data-filter="all" onclick="filterToolLog('all',this)">All</button>
+      <button class="btn btn-ghost btn-sm tool-filter" data-filter="success" onclick="filterToolLog('success',this)" style="color:var(--accent)">Success</button>
+      <button class="btn btn-ghost btn-sm tool-filter" data-filter="failed" onclick="filterToolLog('failed',this)" style="color:var(--red)">Failed</button>
+    </div>
+
+    <!-- Empty State -->
+    <div id="tool-log-empty" style="text-align:center;padding:60px 20px">
+      <span class="material-symbols-rounded" style="font-size:48px;color:var(--text-muted)">terminal</span>
+      <p style="color:var(--text-muted);margin-top:12px;font-size:14px">No tool executions yet. Agents haven't called any tools.</p>
+      <p style="color:var(--text-muted);margin-top:6px;font-size:12px">When agents use tools like <code style="background:var(--bg-elevated);padding:2px 6px;border-radius:4px">github</code>, <code style="background:var(--bg-elevated);padding:2px 6px;border-radius:4px">ls</code>, <code style="background:var(--bg-elevated);padding:2px 6px;border-radius:4px">cat</code> — they'll show up here.</p>
+    </div>
+
+    <!-- Log entries -->
     <div id="tool-log-list"></div>
   </div>
 
@@ -988,36 +1036,83 @@ function navigate(page) {
   if (page === 'tools') loadToolLog();
 }
 
+let toolLogData = [];
 async function loadToolLog() {
   try {
     const res = await fetch(API + '/api/tools/log');
     const logs = await res.json();
-    const empty = document.getElementById('tool-log-empty');
-    const list = document.getElementById('tool-log-list');
-    if (!Array.isArray(logs) || logs.length === 0) {
-      empty.style.display = '';
-      list.innerHTML = '';
-      return;
-    }
-    empty.style.display = 'none';
-    list.innerHTML = logs.map(l => {
-      const time = new Date(l.ts).toLocaleTimeString();
-      const agent = agents.find(a => a.id === l.agentId);
-      const agentName = agent ? agent.name : l.agentId;
-      const statusColor = l.success ? 'var(--accent)' : 'var(--red)';
-      const statusLabel = l.success ? 'SUCCESS' : 'FAILED';
-      return `<div class="card" style="margin-bottom:8px;padding:12px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-          <span style="font-size:11px;color:var(--text-muted)">${time}</span>
-          <span style="font-weight:600;font-size:13px">${esc(agentName)}</span>
-          <span class="tag" style="background:var(--bg-elevated);color:var(--text-secondary);font-family:monospace">${esc(l.tool)}</span>
-          <span class="tag" style="background:${statusColor}22;color:${statusColor};font-size:10px">${statusLabel}</span>
-        </div>
-        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px"><strong>Args:</strong> <code style="background:var(--bg-elevated);padding:2px 6px;border-radius:4px">${esc(l.args || '(none)')}</code></div>
-        <div style="font-size:12px;color:${l.success ? 'var(--text-secondary)' : 'var(--red)'};white-space:pre-wrap;font-family:monospace;background:var(--bg-elevated);padding:8px;border-radius:6px;max-height:120px;overflow:auto">${esc(l.result || '(no output)')}</div>
-      </div>`;
-    }).join('');
+    toolLogData = Array.isArray(logs) ? logs : [];
+    updateToolStats(toolLogData);
+    renderToolLog(toolLogData);
   } catch(e) { console.log('Tool log error:', e); }
+}
+
+function updateToolStats(logs) {
+  const total = logs.length;
+  const successes = logs.filter(l => l.success).length;
+  const rate = total > 0 ? Math.round((successes / total) * 100) : 0;
+  document.getElementById('tool-stat-total').textContent = total;
+  document.getElementById('tool-stat-session').textContent = total;
+  document.getElementById('tool-stat-rate').textContent = total > 0 ? rate + '%' : '—';
+  document.getElementById('tool-rate-bar').style.width = rate + '%';
+  document.getElementById('tool-rate-bar').style.background = rate >= 80 ? 'var(--accent)' : rate >= 50 ? 'var(--orange)' : 'var(--red)';
+  // Most active agent
+  const counts = {};
+  logs.forEach(l => { counts[l.agentId] = (counts[l.agentId] || 0) + 1; });
+  const topAgent = Object.entries(counts).sort((a,b) => b[1] - a[1])[0];
+  if (topAgent) {
+    const agent = agents.find(a => a.id === topAgent[0]);
+    document.getElementById('tool-stat-agent').textContent = agent ? agent.name : topAgent[0];
+    document.getElementById('tool-stat-agent-count').textContent = topAgent[1];
+  } else {
+    document.getElementById('tool-stat-agent').textContent = '—';
+    document.getElementById('tool-stat-agent-count').textContent = '0';
+  }
+}
+
+function renderToolLog(logs, filter) {
+  const filtered = filter === 'success' ? logs.filter(l => l.success) : filter === 'failed' ? logs.filter(l => !l.success) : logs;
+  const empty = document.getElementById('tool-log-empty');
+  const list = document.getElementById('tool-log-list');
+  if (filtered.length === 0) {
+    empty.style.display = '';
+    list.innerHTML = '';
+    return;
+  }
+  empty.style.display = 'none';
+  list.innerHTML = filtered.map(l => {
+    const time = new Date(l.ts).toLocaleTimeString();
+    const agent = agents.find(a => a.id === l.agentId);
+    const agentName = agent ? agent.name : l.agentId;
+    const statusColor = l.success ? 'var(--accent)' : 'var(--red)';
+    const statusIcon = l.success ? 'check_circle' : 'error';
+    const statusLabel = l.success ? 'SUCCESS' : 'FAILED';
+    const toolColors = { github: 'var(--purple)', ls: 'var(--blue)', cat: 'var(--cyan)', curl: 'var(--orange)', node: 'var(--accent)', git: 'var(--red)' };
+    const toolColor = toolColors[l.tool] || 'var(--text-secondary)';
+    return `<div class="card" style="margin-bottom:8px;padding:14px 16px;border-left:3px solid ${statusColor}">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span class="material-symbols-rounded" style="font-size:16px;color:${statusColor}">${statusIcon}</span>
+        <span style="font-weight:600;font-size:13px;color:var(--text-primary)">${esc(agentName)}</span>
+        <span class="tag" style="background:${toolColor}18;color:${toolColor};font-family:'SF Mono',monospace;font-size:11px;font-weight:600">${esc(l.tool)}</span>
+        <span class="tag" style="background:${statusColor}18;color:${statusColor};font-size:10px;font-weight:600">${statusLabel}</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--text-muted)">${time}</span>
+      </div>
+      ${l.args ? `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px"><span style="color:var(--text-muted);font-weight:500">ARGS</span> <code style="background:var(--bg-elevated);padding:3px 8px;border-radius:4px;font-size:11px">${esc(l.args)}</code></div>` : ''}
+      <div style="font-size:12px;color:${l.success ? 'var(--text-secondary)' : 'var(--red)'};white-space:pre-wrap;font-family:'SF Mono',monospace;background:var(--bg-elevated);padding:10px 12px;border-radius:8px;max-height:140px;overflow:auto;line-height:1.5;font-size:11px">${esc(l.result || '(no output)')}</div>
+    </div>`;
+  }).join('');
+}
+
+function filterToolLog(filter, btn) {
+  document.querySelectorAll('.tool-filter').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderToolLog(toolLogData, filter);
+}
+
+function clearToolLog() {
+  toolLogData = [];
+  updateToolStats([]);
+  renderToolLog([]);
 }
 
 // ═══════════════════════════════════════
