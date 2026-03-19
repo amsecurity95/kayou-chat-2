@@ -1077,31 +1077,36 @@ footer {
 </section>
 
 <!-- ─── HOW IT WORKS ─── -->
-<section class="how" id="how">
-  <div class="container">
+<section class="how" id="how" style="background:var(--gray-900);color:#fff;position:relative;overflow:hidden">
+  <div style="position:absolute;inset:0;background:radial-gradient(circle at 30% 50%,rgba(37,99,235,.15),transparent 60%),radial-gradient(circle at 70% 50%,rgba(124,58,237,.15),transparent 60%)"></div>
+  <div class="container" style="position:relative;z-index:1">
     <div class="section-header reveal">
-      <div class="section-label">Simple Process</div>
-      <h2 class="section-title">Up and running in <span class="gradient-text">three steps.</span></h2>
-      <p class="section-desc">No complicated onboarding. No learning curve. Just tell us about your brand and we handle the rest.</p>
+      <div class="section-label" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.1)">How It Works</div>
+      <h2 class="section-title" style="color:#fff">From zero to everywhere<br>in <span class="gradient-text">three steps.</span></h2>
     </div>
-    <div class="steps">
-      <div class="step reveal reveal-delay-1">
-        <div class="step-num">1</div>
-        <div class="step-icon">&#128172;</div>
-        <h3>Tell us about your brand</h3>
-        <p>Share your brand voice, target audience, and goals. Our AI team learns your style in minutes, not weeks.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:60px;position:relative">
+      <!-- Connector line -->
+      <div style="position:absolute;top:40px;left:15%;right:15%;height:2px;background:linear-gradient(90deg,var(--blue),var(--purple));opacity:.3"></div>
+
+      <div class="reveal reveal-delay-1" style="text-align:center;padding:0 24px">
+        <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--purple));display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:28px;font-weight:800;color:#fff;position:relative;z-index:2;box-shadow:0 0 0 8px var(--gray-900),0 0 0 10px rgba(99,102,241,.3)">1</div>
+        <div style="width:56px;height:56px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;margin:0 auto 20px"><span class="material-symbols-rounded" style="font-size:28px;color:var(--blue)">chat_bubble</span></div>
+        <h3 style="font-size:18px;font-weight:700;margin-bottom:10px">Tell us your brand</h3>
+        <p style="font-size:14px;color:var(--gray-400);line-height:1.6">Share your voice, audience, and goals. Our AI learns your style in minutes.</p>
       </div>
-      <div class="step reveal reveal-delay-2">
-        <div class="step-num">2</div>
-        <div class="step-icon">&#9997;&#65039;</div>
-        <h3>We create the content</h3>
-        <p>Your AI team drafts posts, captions, hashtags, and visuals tailored for each platform's unique format.</p>
+
+      <div class="reveal reveal-delay-2" style="text-align:center;padding:0 24px">
+        <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--purple));display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:28px;font-weight:800;color:#fff;position:relative;z-index:2;box-shadow:0 0 0 8px var(--gray-900),0 0 0 10px rgba(99,102,241,.3)">2</div>
+        <div style="width:56px;height:56px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;margin:0 auto 20px"><span class="material-symbols-rounded" style="font-size:28px;color:var(--purple)">edit_note</span></div>
+        <h3 style="font-size:18px;font-weight:700;margin-bottom:10px">We create content</h3>
+        <p style="font-size:14px;color:var(--gray-400);line-height:1.6">Your AI team drafts posts, captions, and hashtags for every platform.</p>
       </div>
-      <div class="step reveal reveal-delay-3">
-        <div class="step-num">3</div>
-        <div class="step-icon">&#128640;</div>
-        <h3>Approve and publish</h3>
-        <p>Review the content, hit approve, and we publish everywhere at the optimal time for maximum reach.</p>
+
+      <div class="reveal reveal-delay-3" style="text-align:center;padding:0 24px">
+        <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--purple));display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:28px;font-weight:800;color:#fff;position:relative;z-index:2;box-shadow:0 0 0 8px var(--gray-900),0 0 0 10px rgba(99,102,241,.3)">3</div>
+        <div style="width:56px;height:56px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;margin:0 auto 20px"><span class="material-symbols-rounded" style="font-size:28px;color:#34d399">rocket_launch</span></div>
+        <h3 style="font-size:18px;font-weight:700;margin-bottom:10px">Approve & publish</h3>
+        <p style="font-size:14px;color:var(--gray-400);line-height:1.6">One click to approve. We publish everywhere at the perfect time.</p>
       </div>
     </div>
   </div>
