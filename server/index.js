@@ -1243,12 +1243,15 @@ fastify.post('/api/chat', async (req, reply) => {
     if (db) {
       try {
         const { rows } = await db.query(
-          'SELECT sender_name, text FROM messages WHERE channel = $1 ORDER BY created_at DESC LIMIT 15',
+          'SELECT sender_name, text, created_at FROM messages WHERE channel = $1 ORDER BY created_at DESC LIMIT 30',
           ['general']
         )
         if (rows.length > 0) {
-          const feed = rows.reverse().map(r => `${r.sender_name}: ${r.text.slice(0, 100)}`).join('\n')
-          channelContext += `\n\nRECENT #GENERAL CHAT (you can see this for context):\n${feed}`
+          const feed = rows.reverse().map(r => {
+            const time = new Date(r.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+            return `[${time}] ${r.sender_name}: ${r.text.slice(0, 250)}`
+          }).join('\n')
+          channelContext += `\n\nRECENT #GENERAL CHAT (you can see what the team is discussing):\n${feed}`
         }
       } catch(e) {}
     }
