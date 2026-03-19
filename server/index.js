@@ -1378,7 +1378,9 @@ fastify.post('/api/chat', async (req, reply) => {
       const data = await res.json()
       responseText = data.message?.content || 'No response'
     } else if (agent.provider === 'groq') {
-      // Groq uses OpenAI-compatible format with tool calling support
+      // Groq agents now routed through OpenRouter (no rate limits)
+      const orKey = process.env.OPENROUTER_API_KEY
+      if (!orKey) throw new Error('OPENROUTER_API_KEY not set')
       let userContent = message
       if (attachments?.length) {
         const parts = []
@@ -1391,38 +1393,18 @@ fastify.post('/api/chat', async (req, reply) => {
       }
       const tools = getGroqTools(agent.permissions)
       const msgs = [{ role: 'system', content: fullSystemPrompt }, ...(history || []).slice(-20), { role: 'user', content: userContent }]
-      const reqBody = { model: agent.model || 'llama-3.3-70b-versatile', max_tokens: 500, messages: msgs }
+      const reqBody = { model: 'meta-llama/llama-3.3-70b-instruct:free', max_tokens: 500, messages: msgs }
       if (tools) reqBody.tools = tools
 
       // Tool calling loop (max 3 rounds)
       for (let round = 0; round < 3; round++) {
-        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${agentApiKey}` },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${orKey}` },
           body: JSON.stringify(reqBody),
         })
-        captureGroqRateLimit(res)
         const data = await res.json()
-        if (data.error) {
-          // If rate limited, fall back to OpenRouter
-          const errMsg = (data.error.message || JSON.stringify(data.error)).toLowerCase()
-          const errCode = (data.error.code || data.error.type || '').toLowerCase()
-          const isRateLimit = errMsg.includes('rate') || errMsg.includes('limit') || errMsg.includes('quota') || errMsg.includes('too many') || errCode.includes('rate') || errCode.includes('limit') || res.status === 429
-          const orKey = process.env.OPENROUTER_API_KEY
-          console.log(`Groq error for ${agentId}: [${res.status}] ${errCode} — ${errMsg}`)
-          if (isRateLimit && orKey) {
-            console.log(`Falling back to OpenRouter for ${agentId}`)
-            const fallbackRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${orKey}` },
-              body: JSON.stringify({ model: 'meta-llama/llama-3.3-70b-instruct:free', max_tokens: 500, messages: reqBody.messages })
-            })
-            const fallbackData = await fallbackRes.json()
-            responseText = fallbackData.choices?.[0]?.message?.content || ''
-            if (responseText) { console.log(`OpenRouter fallback success for ${agentId}`); break }
-          }
-          throw new Error(data.error.message || JSON.stringify(data.error))
-        }
+        if (data.error) throw new Error(data.error.message || JSON.stringify(data.error))
 
         const choice = data.choices?.[0]
         if (choice?.finish_reason === 'tool_calls' && choice.message?.tool_calls?.length) {
