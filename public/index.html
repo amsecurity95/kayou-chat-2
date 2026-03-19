@@ -624,11 +624,23 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
       </div>
     </div>
 
+    <!-- Agent Breakdown -->
+    <div class="card" style="margin-bottom:16px;padding:16px" id="tool-agent-breakdown">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span class="material-symbols-rounded" style="font-size:18px;color:var(--text-muted)">groups</span>
+        <span style="font-size:13px;font-weight:600">Who's Using Tools</span>
+      </div>
+      <div id="tool-agent-list" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+    </div>
+
     <!-- Filter tabs -->
-    <div style="display:flex;gap:6px;margin-bottom:12px" id="tool-filter-tabs">
+    <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap" id="tool-filter-tabs">
       <button class="btn btn-ghost btn-sm tool-filter active" data-filter="all" onclick="filterToolLog('all',this)">All</button>
       <button class="btn btn-ghost btn-sm tool-filter" data-filter="success" onclick="filterToolLog('success',this)" style="color:var(--accent)">Success</button>
       <button class="btn btn-ghost btn-sm tool-filter" data-filter="failed" onclick="filterToolLog('failed',this)" style="color:var(--red)">Failed</button>
+      <span style="width:1px;background:var(--border);margin:0 4px"></span>
+      <!-- Agent filter buttons injected dynamically -->
+      <span id="tool-agent-filters"></span>
     </div>
 
     <!-- Empty State -->
@@ -1037,13 +1049,26 @@ function navigate(page) {
 }
 
 let toolLogData = [];
+let toolLogFilter = 'all';
+
+function toolAgentAvatar(agent, size) {
+  size = size || 28;
+  if (agent && agent.profilePhoto) {
+    return `<img src="${agent.profilePhoto}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover">`;
+  }
+  const color = (agent && agent.color) || '#6366F1';
+  const initial = agent ? agent.name[0] : '?';
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.45)}px;font-weight:600;flex-shrink:0">${esc(initial)}</div>`;
+}
+
 async function loadToolLog() {
   try {
     const res = await fetch(API + '/api/tools/log');
     const logs = await res.json();
     toolLogData = Array.isArray(logs) ? logs : [];
     updateToolStats(toolLogData);
-    renderToolLog(toolLogData);
+    renderAgentBreakdown(toolLogData);
+    renderToolLog(toolLogData, toolLogFilter);
   } catch(e) { console.log('Tool log error:', e); }
 }
 
@@ -1070,8 +1095,72 @@ function updateToolStats(logs) {
   }
 }
 
+function renderAgentBreakdown(logs) {
+  const breakdown = document.getElementById('tool-agent-list');
+  const filtersEl = document.getElementById('tool-agent-filters');
+  if (!logs.length) {
+    breakdown.innerHTML = '<span style="font-size:12px;color:var(--text-muted)">No activity yet</span>';
+    filtersEl.innerHTML = '';
+    document.getElementById('tool-agent-breakdown').style.display = 'none';
+    return;
+  }
+  document.getElementById('tool-agent-breakdown').style.display = '';
+
+  // Count per agent
+  const agentStats = {};
+  logs.forEach(l => {
+    if (!agentStats[l.agentId]) agentStats[l.agentId] = { total: 0, success: 0, failed: 0, tools: {} };
+    agentStats[l.agentId].total++;
+    if (l.success) agentStats[l.agentId].success++; else agentStats[l.agentId].failed++;
+    agentStats[l.agentId].tools[l.tool] = (agentStats[l.agentId].tools[l.tool] || 0) + 1;
+  });
+
+  // Sort by most active
+  const sorted = Object.entries(agentStats).sort((a,b) => b[1].total - a[1].total);
+
+  // Render agent cards
+  breakdown.innerHTML = sorted.map(([id, stats]) => {
+    const agent = agents.find(a => a.id === id);
+    const name = agent ? agent.name : id;
+    const color = (agent && agent.color) || '#6366F1';
+    const topTools = Object.entries(stats.tools).sort((a,b) => b[1] - a[1]).slice(0, 3).map(([t]) => t);
+    const successRate = Math.round((stats.success / stats.total) * 100);
+    const isActive = toolLogFilter === 'agent:' + id;
+    return `<div onclick="filterToolLog('agent:${id}',null)" style="background:${isActive ? color + '22' : 'var(--bg-elevated)'};border:1px solid ${isActive ? color : 'var(--border)'};border-radius:10px;padding:10px 14px;cursor:pointer;min-width:160px;transition:all .15s" class="tool-agent-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        ${toolAgentAvatar(agent, 24)}
+        <span style="font-weight:600;font-size:13px">${esc(name)}</span>
+      </div>
+      <div style="display:flex;gap:12px;font-size:11px;color:var(--text-muted);margin-bottom:6px">
+        <span><strong style="color:var(--text-primary)">${stats.total}</strong> calls</span>
+        <span style="color:var(--accent)">${stats.success} ok</span>
+        ${stats.failed > 0 ? `<span style="color:var(--red)">${stats.failed} fail</span>` : ''}
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${topTools.map(t => `<span class="tag" style="font-size:10px;background:var(--bg-card);color:var(--text-secondary)">${esc(t)}</span>`).join('')}
+      </div>
+      <div class="progress-bar" style="margin-top:6px;height:3px"><div class="progress-fill" style="width:${successRate}%;background:${successRate >= 80 ? 'var(--accent)' : successRate >= 50 ? 'var(--orange)' : 'var(--red)'}"></div></div>
+    </div>`;
+  }).join('');
+
+  // Render agent filter buttons in the filter tabs bar
+  filtersEl.innerHTML = sorted.map(([id]) => {
+    const agent = agents.find(a => a.id === id);
+    const name = agent ? agent.name : id;
+    const color = (agent && agent.color) || '#6366F1';
+    const isActive = toolLogFilter === 'agent:' + id;
+    return `<button class="btn btn-ghost btn-sm tool-filter ${isActive ? 'active' : ''}" data-filter="agent:${id}" onclick="filterToolLog('agent:${id}',this)" style="color:${color};gap:4px;display:inline-flex;align-items:center">
+      ${toolAgentAvatar(agent, 14)} ${esc(name)}
+    </button>`;
+  }).join('');
+}
+
 function renderToolLog(logs, filter) {
-  const filtered = filter === 'success' ? logs.filter(l => l.success) : filter === 'failed' ? logs.filter(l => !l.success) : logs;
+  let filtered = logs;
+  if (filter === 'success') filtered = logs.filter(l => l.success);
+  else if (filter === 'failed') filtered = logs.filter(l => !l.success);
+  else if (filter && filter.startsWith('agent:')) filtered = logs.filter(l => l.agentId === filter.slice(6));
+
   const empty = document.getElementById('tool-log-empty');
   const list = document.getElementById('tool-log-list');
   if (filtered.length === 0) {
@@ -1084,6 +1173,7 @@ function renderToolLog(logs, filter) {
     const time = new Date(l.ts).toLocaleTimeString();
     const agent = agents.find(a => a.id === l.agentId);
     const agentName = agent ? agent.name : l.agentId;
+    const agentColor = (agent && agent.color) || '#6366F1';
     const statusColor = l.success ? 'var(--accent)' : 'var(--red)';
     const statusIcon = l.success ? 'check_circle' : 'error';
     const statusLabel = l.success ? 'SUCCESS' : 'FAILED';
@@ -1091,27 +1181,37 @@ function renderToolLog(logs, filter) {
     const toolColor = toolColors[l.tool] || 'var(--text-secondary)';
     return `<div class="card" style="margin-bottom:8px;padding:14px 16px;border-left:3px solid ${statusColor}">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-        <span class="material-symbols-rounded" style="font-size:16px;color:${statusColor}">${statusIcon}</span>
-        <span style="font-weight:600;font-size:13px;color:var(--text-primary)">${esc(agentName)}</span>
+        ${toolAgentAvatar(agent, 24)}
+        <div style="display:flex;flex-direction:column">
+          <span style="font-weight:600;font-size:13px;color:var(--text-primary)">${esc(agentName)}</span>
+          <span style="font-size:10px;color:var(--text-muted)">called <strong style="color:${toolColor}">${esc(l.tool)}</strong></span>
+        </div>
         <span class="tag" style="background:${toolColor}18;color:${toolColor};font-family:'SF Mono',monospace;font-size:11px;font-weight:600">${esc(l.tool)}</span>
+        <span class="material-symbols-rounded" style="font-size:14px;color:${statusColor}">${statusIcon}</span>
         <span class="tag" style="background:${statusColor}18;color:${statusColor};font-size:10px;font-weight:600">${statusLabel}</span>
         <span style="margin-left:auto;font-size:11px;color:var(--text-muted)">${time}</span>
       </div>
-      ${l.args ? `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px"><span style="color:var(--text-muted);font-weight:500">ARGS</span> <code style="background:var(--bg-elevated);padding:3px 8px;border-radius:4px;font-size:11px">${esc(l.args)}</code></div>` : ''}
-      <div style="font-size:12px;color:${l.success ? 'var(--text-secondary)' : 'var(--red)'};white-space:pre-wrap;font-family:'SF Mono',monospace;background:var(--bg-elevated);padding:10px 12px;border-radius:8px;max-height:140px;overflow:auto;line-height:1.5;font-size:11px">${esc(l.result || '(no output)')}</div>
+      ${l.args ? `<div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;padding-left:34px"><span style="color:var(--text-muted);font-weight:500">ARGS</span> <code style="background:var(--bg-elevated);padding:3px 8px;border-radius:4px;font-size:11px">${esc(l.args)}</code></div>` : ''}
+      <div style="font-size:11px;color:${l.success ? 'var(--text-secondary)' : 'var(--red)'};white-space:pre-wrap;font-family:'SF Mono',monospace;background:var(--bg-elevated);padding:10px 12px;border-radius:8px;max-height:140px;overflow:auto;line-height:1.5;margin-left:34px">${esc(l.result || '(no output)')}</div>
     </div>`;
   }).join('');
 }
 
 function filterToolLog(filter, btn) {
-  document.querySelectorAll('.tool-filter').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
+  toolLogFilter = filter;
+  // Update all filter button states
+  document.querySelectorAll('.tool-filter').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === filter);
+  });
+  renderAgentBreakdown(toolLogData);
   renderToolLog(toolLogData, filter);
 }
 
 function clearToolLog() {
   toolLogData = [];
+  toolLogFilter = 'all';
   updateToolStats([]);
+  renderAgentBreakdown([]);
   renderToolLog([]);
 }
 
