@@ -976,7 +976,6 @@ function removeAttachment(i) {
 }
 
 const CHANNELS = [
-  { id: 'founders', name: 'founders', icon: 'lock', desc: 'Private — Aimar, Claude & Kayou Code only', locked: true },
   { id: 'general', name: 'general', icon: 'tag', desc: "Team room — everyone's here" },
   { id: 'ideas', name: 'ideas', icon: 'lightbulb', desc: 'Brainstorm and pitch new ideas' },
   { id: 'research', name: 'research', icon: 'query_stats', desc: 'Market research & analysis' },
@@ -988,7 +987,6 @@ const CHANNELS = [
 ];
 
 const CHANNEL_AGENTS = {
-  founders: ['claude'],
   general: ['kayou', 'kayou-kilo'],
   ideas: ['kayou-kilo'],
   research: ['kayou-kilo'],
@@ -1303,15 +1301,12 @@ function esc(s) {
 // CHAT
 // ═══════════════════════════════════════
 function renderChannelList() {
-  document.getElementById('channel-list').innerHTML = CHANNELS.map(ch => {
-    const isLocked = ch.locked;
-    const lockStyle = isLocked ? 'background:linear-gradient(135deg,var(--purple-dim),var(--blue-dim));border:1px solid var(--purple)40;' : '';
-    return `
-    <div class="channel-item ${ch.id === currentChannel ? 'active' : ''}" data-channel="${ch.id}" onclick="switchChannel('${ch.id}')" style="${lockStyle}">
-      <span class="material-symbols-rounded" ${isLocked ? 'style="color:var(--purple)"' : ''}>${ch.icon}</span>
+  document.getElementById('channel-list').innerHTML = CHANNELS.map(ch => `
+    <div class="channel-item ${ch.id === currentChannel ? 'active' : ''}" data-channel="${ch.id}" onclick="switchChannel('${ch.id}')">
+      <span class="material-symbols-rounded">${ch.icon}</span>
       ${ch.name}
-    </div>`;
-  }).join('');
+    </div>
+  `).join('');
 }
 
 function renderDMList() {
