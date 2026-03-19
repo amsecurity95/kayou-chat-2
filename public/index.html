@@ -1695,37 +1695,28 @@ function formatMsg(s) {
 // AGENTS PAGE
 // ═══════════════════════════════════════
 function renderAgents() {
-  // Sort by team hierarchy: leads first, then their reports grouped together
-  const teamOrder = ['kayou', 'dev', 'ops', 'claude', 'sonic', 'kayou-code', 'kayou-kilo', 'scout', 'analyst'];
-  const sorted = [...agents].sort((a, b) => {
+  // Split into active and disabled
+  const teamOrder = ['kayou', 'kayou-kilo', 'claude', 'sonic', 'kayou-code'];
+  const active = [...agents].filter(a => a.enabled).sort((a, b) => {
     const ai = teamOrder.indexOf(a.id);
     const bi = teamOrder.indexOf(b.id);
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
   });
+  const disabled = [...agents].filter(a => !a.enabled);
 
-  // Group into teams
-  const buildTeam = sorted.filter(a => a.id === 'kayou' || a.reportsTo === 'kayou');
-  const securityTeam = sorted.filter(a => a.id === 'claude' || a.reportsTo === 'claude');
-  const researchTeam = sorted.filter(a => a.id === 'kayou-kilo' || a.reportsTo === 'kayou-kilo');
-  const independent = sorted.filter(a => a.reportsTo === 'aimar' && !['kayou','claude','kayou-kilo'].includes(a.id));
-  const others = sorted.filter(a => !buildTeam.includes(a) && !securityTeam.includes(a) && !researchTeam.includes(a) && !independent.includes(a));
-
-  const renderTeam = (label, icon, team) => {
-    if (team.length === 0) return '';
+  const renderSection = (label, icon, list) => {
+    if (list.length === 0) return '';
     return `<div style="margin-bottom:20px">
       <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;display:flex;align-items:center;gap:6px">
         <span class="material-symbols-rounded" style="font-size:16px">${icon}</span> ${label}
       </div>
-      <div class="grid grid-auto">${team.map(a => renderAgentCard(a)).join('')}</div>
+      <div class="grid grid-auto">${list.map(a => renderAgentCard(a)).join('')}</div>
     </div>`;
   };
 
   document.getElementById('agents-grid').innerHTML =
-    renderTeam('Build Team', 'construction', buildTeam) +
-    renderTeam('Security Team', 'shield', securityTeam) +
-    renderTeam('Research Team', 'query_stats', researchTeam) +
-    (independent.length > 0 ? renderTeam('Independent', 'person', independent) : '') +
-    (others.length > 0 ? renderTeam('Other', 'group', others) : '');
+    renderSection('Active Agents', 'group', active) +
+    (disabled.length > 0 ? renderSection('Disabled', 'block', disabled) : '');
 }
 
 function renderAgentCard(a) {
