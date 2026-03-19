@@ -1450,9 +1450,7 @@ fastify.post('/api/chat', async (req, reply) => {
       const data = await res.json()
       responseText = data.message?.content || 'No response'
     } else if (agent.provider === 'groq') {
-      // Groq agents now routed through OpenRouter (no rate limits)
-      const orKey = process.env.OPENROUTER_API_KEY
-      if (!orKey) throw new Error('OPENROUTER_API_KEY not set')
+      // Groq — direct API with per-agent keys
       let userContent = message
       if (attachments?.length) {
         const parts = []
@@ -1465,36 +1463,18 @@ fastify.post('/api/chat', async (req, reply) => {
       }
       const tools = getGroqTools(agent.permissions)
       const msgs = [{ role: 'system', content: fullSystemPrompt }, ...(history || []).slice(-20), { role: 'user', content: userContent }]
-      const OR_MODELS = ['nvidia/nemotron-3-super-120b-a12b:free', 'mistralai/mistral-small-3.1-24b-instruct:free', 'qwen/qwen3-coder:free', 'meta-llama/llama-3.3-70b-instruct:free']
-      const reqBody = { model: OR_MODELS[0], max_tokens: 500, messages: msgs }
+      const reqBody = { model: agent.model || 'llama-3.3-70b-versatile', max_tokens: 500, messages: msgs }
       if (tools) reqBody.tools = tools
 
       // Tool calling loop (max 3 rounds)
       for (let round = 0; round < 3; round++) {
-        let data, lastErr
-        for (const model of OR_MODELS) {
-          reqBody.model = model
-          const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${orKey}` },
-            body: JSON.stringify(reqBody),
-          })
-          data = await res.json()
-          if (data.error) {
-            lastErr = data.error.message || JSON.stringify(data.error)
-            console.log(`OpenRouter ${model} failed for ${agentId}: ${lastErr}, trying next...`)
-            continue
-          }
-          // Check for empty response — try next model
-          const content = data.choices?.[0]?.message?.content
-          if (!content || content.trim() === '') {
-            console.log(`OpenRouter ${model} returned empty for ${agentId}, trying next...`)
-            data.error = { message: 'Empty response' }
-            continue
-          }
-          break
-        }
-        if (data.error) throw new Error(lastErr || 'All models returned empty')
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${agentApiKey}` },
+          body: JSON.stringify(reqBody),
+        })
+        const data = await res.json()
+        if (data.error) throw new Error(data.error.message || JSON.stringify(data.error))
 
         const choice = data.choices?.[0]
         if (choice?.finish_reason === 'tool_calls' && choice.message?.tool_calls?.length) {
