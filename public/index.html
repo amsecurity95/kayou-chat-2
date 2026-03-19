@@ -1321,6 +1321,7 @@ function renderDMList() {
 
 async function switchChannel(id) {
   currentChannel = id;
+  showAllMessages[id] = false; // Start compact on channel switch
   document.querySelectorAll('.channel-item').forEach(el => el.classList.toggle('active', el.dataset.channel === id));
 
   const ch = CHANNELS.find(c => c.id === id);
@@ -1735,75 +1736,101 @@ function hideTyping() {
   document.getElementById('typing-indicator').innerHTML = '';
 }
 
+const VISIBLE_MSG_COUNT = 15;
+let showAllMessages = {};
+
+function renderMsgHTML(m, i, msgs) {
+  if (m.sender === 'system') {
+    return `<div style="text-align:center;padding:6px;font-size:11px;color:var(--text-muted)">${esc(m.text)}</div>`;
+  }
+
+  const prev = msgs[i - 1];
+  const isGroup = prev && prev.sender === m.sender && prev.sender !== 'system' && (m.ts - prev.ts) < 120000;
+  const now = new Date();
+  const msgDate = m.ts;
+  const isToday = msgDate.toDateString() === now.toDateString();
+  const time = isToday
+    ? msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : msgDate.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const isUser = m.sender === 'aimar';
+  const side = isUser ? 'msg-right' : 'msg-left';
+
+  const bubbleColor = isUser ? '#2563eb' : (m.color ? m.color + '25' : '#6366F125');
+  const bubbleBorder = isUser ? 'none' : `1px solid ${m.color || '#6366F1'}40`;
+
+  let avatarHTML = '';
+  if (!isUser) {
+    if (m.photo) {
+      avatarHTML = `<img class="msg-avatar" src="${esc(m.photo)}">`;
+    } else {
+      avatarHTML = `<div class="msg-avatar-text" style="background:${m.color || '#6366F1'}">${esc(m.name?.[0] || '?')}</div>`;
+    }
+  }
+
+  let replyHTML = '';
+  if (m.replyTo) {
+    const refColor = m.replyTo.color || 'var(--text-muted)';
+    replyHTML = `<div class="msg-reply-ref" onclick="scrollToMsg(${m.replyTo.msgIndex || 0})"><div class="ref-bar" style="background:${refColor}"></div><span style="font-weight:600;color:${refColor}">${esc(m.replyTo.name)}</span><span class="ref-text">${esc(m.replyTo.text)}</span></div>`;
+  }
+
+  const rxns = m.reactions || {};
+  const rxnKeys = Object.keys(rxns);
+  const reactionsHTML = rxnKeys.length > 0
+    ? `<div class="msg-reactions">${rxnKeys.map(r => `<span class="rxn ${rxns[r]==='aimar'?'mine':''}" onclick="event.stopPropagation();addReaction(${i},'${r}')">${r}</span>`).join('')}</div>`
+    : '';
+
+  return `
+    <div class="msg ${side} ${isGroup ? 'msg-group' : ''} msg-wrap" data-msg-idx="${i}" onclick="openMsgCtx(${i},event)">
+      ${avatarHTML}
+      <div class="msg-body">
+        <div class="msg-header">
+          <span class="msg-name" style="color:${m.color || 'var(--text-primary)'}">${esc(m.name)}</span>
+          <span class="msg-time">${time}</span>
+        </div>
+        ${replyHTML}
+        <div class="msg-bubble" style="background:${bubbleColor};border:${bubbleBorder}">
+          <div class="msg-text">${formatMsg(m.text)}</div>
+          ${(m.attachments || []).map(att => {
+            if (att.type === 'image') return '<img class="msg-attachment-img" src="' + esc(att.data) + '" onclick="window.open(this.src)">';
+            if (att.type === 'pdf') return '<div class="msg-attachment-pdf"><span class="material-symbols-rounded" style="font-size:18px;color:var(--red)">picture_as_pdf</span>' + esc(att.name) + '</div>';
+            return '';
+          }).join('')}
+        </div>
+        ${reactionsHTML}
+      </div>
+    </div>
+  `;
+}
+
 function renderMessages() {
   const container = document.getElementById('chat-messages');
   const msgs = channelMessages[currentChannel] || [];
+  const expanded = showAllMessages[currentChannel];
+  const hiddenCount = Math.max(0, msgs.length - VISIBLE_MSG_COUNT);
 
-  container.innerHTML = msgs.map((m, i) => {
-    if (m.sender === 'system') {
-      return `<div style="text-align:center;padding:6px;font-size:11px;color:var(--text-muted)">${esc(m.text)}</div>`;
-    }
+  if (expanded || hiddenCount === 0) {
+    // Show all
+    container.innerHTML = msgs.map((m, i) => renderMsgHTML(m, i, msgs)).join('');
+  } else {
+    // Show "load older" button + only recent messages
+    const visible = msgs.slice(-VISIBLE_MSG_COUNT);
+    const startIdx = msgs.length - VISIBLE_MSG_COUNT;
+    const loaderHTML = `<div style="text-align:center;padding:12px 0 8px">
+      <button onclick="expandMessages()" style="background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-secondary);padding:6px 16px;border-radius:20px;font-size:12px;font-family:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s" onmouseover="this.style.background='var(--bg-card-hover)';this.style.color='var(--text-primary)'" onmouseout="this.style.background='var(--bg-elevated)';this.style.color='var(--text-secondary)'">
+        <span class="material-symbols-rounded" style="font-size:14px">expand_less</span>
+        Show ${hiddenCount} older message${hiddenCount !== 1 ? 's' : ''}
+      </button>
+    </div>`;
+    container.innerHTML = loaderHTML + visible.map((m, vi) => renderMsgHTML(m, startIdx + vi, msgs)).join('');
+  }
+}
 
-    const prev = msgs[i - 1];
-    const isGroup = prev && prev.sender === m.sender && prev.sender !== 'system' && (m.ts - prev.ts) < 120000;
-    const now = new Date();
-    const msgDate = m.ts;
-    const isToday = msgDate.toDateString() === now.toDateString();
-    const time = isToday
-      ? msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      : msgDate.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const isUser = m.sender === 'aimar';
-    const side = isUser ? 'msg-right' : 'msg-left';
-
-    // Bubble color — user gets blue, agents get their own color
-    const bubbleColor = isUser ? '#2563eb' : (m.color ? m.color + '25' : '#6366F125');
-    const bubbleBorder = isUser ? 'none' : `1px solid ${m.color || '#6366F1'}40`;
-
-    let avatarHTML = '';
-    if (!isUser) {
-      if (m.photo) {
-        avatarHTML = `<img class="msg-avatar" src="${esc(m.photo)}">`;
-      } else {
-        avatarHTML = `<div class="msg-avatar-text" style="background:${m.color || '#6366F1'}">${esc(m.name?.[0] || '?')}</div>`;
-      }
-    }
-
-    // Reply reference
-    let replyHTML = '';
-    if (m.replyTo) {
-      const refColor = m.replyTo.color || 'var(--text-muted)';
-      replyHTML = `<div class="msg-reply-ref" onclick="scrollToMsg(${m.replyTo.msgIndex || 0})"><div class="ref-bar" style="background:${refColor}"></div><span style="font-weight:600;color:${refColor}">${esc(m.replyTo.name)}</span><span class="ref-text">${esc(m.replyTo.text)}</span></div>`;
-    }
-
-    // Reactions
-    const rxns = m.reactions || {};
-    const rxnKeys = Object.keys(rxns);
-    const reactionsHTML = rxnKeys.length > 0
-      ? `<div class="msg-reactions">${rxnKeys.map(r => `<span class="rxn ${rxns[r]==='aimar'?'mine':''}" onclick="event.stopPropagation();addReaction(${i},'${r}')">${r}</span>`).join('')}</div>`
-      : '';
-
-    return `
-      <div class="msg ${side} ${isGroup ? 'msg-group' : ''} msg-wrap" data-msg-idx="${i}" onclick="openMsgCtx(${i},event)">
-        ${avatarHTML}
-        <div class="msg-body">
-          <div class="msg-header">
-            <span class="msg-name" style="color:${m.color || 'var(--text-primary)'}">${esc(m.name)}</span>
-            <span class="msg-time">${time}</span>
-          </div>
-          ${replyHTML}
-          <div class="msg-bubble" style="background:${bubbleColor};border:${bubbleBorder}">
-            <div class="msg-text">${formatMsg(m.text)}</div>
-            ${(m.attachments || []).map(att => {
-              if (att.type === 'image') return '<img class="msg-attachment-img" src="' + esc(att.data) + '" onclick="window.open(this.src)">';
-              if (att.type === 'pdf') return '<div class="msg-attachment-pdf"><span class="material-symbols-rounded" style="font-size:18px;color:var(--red)">picture_as_pdf</span>' + esc(att.name) + '</div>';
-              return '';
-            }).join('')}
-          </div>
-          ${reactionsHTML}
-        </div>
-      </div>
-    `;
-  }).join('');
+function expandMessages() {
+  showAllMessages[currentChannel] = true;
+  renderMessages();
+  // Scroll to top to see old messages
+  const el = document.getElementById('chat-messages');
+  el.scrollTop = 0;
 }
 
 function scrollChat() {
