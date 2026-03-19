@@ -4,7 +4,7 @@ const fastify = require('fastify')({ logger: true, bodyLimit: 10 * 1024 * 1024 }
 const cors = require('@fastify/cors')
 const fastifyStatic = require('@fastify/static')
 let Server; try { Server = require('socket.io').Server } catch(e) { /* socket.io optional */ }
-let UploadPost; try { UploadPost = require('upload-post').UploadPost } catch(e) { /* upload-post optional */ }
+// Upload-Post uses REST API directly — no SDK needed
 
 const { execSync } = require('child_process')
 
@@ -1265,11 +1265,15 @@ fastify.post('/api/external/tools', async (req, reply) => {
 })
 
 // ══════════════ SOCIAL MEDIA MANAGEMENT ══════════════
-// Upload-Post SDK init
-function getUploadPostClient() {
+// Upload-Post REST API helper
+const UPLOAD_POST_BASE = 'https://api.upload-post.com'
+function uploadPostFetch(endpoint, opts = {}) {
   const key = process.env.UPLOAD_POST_API_KEY
-  if (!key || !UploadPost) return null
-  return new UploadPost(key)
+  if (!key) throw new Error('UPLOAD_POST_API_KEY not configured')
+  return fetch(`${UPLOAD_POST_BASE}${endpoint}`, {
+    ...opts,
+    headers: { 'Authorization': `Apikey ${key}`, 'Content-Type': 'application/json', ...(opts.headers || {}) }
+  }).then(r => r.json())
 }
 
 // GET /api/social/accounts — list client accounts
@@ -1285,15 +1289,7 @@ fastify.post('/api/social/accounts', async (req, reply) => {
   const { clientName, platforms, notes } = req.body
   if (!clientName) return reply.code(400).send({ error: 'Missing clientName' })
 
-  // Create user on Upload-Post if SDK available
-  let uploadPostUser = null
-  const client = getUploadPostClient()
-  if (client) {
-    try {
-      const user = await client.createUser({ name: clientName })
-      uploadPostUser = user?.id || user?.userId || null
-    } catch(e) { console.log('Upload-Post createUser error:', e.message) }
-  }
+  let uploadPostUser = clientName.toLowerCase().replace(/[^a-z0-9]/g, '-')
 
   const { rows } = await db.query(
     'INSERT INTO social_accounts (client_name, upload_post_user, platforms, notes) VALUES ($1, $2, $3, $4) RETURNING *',
@@ -1311,14 +1307,13 @@ fastify.delete('/api/social/accounts/:id', async (req) => {
 
 // POST /api/social/accounts/:id/connect — generate Upload-Post connect URL for client
 fastify.post('/api/social/accounts/:id/connect', async (req, reply) => {
-  const client = getUploadPostClient()
-  if (!client) return reply.code(503).send({ error: 'Upload-Post not configured' })
+  if (!process.env.UPLOAD_POST_API_KEY) return reply.code(503).send({ error: 'Upload-Post not configured. Add UPLOAD_POST_API_KEY to Railway.' })
   if (!db) return reply.code(500).send({ error: 'No database' })
   const { rows } = await db.query('SELECT * FROM social_accounts WHERE id = $1', [req.params.id])
   if (!rows[0]) return reply.code(404).send({ error: 'Account not found' })
   try {
-    const jwt = await client.generateJwt({ userId: rows[0].upload_post_user })
-    return { url: jwt?.url || jwt, account: rows[0].client_name }
+    const data = await uploadPostFetch('/api/uploadposts/me')
+    return { info: data, account: rows[0].client_name, message: 'Upload-Post connected. Use the Upload-Post dashboard to connect social platforms for this client.' }
   } catch(e) {
     return reply.code(500).send({ error: e.message })
   }
@@ -1390,26 +1385,38 @@ fastify.post('/api/social/posts/:id/approve', async (req, reply) => {
   const limit = parseInt(process.env.UPLOAD_POST_LIMIT || '10')
   if (monthlyCount >= limit) return reply.code(429).send({ error: `Monthly limit reached (${monthlyCount}/${limit}). Upgrade Upload-Post plan.` })
 
-  // Publish via Upload-Post
-  const client = getUploadPostClient()
+  // Publish via Upload-Post REST API
   let jobId = null
   let uploadStatus = null
-  if (client && post.upload_post_user) {
+  if (process.env.UPLOAD_POST_API_KEY) {
     try {
-      const opts = {
-        userId: post.upload_post_user,
-        platforms: post.platforms || [],
-        text: post.title + (post.description ? '\n\n' + post.description : ''),
+      const text = post.title + (post.description ? '\n\n' + post.description : '')
+      const platforms = post.platforms || []
+      const body = { async_upload: true }
+
+      // Build platform-specific arrays
+      if (platforms.length > 0) {
+        // Upload-Post uses profile_username per platform — for MVP we send the text to all connected profiles
+        body.post_text = text
       }
-      if (post.scheduled_date) opts.scheduledDate = post.scheduled_date
-      if (post.media_urls?.length > 0) opts.mediaUrls = post.media_urls
+      if (post.scheduled_date) body.scheduled_date = post.scheduled_date
+      if (post.media_urls?.length > 0) body.media_url = post.media_urls[0] // primary media
 
-      let result
-      if (post.content_type === 'video') result = await client.upload(opts)
-      else if (post.content_type === 'photo') result = await client.uploadPhotos(opts)
-      else result = await client.uploadText(opts)
+      let endpoint = '/api/upload_text'
+      if (post.content_type === 'video') endpoint = '/api/upload_videos'
+      else if (post.content_type === 'photo') endpoint = '/api/upload_photos'
 
-      jobId = result?.jobId || result?.id || null
+      // Build the request body per Upload-Post docs
+      const reqBody = {}
+      for (const platform of platforms) {
+        reqBody[`${platform}_text`] = text
+        if (body.media_url) reqBody[`${platform}_media_url`] = body.media_url
+      }
+      reqBody.async_upload = true
+      if (post.scheduled_date) reqBody.scheduled_date = post.scheduled_date
+
+      const result = await uploadPostFetch(endpoint, { method: 'POST', body: JSON.stringify(reqBody) })
+      jobId = result?.request_id || result?.job_id || null
       uploadStatus = result
     } catch(e) {
       console.error('Upload-Post publish error:', e.message)
