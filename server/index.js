@@ -1004,6 +1004,77 @@ fastify.post('/api/external/dm', async (req, reply) => {
   return { ok: true, channel: dmChannel, sender: agent.id }
 })
 
+// ══════════════ EXTERNAL AGENT MANAGEMENT (for Kayou Code) ══════════════
+
+// GET /api/external/agents — list all agents and their config
+fastify.get('/api/external/agents', async (req, reply) => {
+  const err = checkExternalAuth(req, reply); if (err) return err
+  const c = loadConfig()
+  return c.agents.map(a => ({
+    id: a.id, name: a.name, provider: a.provider, model: a.model || '',
+    enabled: a.enabled, reportsTo: a.reportsTo, color: a.color,
+    hasKey: !!(a.apiKey && a.apiKey !== ''), permissions: a.permissions || [],
+    webhookUrl: a.webhookUrl ? '(set)' : '', channels: a.channels || []
+  }))
+})
+
+// PUT /api/external/agents/:id — update an agent's config
+// Body: { provider?, model?, apiKey?, enabled?, systemPrompt?, webhookUrl?, permissions? }
+fastify.put('/api/external/agents/:id', async (req, reply) => {
+  const err = checkExternalAuth(req, reply); if (err) return err
+  const c = loadConfig()
+  const agent = c.agents.find(a => a.id === req.params.id)
+  if (!agent) return reply.code(404).send({ error: 'Agent not found' })
+
+  // Protected agents — cannot modify Claude or Aimar
+  if (['claude'].includes(req.params.id)) return reply.code(403).send({ error: 'Cannot modify this agent' })
+
+  const allowed = ['provider', 'model', 'apiKey', 'enabled', 'systemPrompt', 'webhookUrl', 'permissions']
+  const changes = {}
+  for (const key of allowed) {
+    if (req.body[key] !== undefined) {
+      agent[key] = req.body[key]
+      changes[key] = key === 'apiKey' ? '(updated)' : req.body[key]
+    }
+  }
+
+  saveConfig(c)
+  console.log(`EXTERNAL ADMIN: Agent ${req.params.id} updated:`, JSON.stringify(changes))
+  return { ok: true, agent: { id: agent.id, name: agent.name, provider: agent.provider, model: agent.model, enabled: agent.enabled, hasKey: !!agent.apiKey, changes } }
+})
+
+// POST /api/external/agents/:id/apikey — set an agent's API key securely
+// Body: { apiKey } or { envVar: "ENV:SOME_KEY" }
+fastify.post('/api/external/agents/:id/apikey', async (req, reply) => {
+  const err = checkExternalAuth(req, reply); if (err) return err
+  const c = loadConfig()
+  const agent = c.agents.find(a => a.id === req.params.id)
+  if (!agent) return reply.code(404).send({ error: 'Agent not found' })
+  if (['claude'].includes(req.params.id)) return reply.code(403).send({ error: 'Cannot modify this agent' })
+
+  const { apiKey, envVar } = req.body
+  if (!apiKey && !envVar) return reply.code(400).send({ error: 'Provide apiKey or envVar' })
+
+  agent.apiKey = envVar || apiKey
+  saveConfig(c)
+  console.log(`EXTERNAL ADMIN: API key updated for ${req.params.id}`)
+  return { ok: true, agent: agent.id, keySet: true }
+})
+
+// POST /api/external/agents/:id/toggle — enable/disable an agent
+fastify.post('/api/external/agents/:id/toggle', async (req, reply) => {
+  const err = checkExternalAuth(req, reply); if (err) return err
+  const c = loadConfig()
+  const agent = c.agents.find(a => a.id === req.params.id)
+  if (!agent) return reply.code(404).send({ error: 'Agent not found' })
+  if (['claude'].includes(req.params.id)) return reply.code(403).send({ error: 'Cannot modify this agent' })
+
+  agent.enabled = req.body.enabled !== undefined ? req.body.enabled : !agent.enabled
+  saveConfig(c)
+  console.log(`EXTERNAL ADMIN: ${agent.name} ${agent.enabled ? 'enabled' : 'disabled'}`)
+  return { ok: true, agent: agent.id, enabled: agent.enabled }
+})
+
 // POST /api/external/ask — send a message and get AI agent responses
 // Body: { channel, name, text, targetAgent? }
 fastify.post('/api/external/ask', async (req, reply) => {
