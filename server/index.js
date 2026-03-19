@@ -1405,9 +1405,13 @@ fastify.post('/api/chat', async (req, reply) => {
         const data = await res.json()
         if (data.error) {
           // If rate limited, fall back to OpenRouter
+          const errMsg = (data.error.message || JSON.stringify(data.error)).toLowerCase()
+          const errCode = (data.error.code || data.error.type || '').toLowerCase()
+          const isRateLimit = errMsg.includes('rate') || errMsg.includes('limit') || errMsg.includes('quota') || errMsg.includes('too many') || errCode.includes('rate') || errCode.includes('limit') || res.status === 429
           const orKey = resolveEnv('OPENROUTER_API_KEY') || process.env.OPENROUTER_API_KEY
-          if ((data.error.type === 'rate_limit_error' || (data.error.message || '').includes('Rate limit') || (data.error.message || '').includes('rate_limit')) && orKey) {
-            console.log(`Groq rate limited for ${agentId}, falling back to OpenRouter`)
+          console.log(`Groq error for ${agentId}: [${res.status}] ${errCode} — ${errMsg}`)
+          if (isRateLimit && orKey) {
+            console.log(`Falling back to OpenRouter for ${agentId}`)
             const fallbackRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${orKey}` },
@@ -1465,7 +1469,7 @@ fastify.post('/api/chat', async (req, reply) => {
     console.error(`Agent ${agentId} error:`, err.message)
     // Clean up error messages for the user
     const msg = err.message || 'Something went wrong'
-    if (msg.includes('Rate limit')) return reply.code(429).send({ error: 'Taking a breather — too many messages. Try again in a minute.' })
+    if (msg.toLowerCase().includes('rate') || msg.toLowerCase().includes('limit') || msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('too many')) return reply.code(429).send({ error: 'Taking a breather — too many messages. Try again in a minute.' })
     if (msg.includes('Failed to call a function')) return reply.code(500).send({ error: 'Tool call failed — try rephrasing your message.' })
     return reply.code(500).send({ error: msg.length > 100 ? msg.slice(0, 100) + '...' : msg })
   }
