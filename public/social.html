@@ -807,6 +807,199 @@ nav .container {
   box-shadow: 0 8px 32px rgba(20,110,245,.3);
 }
 
+/* ── TEAM / AGENT ── */
+.team-section {
+  background: var(--bg-primary);
+  padding: 120px 0;
+  position: relative;
+  overflow: hidden;
+}
+.team-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 40% 50%, rgba(232,100,60,.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 60% 30%, rgba(139,47,201,.06) 0%, transparent 50%);
+  pointer-events: none;
+}
+.team-showcase {
+  display: flex;
+  align-items: center;
+  gap: 72px;
+  position: relative;
+  z-index: 1;
+}
+.team-visual {
+  flex: 0 0 420px;
+  position: relative;
+}
+.agent-card {
+  position: relative;
+  border-radius: 28px;
+  overflow: hidden;
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 40px;
+  text-align: center;
+  transition: all .5s var(--transition);
+}
+.agent-card:hover {
+  border-color: rgba(232,133,90,.3);
+  box-shadow: 0 24px 80px rgba(232,100,60,.12), 0 0 120px rgba(232,100,60,.06);
+  transform: translateY(-8px);
+}
+.agent-glow {
+  position: absolute;
+  width: 300px; height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232,100,60,.2), transparent 70%);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  filter: blur(60px);
+  pointer-events: none;
+  z-index: 0;
+}
+.agent-avatar {
+  position: relative;
+  z-index: 1;
+  width: 220px;
+  height: 220px;
+  margin: 0 auto 28px;
+  border-radius: 24px;
+  overflow: hidden;
+  background: rgba(255,255,255,.02);
+}
+.agent-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.agent-name {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -.03em;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  position: relative;
+  z-index: 1;
+}
+.agent-role {
+  font-size: 14px;
+  font-weight: 500;
+  color: #e8855a;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 1;
+}
+.agent-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 100px;
+  background: rgba(76,217,100,.08);
+  border: 1px solid rgba(76,217,100,.2);
+  font-size: 13px;
+  font-weight: 500;
+  color: #4cd964;
+  position: relative;
+  z-index: 1;
+}
+.agent-status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #4cd964;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(76,217,100,.4); }
+  50% { opacity: .7; box-shadow: 0 0 0 6px rgba(76,217,100,0); }
+}
+.team-info {
+  flex: 1;
+}
+.team-info .section-eyebrow {
+  margin-bottom: 16px;
+}
+.team-info h2 {
+  font-size: clamp(32px,4vw,48px);
+  font-weight: 700;
+  letter-spacing: -.04em;
+  line-height: 1.1;
+  margin-bottom: 20px;
+}
+.team-info h2 .highlight-text {
+  background: linear-gradient(135deg, #e8855a, #d4547a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.team-desc {
+  font-size: 17px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 36px;
+  max-width: 480px;
+}
+.agent-capabilities {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.capability {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.02);
+  border: 1px solid var(--border-subtle);
+  transition: all .3s var(--transition);
+}
+.capability:hover {
+  background: rgba(255,255,255,.04);
+  border-color: var(--border-light);
+  transform: translateX(4px);
+}
+.capability-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(232,133,90,.15), rgba(212,84,122,.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.capability-icon .material-symbols-rounded {
+  font-size: 18px;
+  color: #e8855a;
+}
+.capability span:last-child {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+@media (max-width: 768px) {
+  .team-showcase {
+    flex-direction: column;
+    gap: 48px;
+  }
+  .team-visual {
+    flex: none;
+    width: 100%;
+    max-width: 340px;
+    margin: 0 auto;
+  }
+  .agent-capabilities {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── CTA ── */
 .cta-section {
   background: transparent;
@@ -1174,6 +1367,59 @@ footer {
         </div>
         <h3>Approve & publish</h3>
         <p>One click to approve. We publish everywhere at the perfect time, automatically.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TEAM / AGENT -->
+<section class="team-section" id="team">
+  <div class="container">
+    <div class="team-showcase">
+      <div class="team-visual reveal">
+        <div class="agent-card">
+          <div class="agent-glow"></div>
+          <div class="agent-avatar">
+            <img src="images/claude-agent.png" alt="Claude — AI Agent">
+          </div>
+          <div class="agent-name">Claude</div>
+          <div class="agent-role">AI Social Media Agent</div>
+          <div class="agent-status">
+            <div class="agent-status-dot"></div>
+            Online & ready
+          </div>
+        </div>
+      </div>
+      <div class="team-info reveal reveal-d2">
+        <div class="section-eyebrow">Meet the Team</div>
+        <h2>Your always-on<br><span class="highlight-text">creative partner.</span></h2>
+        <p class="team-desc">Claude is an advanced AI agent that understands your brand, writes in your voice, and creates scroll-stopping content across every platform — 24/7, no days off.</p>
+        <div class="agent-capabilities">
+          <div class="capability">
+            <div class="capability-icon"><span class="material-symbols-rounded">edit_note</span></div>
+            <span>Content creation</span>
+          </div>
+          <div class="capability">
+            <div class="capability-icon"><span class="material-symbols-rounded">schedule</span></div>
+            <span>Smart scheduling</span>
+          </div>
+          <div class="capability">
+            <div class="capability-icon"><span class="material-symbols-rounded">trending_up</span></div>
+            <span>Trend analysis</span>
+          </div>
+          <div class="capability">
+            <div class="capability-icon"><span class="material-symbols-rounded">palette</span></div>
+            <span>Brand voice</span>
+          </div>
+          <div class="capability">
+            <div class="capability-icon"><span class="material-symbols-rounded">analytics</span></div>
+            <span>Performance insights</span>
+          </div>
+          <div class="capability">
+            <div class="capability-icon"><span class="material-symbols-rounded">language</span></div>
+            <span>Multi-platform</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
