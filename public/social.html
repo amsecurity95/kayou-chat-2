@@ -52,7 +52,7 @@ body::before {
   background:
     radial-gradient(ellipse at 30% 30%, rgba(139,47,201,.15) 0%, transparent 50%),
     radial-gradient(ellipse at 70% 40%, rgba(212,84,122,.12) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 70%, rgba(232,133,90,.08) 0%, transparent 50%);
+    radial-gradient(ellipse at 50% 70%, rgba(194,10,215,.06) 0%, transparent 50%);
   pointer-events: none;
   z-index: 0;
 }
@@ -215,7 +215,7 @@ nav .container {
     #8b2fc9 0deg,
     #d4547a 60deg,
     #e8855a 120deg,
-    #d4956a 180deg,
+    #c94b8e 180deg,
     #9b59b6 240deg,
     #6a3093 300deg,
     #8b2fc9 360deg
@@ -258,7 +258,7 @@ nav .container {
 }
 .hero-aurora-4 {
   width: 350px; height: 350px;
-  background: radial-gradient(circle, #c9a04b, #e8855a, transparent 70%);
+  background: radial-gradient(circle, #d4547a, #c94b8e, transparent 70%);
   top: 10%; left: 55%;
   animation: auroraDrift 20s ease-in-out infinite 5s, auroraWave 14s ease-in-out infinite reverse;
 }
@@ -473,9 +473,17 @@ nav .container {
 
 /* ── PLATFORMS / TRUSTED ── */
 .platforms-section {
-  background: transparent;
+  background: var(--bg-primary);
   padding: 80px 0;
   position: relative;
+}
+.platforms-section::before {
+  content: '';
+  position: absolute;
+  top: -80px; left: 0; right: 0;
+  height: 80px;
+  background: linear-gradient(to bottom, transparent, var(--bg-primary));
+  pointer-events: none;
 }
 .platforms-section .section-header {
   text-align: center;
@@ -535,17 +543,27 @@ nav .container {
 
 /* ── HOW IT WORKS ── */
 .how-section {
-  background: transparent;
+  background: var(--bg-primary);
   padding: 120px 0;
   position: relative;
   overflow: hidden;
+}
+.how-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 25% 40%, rgba(139,47,201,.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 75% 60%, rgba(232,133,90,.06) 0%, transparent 50%);
+  backdrop-filter: blur(1px);
+  pointer-events: none;
 }
 .how-section .glow {
   position: absolute;
   width: 600px; height: 600px;
   border-radius: 50%;
   filter: blur(150px);
-  opacity: .08;
+  opacity: .06;
   pointer-events: none;
 }
 .how-section .glow-1 { background: #8b2fc9; top: 0; left: 20%; }
@@ -591,48 +609,61 @@ nav .container {
   position: relative;
   z-index: 1;
 }
-.steps-connector {
-  position: absolute;
-  top: 48px;
-  left: calc(16.66% + 48px);
-  right: calc(16.66% + 48px);
-  height: 2px;
-  background: linear-gradient(90deg, #8b2fc9, #e8855a);
-  opacity: .2;
-  z-index: 0;
-}
 .step-card {
   text-align: center;
-  padding: 0 16px;
+  padding: 32px 24px;
   position: relative;
+  background: rgba(255,255,255,.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all .4s var(--transition);
+}
+.step-card:hover {
+  background: rgba(255,255,255,.04);
+  border-color: var(--border-light);
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0,0,0,.2);
 }
 .step-num {
-  width: 72px; height: 72px;
-  border-radius: 50%;
+  width: 64px; height: 64px;
+  border-radius: 16px;
   background: linear-gradient(135deg, #8b2fc9, #d4547a, #e8855a);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 28px;
-  font-size: 26px;
+  margin: 0 auto 24px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--text-primary);
   position: relative;
-  z-index: 2;
-  box-shadow: 0 0 0 8px #0e0812, 0 0 0 10px rgba(139,47,201,.2), 0 8px 32px rgba(194,10,215,.2);
+  transform: perspective(600px) rotateY(-8deg) rotateX(4deg);
+  box-shadow:
+    8px 8px 0 rgba(139,47,201,.15),
+    16px 16px 0 rgba(139,47,201,.06),
+    0 8px 24px rgba(194,10,215,.2);
+  transition: transform .4s var(--transition), box-shadow .4s;
+}
+.step-card:hover .step-num {
+  transform: perspective(600px) rotateY(0deg) rotateX(0deg);
+  box-shadow:
+    0 0 0 rgba(139,47,201,0),
+    0 0 0 rgba(139,47,201,0),
+    0 12px 32px rgba(194,10,215,.3);
 }
 .step-icon-box {
-  width: 56px; height: 56px;
-  border-radius: 14px;
-  background: var(--bg-card);
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.04);
   border: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 20px;
+  margin: 0 auto 18px;
 }
 .step-icon-box .material-symbols-rounded {
-  font-size: 26px;
+  font-size: 24px;
   color: var(--blue);
 }
 .step-card h3 {
@@ -1127,7 +1158,6 @@ footer {
       <p class="section-desc">We handle everything so you can focus on running your business.</p>
     </div>
     <div class="steps-grid">
-      <div class="steps-connector"></div>
       <div class="step-card reveal reveal-d1">
         <div class="step-num">1</div>
         <div class="step-icon-box">
