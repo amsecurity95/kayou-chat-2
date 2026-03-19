@@ -520,7 +520,7 @@ fastify.post('/api/webhook/message', async (req, reply) => {
 // ══════════════ TOOL CALLING ══════════════
 // Available tools that agents can call
 const AGENT_TOOLS = {
-  gh: { description: 'GitHub CLI — list repos, issues, PRs, create issues', allowedArgs: /^(repo list|repo view|issue list|issue view|issue create|pr list|pr view|pr create|api)\b/ },
+  github: { description: 'GitHub API — create issues, list issues, list repos. Args format: "create_issue owner/repo Title | Body" or "list_issues owner/repo" or "list_repos"', isAsync: true },
   git: { description: 'Git — status, log, diff, branch', allowedArgs: /^(status|log|diff|branch|remote|show|ls-files)\b/ },
   ls: { description: 'List files in a directory', allowedArgs: /^[^\;|&`$]+$/ },
   cat: { description: 'Read file contents', allowedArgs: /^[^\;|&`$]+$/ },
@@ -558,22 +558,62 @@ function executeAdminTool(toolName, args, callerAgentId) {
 // Blocked patterns for safety
 const BLOCKED_PATTERNS = /rm\s+-rf|rm\s+\/|sudo|chmod|chown|mkfs|dd\s+if|>\s*\/dev|passwd|shutdown|reboot|kill\s+-9|pkill|eval\s*\(|exec\s*\(/i
 
+async function executeGithubTool(args) {
+  const c = loadConfig()
+  const token = resolveEnv(c.github?.token)
+  if (!token) return { error: 'GitHub token not configured' }
+  const headers = { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json', 'User-Agent': 'KayouChat' }
+  const ghFetch = async (url, opts = {}) => {
+    const res = await fetch(`https://api.github.com${url}`, { headers, ...opts })
+    return res.json()
+  }
+
+  if (args.startsWith('create_issue ')) {
+    const rest = args.slice(13)
+    const [repoPath, ...titleBody] = rest.split(' ')
+    const fullText = titleBody.join(' ')
+    const [title, ...bodyParts] = fullText.split('|')
+    const body = bodyParts.join('|').trim() || ''
+    const data = await ghFetch(`/repos/${repoPath}/issues`, { method: 'POST', body: JSON.stringify({ title: title.trim(), body }) })
+    if (data.html_url) return { output: `Issue created: ${data.html_url}` }
+    return { error: data.message || 'Failed to create issue' }
+  }
+  if (args.startsWith('list_issues ')) {
+    const repo = args.slice(12).trim()
+    const data = await ghFetch(`/repos/${repo}/issues?state=open&per_page=10`)
+    if (Array.isArray(data)) return { output: data.map(i => `#${i.number}: ${i.title} (${i.state})`).join('\n') || 'No open issues' }
+    return { error: data.message || 'Failed' }
+  }
+  if (args.startsWith('list_repos')) {
+    const data = await ghFetch('/user/repos?sort=updated&per_page=10')
+    if (Array.isArray(data)) return { output: data.map(r => `${r.full_name} — ${r.description || 'no desc'}`).join('\n') }
+    return { error: data.message || 'Failed' }
+  }
+  if (args.startsWith('close_issue ')) {
+    const rest = args.slice(12).trim()
+    const [repo, num] = rest.split(' ')
+    const data = await ghFetch(`/repos/${repo}/issues/${num}`, { method: 'PATCH', body: JSON.stringify({ state: 'closed' }) })
+    if (data.html_url) return { output: `Issue #${num} closed: ${data.html_url}` }
+    return { error: data.message || 'Failed' }
+  }
+  return { error: 'Unknown github command. Use: create_issue, list_issues, list_repos, close_issue' }
+}
+
 function executeToolCall(toolName, args, callerAgentId) {
   // Check admin tools first
   if (ADMIN_TOOLS[toolName]) return executeAdminTool(toolName, args, callerAgentId)
   if (!AGENT_TOOLS[toolName]) return { error: `Unknown tool: ${toolName}` }
   if (BLOCKED_PATTERNS.test(args)) return { error: 'Blocked: dangerous command' }
 
+  // Async tools (GitHub) — return promise
+  if (toolName === 'github') return executeGithubTool(args)
+
   const tool = AGENT_TOOLS[toolName]
   if (tool.allowedArgs && !tool.allowedArgs.test(args)) {
     return { error: `Not allowed: ${toolName} ${args.slice(0, 50)}` }
   }
 
-  const cmd = toolName === 'ls' || toolName === 'cat' || toolName === 'curl'
-    ? `${toolName} ${args}`
-    : toolName === 'node' ? `node ${args}`
-    : `${toolName} ${args}`
-
+  const cmd = `${toolName} ${args}`
   try {
     const output = execSync(cmd, {
       timeout: 15000,
@@ -1414,7 +1454,7 @@ fastify.post('/api/chat', async (req, reply) => {
           const toolResults = []
           for (const tb of toolBlocks) {
             console.log(`Tool call [${agentId}]: ${tb.name} ${tb.input?.args}`)
-            const result = executeToolCall(tb.name, tb.input?.args || '', agentId)
+            const result = await executeToolCall(tb.name, tb.input?.args || '', agentId)
             toolResults.push({
               type: 'tool_result',
               tool_use_id: tb.id,
@@ -1483,7 +1523,7 @@ fastify.post('/api/chat', async (req, reply) => {
           for (const tc of choice.message.tool_calls) {
             const args = JSON.parse(tc.function?.arguments || '{}')
             console.log(`Tool call [${agentId}]: ${tc.function.name} ${args.args}`)
-            const result = executeToolCall(tc.function.name, args.args || '', agentId)
+            const result = await executeToolCall(tc.function.name, args.args || '', agentId)
             reqBody.messages.push({
               role: 'tool',
               tool_call_id: tc.id,
