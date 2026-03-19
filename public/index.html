@@ -360,6 +360,9 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
   <div class="nav-item" data-page="tools" onclick="navigate('tools')" title="Tool Logs">
     <span class="material-symbols-rounded">terminal</span>
   </div>
+  <div class="nav-item" data-page="social" onclick="navigate('social')" title="Social Media">
+    <span class="material-symbols-rounded">share</span>
+  </div>
 
   <div class="nav-bottom">
     <div class="nav-item" data-page="settings" onclick="navigate('settings')" title="Settings">
@@ -652,6 +655,74 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 
     <!-- Log entries -->
     <div id="tool-log-list"></div>
+  </div>
+
+  <!-- SOCIAL MEDIA -->
+  <div class="content page" id="page-social">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <h2 style="font-size:18px;font-weight:700">Social Media Manager</h2>
+        <p style="font-size:13px;color:var(--text-muted);margin-top:4px">Draft, approve & publish content across all platforms</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="showAddClient()"><span class="material-symbols-rounded" style="font-size:16px">person_add</span> Add Client</button>
+        <button class="btn btn-primary" onclick="showCreatePost()"><span class="material-symbols-rounded" style="font-size:16px">edit_note</span> New Post</button>
+      </div>
+    </div>
+
+    <!-- Usage + Stats -->
+    <div class="grid grid-3" style="margin-bottom:16px">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Monthly Usage</span>
+          <span class="tag tag-purple">Upload-Post</span>
+        </div>
+        <div class="stat-value" id="social-usage">0/10</div>
+        <div class="progress-bar" style="margin-top:10px"><div class="progress-fill" id="social-usage-bar" style="width:0%;background:var(--accent)"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Pending Approval</span>
+          <span class="tag tag-orange">Review</span>
+        </div>
+        <div class="stat-value" id="social-pending">0</div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Published</span>
+          <span class="tag tag-green">Live</span>
+        </div>
+        <div class="stat-value" id="social-published">0</div>
+      </div>
+    </div>
+
+    <!-- Pending Approvals -->
+    <div class="card" style="margin-bottom:16px;padding:16px">
+      <div class="card-header" style="margin-bottom:12px">
+        <span class="card-title"><span class="material-symbols-rounded" style="font-size:18px;vertical-align:middle;color:var(--orange)">pending_actions</span> Pending Approval</span>
+      </div>
+      <div id="social-pending-list"></div>
+      <div id="social-pending-empty" style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">No posts waiting for approval</div>
+    </div>
+
+    <!-- Published Posts -->
+    <div class="card" style="margin-bottom:16px;padding:16px">
+      <div class="card-header" style="margin-bottom:12px">
+        <span class="card-title"><span class="material-symbols-rounded" style="font-size:18px;vertical-align:middle;color:var(--accent)">check_circle</span> Published & Scheduled</span>
+      </div>
+      <div id="social-published-list"></div>
+      <div id="social-published-empty" style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">No published posts yet</div>
+    </div>
+
+    <!-- Client Accounts -->
+    <div class="card" style="padding:16px">
+      <div class="card-header" style="margin-bottom:12px">
+        <span class="card-title"><span class="material-symbols-rounded" style="font-size:18px;vertical-align:middle;color:var(--blue)">group</span> Client Accounts</span>
+      </div>
+      <div id="social-clients-list"></div>
+      <div id="social-clients-empty" style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">No clients yet. Add your first client to start.</div>
+    </div>
   </div>
 
   <!-- SETTINGS -->
@@ -983,6 +1054,7 @@ const CHANNELS = [
   { id: 'security', name: 'security', icon: 'shield', desc: 'Security reviews & audits — Claude + Sonic' },
   { id: 'testing', name: 'testing', icon: 'bug_report', desc: 'QA & testing' },
   { id: 'release', name: 'release', icon: 'rocket_launch', desc: 'Deployments & releases' },
+  { id: 'social', name: 'social', icon: 'share', desc: 'Social media content drafts & approvals' },
   { id: 'office', name: 'office', icon: 'business_center', desc: 'Agent workspace — see who\'s working' },
 ];
 
@@ -994,6 +1066,7 @@ const CHANNEL_AGENTS = {
   build: ['kayou', 'dev', 'ops', 'sonic'],
   testing: ['kayou', 'dev', 'claude', 'sonic'],
   release: ['kayou', 'ops', 'claude', 'sonic'],
+  social: ['kayou-kilo'],
 };
 
 // ═══════════════════════════════════════
@@ -1043,9 +1116,10 @@ function navigate(page) {
   document.querySelectorAll('.sidebar .nav-item').forEach(n => {
     n.classList.toggle('active', n.dataset.page === page);
   });
-  const titles = { dashboard: 'Dashboard', chat: 'Chat', agents: 'AI Agents', projects: 'Projects', tools: 'Tool Logs', settings: 'Settings' };
+  const titles = { dashboard: 'Dashboard', chat: 'Chat', agents: 'AI Agents', projects: 'Projects', tools: 'Tool Logs', social: 'Social Media', settings: 'Settings' };
   document.getElementById('page-title').textContent = titles[page] || page;
   if (page === 'tools') loadToolLog();
+  if (page === 'social') loadSocialDashboard();
 }
 
 let toolLogData = [];
@@ -1213,6 +1287,143 @@ function clearToolLog() {
   updateToolStats([]);
   renderAgentBreakdown([]);
   renderToolLog([]);
+}
+
+// ═══════════════════════════════════════
+// SOCIAL MEDIA
+// ═══════════════════════════════════════
+const PLATFORM_ICONS = { tiktok:'🎵', instagram:'📸', youtube:'▶️', facebook:'👤', x:'𝕏', linkedin:'💼', threads:'🧵', pinterest:'📌', reddit:'🔴', bluesky:'🦋' };
+
+async function loadSocialDashboard() {
+  try {
+    const [postsRes, accountsRes, usageRes] = await Promise.all([
+      fetch(API + '/api/social/posts'), fetch(API + '/api/social/accounts'), fetch(API + '/api/social/usage')
+    ]);
+    const posts = await postsRes.json();
+    const accounts = await accountsRes.json();
+    const usage = await usageRes.json();
+    renderSocialDashboard(posts, accounts, usage);
+  } catch(e) { console.error('Social load error:', e); }
+}
+
+function renderSocialDashboard(posts, accounts, usage) {
+  // Usage
+  const pct = Math.round((usage.used / usage.limit) * 100);
+  document.getElementById('social-usage').textContent = `${usage.used}/${usage.limit}`;
+  document.getElementById('social-usage-bar').style.width = pct + '%';
+  document.getElementById('social-usage-bar').style.background = pct >= 90 ? 'var(--red)' : pct >= 70 ? 'var(--orange)' : 'var(--accent)';
+
+  const pending = Array.isArray(posts) ? posts.filter(p => p.status === 'pending' || p.status === 'draft') : [];
+  const published = Array.isArray(posts) ? posts.filter(p => p.status === 'published' || p.status === 'scheduled') : [];
+  document.getElementById('social-pending').textContent = pending.length;
+  document.getElementById('social-published').textContent = published.length;
+
+  // Pending list
+  const pendingList = document.getElementById('social-pending-list');
+  const pendingEmpty = document.getElementById('social-pending-empty');
+  if (pending.length === 0) { pendingList.innerHTML = ''; pendingEmpty.style.display = ''; }
+  else {
+    pendingEmpty.style.display = 'none';
+    pendingList.innerHTML = pending.map(p => {
+      const platforms = (p.platforms || []).map(pl => PLATFORM_ICONS[pl] || pl).join(' ');
+      const time = new Date(p.created_at).toLocaleDateString();
+      return `<div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg-elevated);border-radius:10px;margin-bottom:6px">
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:13px">${esc(p.title?.slice(0,80))}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${esc(p.client_name||'General')} · ${platforms} · ${time} · by ${esc(p.drafted_by||'?')}</div>
+        </div>
+        <button class="btn btn-sm" style="background:var(--accent);color:#000;font-weight:600" onclick="approveSocialPost(${p.id})">Approve</button>
+        <button class="btn btn-sm" style="background:var(--red-dim);color:var(--red)" onclick="rejectSocialPost(${p.id})">Reject</button>
+      </div>`;
+    }).join('');
+  }
+
+  // Published list
+  const pubList = document.getElementById('social-published-list');
+  const pubEmpty = document.getElementById('social-published-empty');
+  if (published.length === 0) { pubList.innerHTML = ''; pubEmpty.style.display = ''; }
+  else {
+    pubEmpty.style.display = 'none';
+    pubList.innerHTML = published.map(p => {
+      const platforms = (p.platforms || []).map(pl => PLATFORM_ICONS[pl] || pl).join(' ');
+      const statusColor = p.status === 'published' ? 'var(--accent)' : 'var(--blue)';
+      return `<div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg-elevated);border-radius:10px;margin-bottom:6px">
+        <span class="material-symbols-rounded" style="font-size:16px;color:${statusColor}">${p.status==='published'?'check_circle':'schedule'}</span>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:13px">${esc(p.title?.slice(0,80))}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${esc(p.client_name||'General')} · ${platforms}</div>
+        </div>
+        <span class="tag" style="background:${statusColor}22;color:${statusColor};font-size:10px">${p.status.toUpperCase()}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // Clients
+  const clientList = document.getElementById('social-clients-list');
+  const clientEmpty = document.getElementById('social-clients-empty');
+  if (!accounts.length) { clientList.innerHTML = ''; clientEmpty.style.display = ''; }
+  else {
+    clientEmpty.style.display = 'none';
+    clientList.innerHTML = accounts.map(a => {
+      const platforms = (a.platforms || []).map(pl => PLATFORM_ICONS[pl] || pl).join(' ');
+      return `<div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg-elevated);border-radius:10px;margin-bottom:6px">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600">${esc(a.client_name[0])}</div>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:13px">${esc(a.client_name)}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${platforms || 'No platforms connected'}</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="connectClientPlatforms(${a.id})">Connect</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteClient(${a.id})">Remove</button>
+      </div>`;
+    }).join('');
+  }
+}
+
+async function approveSocialPost(id) {
+  try {
+    const res = await fetch(API + '/api/social/posts/' + id + '/approve', { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) loadSocialDashboard();
+    else alert(data.error || 'Failed to approve');
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function rejectSocialPost(id) {
+  const reason = prompt('Rejection reason (optional):');
+  if (reason === null) return;
+  await fetch(API + '/api/social/posts/' + id + '/reject', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ reason }) });
+  loadSocialDashboard();
+}
+
+async function showAddClient() {
+  const name = prompt('Client name (business or influencer):');
+  if (!name) return;
+  const platforms = prompt('Platforms (comma-separated: tiktok,instagram,youtube,facebook,x,linkedin):');
+  await fetch(API + '/api/social/accounts', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ clientName: name, platforms: platforms ? platforms.split(',').map(p=>p.trim()) : [] }) });
+  loadSocialDashboard();
+}
+
+async function showCreatePost() {
+  const title = prompt('Post content/caption:');
+  if (!title) return;
+  const platforms = prompt('Platforms (comma-separated: tiktok,instagram,youtube,facebook,x,linkedin,threads):');
+  await fetch(API + '/api/social/posts', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ title, platforms: platforms ? platforms.split(',').map(p=>p.trim()) : [], draftedBy: 'aimar' }) });
+  loadSocialDashboard();
+}
+
+async function connectClientPlatforms(id) {
+  try {
+    const res = await fetch(API + '/api/social/accounts/' + id + '/connect', { method: 'POST' });
+    const data = await res.json();
+    if (data.url) window.open(data.url, '_blank');
+    else alert(data.error || 'Upload-Post not configured yet. Add UPLOAD_POST_API_KEY to Railway.');
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function deleteClient(id) {
+  if (!confirm('Remove this client?')) return;
+  await fetch(API + '/api/social/accounts/' + id, { method: 'DELETE' });
+  loadSocialDashboard();
 }
 
 // ═══════════════════════════════════════

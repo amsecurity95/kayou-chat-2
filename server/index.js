@@ -4,6 +4,7 @@ const fastify = require('fastify')({ logger: true, bodyLimit: 10 * 1024 * 1024 }
 const cors = require('@fastify/cors')
 const fastifyStatic = require('@fastify/static')
 let Server; try { Server = require('socket.io').Server } catch(e) { /* socket.io optional */ }
+let UploadPost; try { UploadPost = require('upload-post').UploadPost } catch(e) { /* upload-post optional */ }
 
 const { execSync } = require('child_process')
 
@@ -47,6 +48,34 @@ async function initDB() {
   await db.query(`CREATE TABLE IF NOT EXISTS user_settings (key VARCHAR(100) PRIMARY KEY, value TEXT NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW())`)
   // Agent photos table
   await db.query(`CREATE TABLE IF NOT EXISTS agent_photos (agent_id VARCHAR(100) PRIMARY KEY, photo TEXT NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW())`)
+  // Social media management tables
+  await db.query(`CREATE TABLE IF NOT EXISTS social_accounts (
+    id SERIAL PRIMARY KEY,
+    client_name VARCHAR(200) NOT NULL,
+    upload_post_user VARCHAR(200),
+    platforms JSONB DEFAULT '[]',
+    connected_at TIMESTAMPTZ DEFAULT NOW(),
+    notes TEXT
+  )`)
+  await db.query(`CREATE TABLE IF NOT EXISTS social_posts (
+    id SERIAL PRIMARY KEY,
+    account_id INTEGER REFERENCES social_accounts(id),
+    status VARCHAR(20) DEFAULT 'draft',
+    content_type VARCHAR(20) DEFAULT 'text',
+    title TEXT NOT NULL,
+    description TEXT,
+    media_urls JSONB DEFAULT '[]',
+    platforms JSONB DEFAULT '[]',
+    platform_options JSONB DEFAULT '{}',
+    scheduled_date TIMESTAMPTZ,
+    drafted_by VARCHAR(100),
+    approved_by VARCHAR(100),
+    rejected_reason TEXT,
+    upload_post_job_id VARCHAR(200),
+    upload_post_status JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`)
   console.log('Database connected — messages will persist')
   } catch(e) { console.error('Database connection failed:', e.message); db = null }
 }
@@ -782,6 +811,7 @@ const CHANNEL_RESPONDERS = {
   build: ['kayou', 'dev', 'ops'],
   testing: ['kayou', 'dev', 'claude', 'sonic'],
   release: ['kayou', 'ops', 'claude', 'sonic'],
+  social: ['kayou-kilo'],
 }
 
 async function triggerTeamResponses(channel, senderId, senderName, text) {
@@ -1232,6 +1262,200 @@ fastify.post('/api/external/tools', async (req, reply) => {
   }
   console.log(`TOOL CREATED by external: ${name} — ${description}`)
   return { ok: true, tool: name, description }
+})
+
+// ══════════════ SOCIAL MEDIA MANAGEMENT ══════════════
+// Upload-Post SDK init
+function getUploadPostClient() {
+  const key = process.env.UPLOAD_POST_API_KEY
+  if (!key || !UploadPost) return null
+  return new UploadPost(key)
+}
+
+// GET /api/social/accounts — list client accounts
+fastify.get('/api/social/accounts', async () => {
+  if (!db) return []
+  const { rows } = await db.query('SELECT * FROM social_accounts ORDER BY connected_at DESC')
+  return rows
+})
+
+// POST /api/social/accounts — add client account
+fastify.post('/api/social/accounts', async (req, reply) => {
+  if (!db) return reply.code(500).send({ error: 'No database' })
+  const { clientName, platforms, notes } = req.body
+  if (!clientName) return reply.code(400).send({ error: 'Missing clientName' })
+
+  // Create user on Upload-Post if SDK available
+  let uploadPostUser = null
+  const client = getUploadPostClient()
+  if (client) {
+    try {
+      const user = await client.createUser({ name: clientName })
+      uploadPostUser = user?.id || user?.userId || null
+    } catch(e) { console.log('Upload-Post createUser error:', e.message) }
+  }
+
+  const { rows } = await db.query(
+    'INSERT INTO social_accounts (client_name, upload_post_user, platforms, notes) VALUES ($1, $2, $3, $4) RETURNING *',
+    [clientName, uploadPostUser, JSON.stringify(platforms || []), notes || '']
+  )
+  return rows[0]
+})
+
+// DELETE /api/social/accounts/:id
+fastify.delete('/api/social/accounts/:id', async (req) => {
+  if (!db) return { ok: false }
+  await db.query('DELETE FROM social_accounts WHERE id = $1', [req.params.id])
+  return { ok: true }
+})
+
+// POST /api/social/accounts/:id/connect — generate Upload-Post connect URL for client
+fastify.post('/api/social/accounts/:id/connect', async (req, reply) => {
+  const client = getUploadPostClient()
+  if (!client) return reply.code(503).send({ error: 'Upload-Post not configured' })
+  if (!db) return reply.code(500).send({ error: 'No database' })
+  const { rows } = await db.query('SELECT * FROM social_accounts WHERE id = $1', [req.params.id])
+  if (!rows[0]) return reply.code(404).send({ error: 'Account not found' })
+  try {
+    const jwt = await client.generateJwt({ userId: rows[0].upload_post_user })
+    return { url: jwt?.url || jwt, account: rows[0].client_name }
+  } catch(e) {
+    return reply.code(500).send({ error: e.message })
+  }
+})
+
+// GET /api/social/posts — list all posts (filter by ?status=pending&account_id=1)
+fastify.get('/api/social/posts', async (req) => {
+  if (!db) return []
+  let query = 'SELECT p.*, a.client_name FROM social_posts p LEFT JOIN social_accounts a ON p.account_id = a.id'
+  const conditions = []
+  const params = []
+  if (req.query?.status) { params.push(req.query.status); conditions.push(`p.status = $${params.length}`) }
+  if (req.query?.account_id) { params.push(req.query.account_id); conditions.push(`p.account_id = $${params.length}`) }
+  if (conditions.length > 0) query += ' WHERE ' + conditions.join(' AND ')
+  query += ' ORDER BY p.created_at DESC LIMIT 100'
+  const { rows } = await db.query(query, params)
+  return rows
+})
+
+// POST /api/social/posts — create a draft post
+fastify.post('/api/social/posts', async (req, reply) => {
+  if (!db) return reply.code(500).send({ error: 'No database' })
+  const { accountId, title, description, contentType, platforms, mediaUrls, platformOptions, scheduledDate, draftedBy } = req.body
+  if (!title) return reply.code(400).send({ error: 'Missing title' })
+  const { rows } = await db.query(
+    `INSERT INTO social_posts (account_id, title, description, content_type, platforms, media_urls, platform_options, scheduled_date, drafted_by, status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending') RETURNING *`,
+    [accountId || null, title, description || '', contentType || 'text', JSON.stringify(platforms || []), JSON.stringify(mediaUrls || []), JSON.stringify(platformOptions || {}), scheduledDate || null, draftedBy || 'aimar']
+  )
+  // Notify #social channel
+  if (io) {
+    const accountName = accountId ? (await db.query('SELECT client_name FROM social_accounts WHERE id=$1', [accountId])).rows[0]?.client_name : 'General'
+    io.emit('new:message', {
+      channel: 'social', sender: 'system', name: 'Social Bot',
+      text: `📝 New draft for ${accountName}: "${title.slice(0,80)}" → ${(platforms||[]).join(', ')||'all platforms'}. Waiting for approval.`,
+      color: '#8b5cf6', ts: new Date().toISOString()
+    })
+  }
+  return rows[0]
+})
+
+// PUT /api/social/posts/:id — update a draft
+fastify.put('/api/social/posts/:id', async (req, reply) => {
+  if (!db) return reply.code(500).send({ error: 'No database' })
+  const { title, description, platforms, mediaUrls, platformOptions, scheduledDate } = req.body
+  const sets = []; const params = [req.params.id]
+  if (title) { params.push(title); sets.push(`title=$${params.length}`) }
+  if (description !== undefined) { params.push(description); sets.push(`description=$${params.length}`) }
+  if (platforms) { params.push(JSON.stringify(platforms)); sets.push(`platforms=$${params.length}`) }
+  if (mediaUrls) { params.push(JSON.stringify(mediaUrls)); sets.push(`media_urls=$${params.length}`) }
+  if (platformOptions) { params.push(JSON.stringify(platformOptions)); sets.push(`platform_options=$${params.length}`) }
+  if (scheduledDate !== undefined) { params.push(scheduledDate); sets.push(`scheduled_date=$${params.length}`) }
+  sets.push('updated_at=NOW()')
+  await db.query(`UPDATE social_posts SET ${sets.join(',')} WHERE id=$1`, params)
+  return { ok: true }
+})
+
+// POST /api/social/posts/:id/approve — approve & publish via Upload-Post
+fastify.post('/api/social/posts/:id/approve', async (req, reply) => {
+  if (!db) return reply.code(500).send({ error: 'No database' })
+  const { rows } = await db.query('SELECT p.*, a.upload_post_user, a.client_name FROM social_posts p LEFT JOIN social_accounts a ON p.account_id = a.id WHERE p.id = $1', [req.params.id])
+  const post = rows[0]
+  if (!post) return reply.code(404).send({ error: 'Post not found' })
+  if (post.status !== 'pending' && post.status !== 'draft') return reply.code(400).send({ error: `Post is already ${post.status}` })
+
+  // Check monthly usage
+  const usage = await db.query("SELECT COUNT(*) as cnt FROM social_posts WHERE status IN ('published','scheduled') AND created_at >= date_trunc('month', NOW())")
+  const monthlyCount = parseInt(usage.rows[0].cnt)
+  const limit = parseInt(process.env.UPLOAD_POST_LIMIT || '10')
+  if (monthlyCount >= limit) return reply.code(429).send({ error: `Monthly limit reached (${monthlyCount}/${limit}). Upgrade Upload-Post plan.` })
+
+  // Publish via Upload-Post
+  const client = getUploadPostClient()
+  let jobId = null
+  let uploadStatus = null
+  if (client && post.upload_post_user) {
+    try {
+      const opts = {
+        userId: post.upload_post_user,
+        platforms: post.platforms || [],
+        text: post.title + (post.description ? '\n\n' + post.description : ''),
+      }
+      if (post.scheduled_date) opts.scheduledDate = post.scheduled_date
+      if (post.media_urls?.length > 0) opts.mediaUrls = post.media_urls
+
+      let result
+      if (post.content_type === 'video') result = await client.upload(opts)
+      else if (post.content_type === 'photo') result = await client.uploadPhotos(opts)
+      else result = await client.uploadText(opts)
+
+      jobId = result?.jobId || result?.id || null
+      uploadStatus = result
+    } catch(e) {
+      console.error('Upload-Post publish error:', e.message)
+      await db.query("UPDATE social_posts SET status='failed', upload_post_status=$2, updated_at=NOW() WHERE id=$1", [post.id, JSON.stringify({ error: e.message })])
+      return reply.code(500).send({ error: 'Publish failed: ' + e.message })
+    }
+  }
+
+  const newStatus = post.scheduled_date ? 'scheduled' : 'published'
+  await db.query(
+    'UPDATE social_posts SET status=$2, approved_by=$3, upload_post_job_id=$4, upload_post_status=$5, updated_at=NOW() WHERE id=$1',
+    [post.id, newStatus, 'aimar', jobId, JSON.stringify(uploadStatus)]
+  )
+
+  // Notify
+  if (io) {
+    io.emit('social:published', { postId: post.id, status: newStatus })
+    io.emit('new:message', {
+      channel: 'social', sender: 'system', name: 'Social Bot',
+      text: `✅ Post ${newStatus}: "${post.title.slice(0,60)}" for ${post.client_name || 'General'} → ${(post.platforms||[]).join(', ')}`,
+      color: '#4ade80', ts: new Date().toISOString()
+    })
+  }
+  return { ok: true, status: newStatus, jobId }
+})
+
+// POST /api/social/posts/:id/reject
+fastify.post('/api/social/posts/:id/reject', async (req, reply) => {
+  if (!db) return reply.code(500).send({ error: 'No database' })
+  const reason = req.body?.reason || ''
+  await db.query("UPDATE social_posts SET status='rejected', rejected_reason=$2, updated_at=NOW() WHERE id=$1", [req.params.id, reason])
+  if (io) {
+    io.emit('new:message', {
+      channel: 'social', sender: 'system', name: 'Social Bot',
+      text: `❌ Post rejected${reason ? ': ' + reason : ''}`,
+      color: '#ef4444', ts: new Date().toISOString()
+    })
+  }
+  return { ok: true }
+})
+
+// GET /api/social/usage — monthly upload count
+fastify.get('/api/social/usage', async () => {
+  if (!db) return { used: 0, limit: 10 }
+  const { rows } = await db.query("SELECT COUNT(*) as cnt FROM social_posts WHERE status IN ('published','scheduled') AND created_at >= date_trunc('month', NOW())")
+  return { used: parseInt(rows[0].cnt), limit: parseInt(process.env.UPLOAD_POST_LIMIT || '10') }
 })
 
 // POST /api/external/ask — send a message and get AI agent responses
