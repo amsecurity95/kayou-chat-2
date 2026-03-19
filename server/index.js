@@ -1408,7 +1408,7 @@ fastify.post('/api/chat', async (req, reply) => {
           const errMsg = (data.error.message || JSON.stringify(data.error)).toLowerCase()
           const errCode = (data.error.code || data.error.type || '').toLowerCase()
           const isRateLimit = errMsg.includes('rate') || errMsg.includes('limit') || errMsg.includes('quota') || errMsg.includes('too many') || errCode.includes('rate') || errCode.includes('limit') || res.status === 429
-          const orKey = resolveEnv('OPENROUTER_API_KEY') || process.env.OPENROUTER_API_KEY
+          const orKey = process.env.OPENROUTER_API_KEY
           console.log(`Groq error for ${agentId}: [${res.status}] ${errCode} — ${errMsg}`)
           if (isRateLimit && orKey) {
             console.log(`Falling back to OpenRouter for ${agentId}`)
