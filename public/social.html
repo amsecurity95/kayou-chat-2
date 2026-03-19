@@ -209,20 +209,13 @@ nav .container {
 .hero::before {
   content: '';
   position: absolute;
-  inset: -50%;
-  background: conic-gradient(
-    from 0deg at 50% 50%,
-    #8b2fc9 0deg,
-    #d4547a 60deg,
-    #e8855a 120deg,
-    #c94b8e 180deg,
-    #9b59b6 240deg,
-    #6a3093 300deg,
-    #8b2fc9 360deg
-  );
-  animation: auroraRotate 20s linear infinite;
-  filter: blur(80px);
-  opacity: .4;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(139,47,201,.25) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 40%, rgba(212,84,122,.2) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(232,133,90,.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 60% 20%, rgba(106,48,147,.2) 0%, transparent 40%);
+  pointer-events: none;
 }
 .hero::after {
   content: '';
