@@ -37,11 +37,24 @@ html { scroll-behavior: smooth; }
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--text-primary);
-  background: var(--bg-primary);
+  background: #0e0812;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+}
+/* Global aurora glow that bleeds through entire page */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 100vh;
+  background:
+    radial-gradient(ellipse at 30% 30%, rgba(139,47,201,.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 40%, rgba(212,84,122,.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 70%, rgba(232,133,90,.08) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
@@ -188,7 +201,7 @@ nav .container {
   min-height: 100vh;
   display: flex;
   align-items: center;
-  background: #1a0a1e;
+  background: transparent;
   overflow: hidden;
   padding: 140px 0 100px;
 }
@@ -215,7 +228,7 @@ nav .container {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at center, transparent 30%, #1a0a1e 75%);
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(14,8,18,.4) 85%);
   pointer-events: none;
 }
 /* Flowing aurora blobs */
@@ -249,31 +262,7 @@ nav .container {
   top: 10%; left: 55%;
   animation: auroraDrift 20s ease-in-out infinite 5s, auroraWave 14s ease-in-out infinite reverse;
 }
-/* Curved flowing lines overlay */
-.hero-curves {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  opacity: .15;
-}
-.hero-curves::before,
-.hero-curves::after {
-  content: '';
-  position: absolute;
-  border: 1px solid rgba(255,255,255,.3);
-  border-radius: 50%;
-}
-.hero-curves::before {
-  width: 200%; height: 200%;
-  top: -80%; left: -50%;
-  animation: auroraRotate 30s linear infinite;
-}
-.hero-curves::after {
-  width: 180%; height: 180%;
-  top: -60%; left: -40%;
-  animation: auroraRotate 25s linear infinite reverse;
-}
+/* Remove curves — clean aurora only */
 
 .hero .container {
   position: relative;
@@ -484,10 +473,9 @@ nav .container {
 
 /* ── PLATFORMS / TRUSTED ── */
 .platforms-section {
-  background: var(--bg-secondary);
+  background: transparent;
   padding: 80px 0;
-  border-top: 1px solid var(--border-subtle);
-  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
 }
 .platforms-section .section-header {
   text-align: center;
@@ -547,7 +535,7 @@ nav .container {
 
 /* ── HOW IT WORKS ── */
 .how-section {
-  background: var(--bg-primary);
+  background: transparent;
   padding: 120px 0;
   position: relative;
   overflow: hidden;
@@ -631,7 +619,7 @@ nav .container {
   color: var(--text-primary);
   position: relative;
   z-index: 2;
-  box-shadow: 0 0 0 8px var(--bg-primary), 0 0 0 10px rgba(139,47,201,.2), 0 8px 32px rgba(194,10,215,.2);
+  box-shadow: 0 0 0 8px #0e0812, 0 0 0 10px rgba(139,47,201,.2), 0 8px 32px rgba(194,10,215,.2);
 }
 .step-icon-box {
   width: 56px; height: 56px;
@@ -663,7 +651,7 @@ nav .container {
 
 /* ── PRICING ── */
 .pricing-section {
-  background: var(--bg-secondary);
+  background: rgba(19,13,24,.6);
   padding: 120px 0;
 }
 .pricing-grid {
@@ -797,7 +785,7 @@ nav .container {
 
 /* ── CTA ── */
 .cta-section {
-  background: var(--bg-primary);
+  background: transparent;
   padding: 120px 0;
   position: relative;
   overflow: hidden;
@@ -1044,7 +1032,6 @@ footer {
   <div class="hero-aurora hero-aurora-2"></div>
   <div class="hero-aurora hero-aurora-3"></div>
   <div class="hero-aurora hero-aurora-4"></div>
-  <div class="hero-curves"></div>
   <div class="container">
     <div class="hero-left">
       <div class="hero-badge">
