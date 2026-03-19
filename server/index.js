@@ -606,7 +606,7 @@ async function executeGithubTool(args) {
   return { error: 'Unknown github command. Use: create_issue, list_issues, list_repos, close_issue' }
 }
 
-function executeToolCall(toolName, args, callerAgentId) {
+async function executeToolCall(toolName, args, callerAgentId) {
   // Check admin tools first
   if (ADMIN_TOOLS[toolName]) return executeAdminTool(toolName, args, callerAgentId)
   if (!AGENT_TOOLS[toolName]) return { error: `Unknown tool: ${toolName}` }
