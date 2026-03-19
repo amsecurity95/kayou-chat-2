@@ -1711,7 +1711,7 @@ function renderAgents() {
       <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;display:flex;align-items:center;gap:6px">
         <span class="material-symbols-rounded" style="font-size:16px">${icon}</span> ${label}
       </div>
-      <div class="grid grid-3">${team.map(a => renderAgentCard(a)).join('')}</div>
+      <div class="grid grid-auto">${team.map(a => renderAgentCard(a)).join('')}</div>
     </div>`;
   };
 
