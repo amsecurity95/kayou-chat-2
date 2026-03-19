@@ -356,6 +356,9 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
   <div class="nav-item" data-page="projects" onclick="navigate('projects')" title="Projects">
     <span class="material-symbols-rounded">folder_open</span>
   </div>
+  <div class="nav-item" data-page="tools" onclick="navigate('tools')" title="Tool Logs">
+    <span class="material-symbols-rounded">terminal</span>
+  </div>
 
   <div class="nav-bottom">
     <div class="nav-item" data-page="settings" onclick="navigate('settings')" title="Settings">
@@ -576,6 +579,19 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
       </div>
       <div id="myapps-list"></div>
     </div>
+  </div>
+
+  <!-- TOOLS LOG -->
+  <div class="content page" id="page-tools">
+    <div class="page-header">
+      <div>
+        <h2 class="page-heading">Tool Execution Log</h2>
+        <p class="page-desc">Real-time log of all tool calls by agents — see what's actually happening</p>
+      </div>
+      <button class="btn btn-primary" onclick="loadToolLog()"><span class="material-symbols-rounded" style="font-size:16px">refresh</span> Refresh</button>
+    </div>
+    <div id="tool-log-empty" style="text-align:center;color:var(--text-muted);padding:40px;font-size:14px">No tool executions yet. Agents haven't called any tools.</div>
+    <div id="tool-log-list"></div>
   </div>
 
   <!-- SETTINGS -->
@@ -967,8 +983,41 @@ function navigate(page) {
   document.querySelectorAll('.sidebar .nav-item').forEach(n => {
     n.classList.toggle('active', n.dataset.page === page);
   });
-  const titles = { dashboard: 'Dashboard', chat: 'Chat', agents: 'AI Agents', projects: 'Projects', settings: 'Settings' };
+  const titles = { dashboard: 'Dashboard', chat: 'Chat', agents: 'AI Agents', projects: 'Projects', tools: 'Tool Logs', settings: 'Settings' };
   document.getElementById('page-title').textContent = titles[page] || page;
+  if (page === 'tools') loadToolLog();
+}
+
+async function loadToolLog() {
+  try {
+    const res = await fetch(API + '/api/tools/log');
+    const logs = await res.json();
+    const empty = document.getElementById('tool-log-empty');
+    const list = document.getElementById('tool-log-list');
+    if (!Array.isArray(logs) || logs.length === 0) {
+      empty.style.display = '';
+      list.innerHTML = '';
+      return;
+    }
+    empty.style.display = 'none';
+    list.innerHTML = logs.map(l => {
+      const time = new Date(l.ts).toLocaleTimeString();
+      const agent = agents.find(a => a.id === l.agentId);
+      const agentName = agent ? agent.name : l.agentId;
+      const statusColor = l.success ? 'var(--accent)' : 'var(--red)';
+      const statusLabel = l.success ? 'SUCCESS' : 'FAILED';
+      return `<div class="card" style="margin-bottom:8px;padding:12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:11px;color:var(--text-muted)">${time}</span>
+          <span style="font-weight:600;font-size:13px">${esc(agentName)}</span>
+          <span class="tag" style="background:var(--bg-elevated);color:var(--text-secondary);font-family:monospace">${esc(l.tool)}</span>
+          <span class="tag" style="background:${statusColor}22;color:${statusColor};font-size:10px">${statusLabel}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px"><strong>Args:</strong> <code style="background:var(--bg-elevated);padding:2px 6px;border-radius:4px">${esc(l.args || '(none)')}</code></div>
+        <div style="font-size:12px;color:${l.success ? 'var(--text-secondary)' : 'var(--red)'};white-space:pre-wrap;font-family:monospace;background:var(--bg-elevated);padding:8px;border-radius:6px;max-height:120px;overflow:auto">${esc(l.result || '(no output)')}</div>
+      </div>`;
+    }).join('');
+  } catch(e) { console.log('Tool log error:', e); }
 }
 
 // ═══════════════════════════════════════

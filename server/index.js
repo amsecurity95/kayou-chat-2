@@ -223,6 +223,13 @@ fastify.addHook('onRequest', async (req, reply) => {
   }
 })
 
+// ══════════════ TOOL EXECUTION LOG ══════════════
+const toolLog = [] // in-memory log, max 100 entries
+function logToolExec(agentId, toolName, args, result, success) {
+  toolLog.unshift({ agentId, tool: toolName, args, result: (result.output || result.error || '').slice(0, 500), success, ts: new Date().toISOString() })
+  if (toolLog.length > 100) toolLog.length = 100
+}
+
 // ══════════════ AGENT PHOTOS (DB-persisted) ══════════════
 let agentPhotosCache = {} // in-memory cache of agent photos from DB
 let groqRateLimit = { remainingTokens: null, limitTokens: null, remainingRequests: null, limitRequests: null, resetTokens: null, lastUpdated: null }
@@ -605,8 +612,12 @@ function executeToolCall(toolName, args, callerAgentId) {
   if (!AGENT_TOOLS[toolName]) return { error: `Unknown tool: ${toolName}` }
   if (BLOCKED_PATTERNS.test(args)) return { error: 'Blocked: dangerous command' }
 
-  // Async tools (GitHub) — return promise
-  if (toolName === 'github') return executeGithubTool(args)
+  // Async tools (GitHub)
+  if (toolName === 'github') {
+    const result = await executeGithubTool(args)
+    logToolExec(callerAgentId, toolName, args, result, !!result.output)
+    return result
+  }
 
   const tool = AGENT_TOOLS[toolName]
   if (tool.allowedArgs && !tool.allowedArgs.test(args)) {
@@ -622,9 +633,13 @@ function executeToolCall(toolName, args, callerAgentId) {
       cwd: path.join(__dirname, '..'),
       env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
     })
-    return { output: output.slice(0, 3000) }
+    const result = { output: output.slice(0, 3000) }
+    logToolExec(callerAgentId, toolName, args, result, true)
+    return result
   } catch(e) {
-    return { error: e.message?.slice(0, 500) || 'Command failed' }
+    const result = { error: e.message?.slice(0, 500) || 'Command failed' }
+    logToolExec(callerAgentId, toolName, args, result, false)
+    return result
   }
 }
 
@@ -1113,6 +1128,38 @@ fastify.post('/api/external/agents/:id/toggle', async (req, reply) => {
   saveConfig(c)
   console.log(`EXTERNAL ADMIN: ${agent.name} ${agent.enabled ? 'enabled' : 'disabled'}`)
   return { ok: true, agent: agent.id, enabled: agent.enabled }
+})
+
+// GET /api/external/tools/log — view tool execution history
+fastify.get('/api/external/tools/log', async (req, reply) => {
+  const err = checkExternalAuth(req, reply); if (err) return err
+  const limit = Math.min(parseInt(req.query?.limit) || 50, 100)
+  return toolLog.slice(0, limit)
+})
+
+// GET /api/tools/log — tool log for dashboard (session auth)
+fastify.get('/api/tools/log', async () => toolLog.slice(0, 50))
+
+// GET /api/external/tools — list available tools
+fastify.get('/api/external/tools', async (req, reply) => {
+  const err = checkExternalAuth(req, reply); if (err) return err
+  const allTools = { ...AGENT_TOOLS, ...ADMIN_TOOLS }
+  return Object.entries(allTools).map(([name, def]) => ({ name, description: def.description }))
+})
+
+// POST /api/external/tools — create a new tool (Kayou Code can design tools)
+fastify.post('/api/external/tools', async (req, reply) => {
+  const err = checkExternalAuth(req, reply); if (err) return err
+  const { name, description, command, allowedArgsPattern } = req.body
+  if (!name || !description) return reply.code(400).send({ error: 'Missing name or description' })
+  if (AGENT_TOOLS[name]) return reply.code(409).send({ error: `Tool "${name}" already exists` })
+  AGENT_TOOLS[name] = {
+    description,
+    allowedArgs: allowedArgsPattern ? new RegExp(allowedArgsPattern) : /^.+$/,
+    customCommand: command || null
+  }
+  console.log(`TOOL CREATED by external: ${name} — ${description}`)
+  return { ok: true, tool: name, description }
 })
 
 // POST /api/external/ask — send a message and get AI agent responses
