@@ -420,28 +420,6 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
       </div>
     </div>
 
-    <!-- Groq Token Tracker -->
-    <div class="card fade-in" style="margin-bottom:16px;animation-delay:.15s" id="groq-card">
-      <div class="card-header">
-        <span class="card-title">Groq API Usage</span>
-        <span class="tag" id="groq-status-tag" style="background:var(--accent-dim);color:var(--accent)">Healthy</span>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div>
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Tokens Remaining</div>
-          <div style="font-size:22px;font-weight:700" id="groq-tokens">—</div>
-          <div class="progress-bar" style="margin-top:6px"><div class="progress-fill" id="groq-tokens-bar" style="width:100%;background:var(--accent)"></div></div>
-          <div style="font-size:10px;color:var(--text-muted);margin-top:2px" id="groq-tokens-detail"></div>
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Requests Remaining</div>
-          <div style="font-size:22px;font-weight:700" id="groq-requests">—</div>
-          <div class="progress-bar" style="margin-top:6px"><div class="progress-fill" id="groq-requests-bar" style="width:100%;background:var(--blue)"></div></div>
-          <div style="font-size:10px;color:var(--text-muted);margin-top:2px" id="groq-requests-detail"></div>
-        </div>
-      </div>
-      <div style="font-size:10px;color:var(--text-muted);margin-top:8px" id="groq-updated"></div>
-    </div>
 
     <div class="grid grid-dashboard fade-in" style="animation-delay:.2s">
       <div class="card">
@@ -934,8 +912,8 @@ const CHANNELS = [
 
 const CHANNEL_AGENTS = {
   general: ['kayou', 'kayou-kilo'],
-  ideas: ['kayou-kilo', 'scout', 'analyst'],
-  research: ['kayou-kilo', 'scout', 'analyst'],
+  ideas: ['kayou-kilo'],
+  research: ['kayou-kilo'],
   security: ['claude', 'sonic'],
   build: ['kayou', 'dev', 'ops', 'sonic'],
   testing: ['kayou', 'dev', 'claude', 'sonic'],
@@ -1004,26 +982,6 @@ async function renderDashboard() {
   try {
     const stats = await (await fetch(API + '/api/stats')).json();
     messageCount = stats.messagesToday || messageCount;
-    // Update Groq card
-    const g = stats.groq || {};
-    if (g.lastUpdated) {
-      const tokPct = g.limitTokens ? Math.round((g.remainingTokens / g.limitTokens) * 100) : 100;
-      const reqPct = g.limitRequests ? Math.round((g.remainingRequests / g.limitRequests) * 100) : 100;
-      document.getElementById('groq-tokens').textContent = g.remainingTokens != null ? g.remainingTokens.toLocaleString() : '—';
-      document.getElementById('groq-requests').textContent = g.remainingRequests != null ? g.remainingRequests.toLocaleString() : '—';
-      document.getElementById('groq-tokens-detail').textContent = g.limitTokens ? `of ${g.limitTokens.toLocaleString()}` : '';
-      document.getElementById('groq-requests-detail').textContent = g.limitRequests ? `of ${g.limitRequests.toLocaleString()}` : '';
-      document.getElementById('groq-tokens-bar').style.width = tokPct + '%';
-      document.getElementById('groq-tokens-bar').style.background = tokPct < 15 ? 'var(--red)' : tokPct < 40 ? 'var(--orange)' : 'var(--accent)';
-      document.getElementById('groq-requests-bar').style.width = reqPct + '%';
-      document.getElementById('groq-requests-bar').style.background = reqPct < 15 ? 'var(--red)' : reqPct < 40 ? 'var(--orange)' : 'var(--blue)';
-      const statusTag = document.getElementById('groq-status-tag');
-      if (tokPct < 10 || reqPct < 10) { statusTag.textContent = 'Critical'; statusTag.style.background = 'var(--red-dim)'; statusTag.style.color = 'var(--red)'; }
-      else if (tokPct < 30 || reqPct < 30) { statusTag.textContent = 'Low'; statusTag.style.background = 'var(--orange-dim)'; statusTag.style.color = 'var(--orange)'; }
-      else { statusTag.textContent = 'Healthy'; statusTag.style.background = 'var(--accent-dim)'; statusTag.style.color = 'var(--accent)'; }
-      document.getElementById('groq-updated').textContent = 'Last updated: ' + new Date(g.lastUpdated).toLocaleTimeString();
-      if (g.resetTokens) document.getElementById('groq-updated').textContent += ' · Resets: ' + g.resetTokens;
-    }
   } catch(e) {}
   document.getElementById('stat-messages').textContent = messageCount;
   document.getElementById('stat-session').textContent = sessionMessages;

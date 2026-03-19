@@ -627,8 +627,8 @@ function getAnthropicTools(agentPerms, agentId) {
 // When any message is posted (by external agent or system), relevant AI agents respond
 const CHANNEL_RESPONDERS = {
   general: ['kayou', 'kayou-kilo'],
-  ideas: ['kayou-kilo', 'scout', 'analyst'],
-  research: ['kayou-kilo', 'scout', 'analyst'],
+  ideas: ['kayou-kilo'],
+  research: ['kayou-kilo'],
   security: ['claude', 'sonic'],
   build: ['kayou', 'dev', 'ops'],
   testing: ['kayou', 'dev', 'claude', 'sonic'],
@@ -762,7 +762,7 @@ async function triggerTeamResponses(channel, senderId, senderName, text) {
 const AGENT_WORK_CHANNELS = {
   'kayou': 'build', 'dev': 'build', 'ops': 'build', 'kayou-code': 'build',
   'claude': 'security', 'sonic': 'security',
-  'kayou-kilo': 'research', 'scout': 'research', 'analyst': 'research',
+  'kayou-kilo': 'research',
 }
 
 async function dispatchToWorkChannels(instruction, respondedAgents) {
