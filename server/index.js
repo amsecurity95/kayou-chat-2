@@ -722,7 +722,8 @@ async function aiComplete(agent, sysPrompt, messages, opts = {}) {
         }
         continue
       }
-      return choice?.message?.content || ''
+      const text = (choice?.message?.content || '').replace(/<\/?function[^>]*>/g, '').replace(/\{"args":"[^"]*"\}/g, '').replace(/\s{2,}/g, ' ').trim()
+      return text
     }
     return ''
   }
@@ -1730,6 +1731,17 @@ When asked a complex question:
       const res = await fetch(agent.model, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${agentApiKey}` }, body: JSON.stringify({ message, history }) })
       const data = await res.json()
       responseText = data.response || data.content || data.message || JSON.stringify(data)
+    }
+
+    // Clean up garbled function call syntax that Groq/Llama sometimes puts in text
+    responseText = responseText
+      .replace(/<\/?function[^>]*>/g, '')
+      .replace(/\{\"args\":\"[^"]*\"\}/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+
+    if (!responseText || responseText === 'No response') {
+      responseText = "I'm here but had trouble processing that. Can you rephrase?"
     }
 
     // ═══ BRAIN LEARNING — runs after every response ═══
