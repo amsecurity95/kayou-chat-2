@@ -702,10 +702,15 @@ async function aiComplete(agent, sysPrompt, messages, opts = {}) {
       if (choice?.finish_reason === 'tool_calls' && choice.message?.tool_calls?.length) {
         reqBody.messages.push(choice.message)
         for (const tc of choice.message.tool_calls) {
-          const args = JSON.parse(tc.function?.arguments || '{}')
-          console.log(`Tool call [${agent.id}]: ${tc.function.name} ${args.args}`)
-          const result = await executeToolCall(tc.function.name, args.args || '', agent.id)
-          reqBody.messages.push({ role: 'tool', tool_call_id: tc.id, content: result.output || result.error || 'No output' })
+          try {
+            const args = JSON.parse(tc.function?.arguments || '{}')
+            console.log(`Tool call [${agent.id}]: ${tc.function.name} ${args.args}`)
+            const result = await executeToolCall(tc.function.name, args.args || '', agent.id)
+            reqBody.messages.push({ role: 'tool', tool_call_id: tc.id, content: result.output || result.error || 'No output' })
+          } catch(parseErr) {
+            console.error(`Tool call parse error [${agent.id}]:`, parseErr.message)
+            reqBody.messages.push({ role: 'tool', tool_call_id: tc.id, content: 'Error: Could not parse tool arguments.' })
+          }
         }
         continue
       }
@@ -1667,14 +1672,23 @@ When asked a complex question:
           // Agent wants to call tools
           reqBody.messages.push(choice.message)
           for (const tc of choice.message.tool_calls) {
-            const args = JSON.parse(tc.function?.arguments || '{}')
-            console.log(`Tool call [${agentId}]: ${tc.function.name} ${args.args}`)
-            const result = await executeToolCall(tc.function.name, args.args || '', agentId)
-            reqBody.messages.push({
-              role: 'tool',
-              tool_call_id: tc.id,
-              content: result.output || result.error || 'No output'
-            })
+            try {
+              const args = JSON.parse(tc.function?.arguments || '{}')
+              console.log(`Tool call [${agentId}]: ${tc.function.name} ${args.args}`)
+              const result = await executeToolCall(tc.function.name, args.args || '', agentId)
+              reqBody.messages.push({
+                role: 'tool',
+                tool_call_id: tc.id,
+                content: result.output || result.error || 'No output'
+              })
+            } catch(parseErr) {
+              console.error(`Tool call parse error [${agentId}]:`, parseErr.message, 'raw:', tc.function?.arguments)
+              reqBody.messages.push({
+                role: 'tool',
+                tool_call_id: tc.id,
+                content: 'Error: Could not parse tool arguments. Try a simpler command.'
+              })
+            }
           }
           continue // Go to next round with tool results
         }
@@ -1708,7 +1722,7 @@ When asked a complex question:
     // Clean up error messages for the user
     const msg = err.message || 'Something went wrong'
     if (msg.toLowerCase().includes('rate') || msg.toLowerCase().includes('limit') || msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('too many')) return reply.code(429).send({ error: 'Taking a breather — too many messages. Try again in a minute.' })
-    if (msg.includes('Failed to call a function')) return reply.code(500).send({ error: 'Tool call failed — try rephrasing your message.' })
+    if (msg.includes('Failed to call a function') || msg.includes('tool_use_failed')) return reply.code(500).send({ error: 'I tried to use a tool but it failed. Let me try answering without tools — rephrase your question.' })
     return reply.code(500).send({ error: msg.length > 100 ? msg.slice(0, 100) + '...' : msg })
   }
 })
