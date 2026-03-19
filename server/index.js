@@ -1413,9 +1413,16 @@ fastify.post('/api/chat', async (req, reply) => {
             console.log(`OpenRouter ${model} failed for ${agentId}: ${lastErr}, trying next...`)
             continue
           }
+          // Check for empty response — try next model
+          const content = data.choices?.[0]?.message?.content
+          if (!content || content.trim() === '') {
+            console.log(`OpenRouter ${model} returned empty for ${agentId}, trying next...`)
+            data.error = { message: 'Empty response' }
+            continue
+          }
           break
         }
-        if (data.error) throw new Error(lastErr)
+        if (data.error) throw new Error(lastErr || 'All models returned empty')
 
         const choice = data.choices?.[0]
         if (choice?.finish_reason === 'tool_calls' && choice.message?.tool_calls?.length) {
