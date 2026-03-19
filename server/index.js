@@ -686,7 +686,7 @@ async function aiComplete(agent, sysPrompt, messages, opts = {}) {
   const maxRounds = opts.toolRounds || 3
 
   if (agent.provider === 'groq') {
-    const tools = agent.permissions?.includes('tools') ? getGroqTools(agent.permissions) : undefined
+    const tools = (!opts.skipTools && agent.permissions?.includes('tools')) ? getGroqTools(agent.permissions) : undefined
     const reqBody = { model: agent.model || 'llama-3.3-70b-versatile', max_tokens: maxTokens, messages: [{ role: 'system', content: sysPrompt }, ...messages] }
     if (tools) reqBody.tools = tools
 
@@ -729,7 +729,7 @@ async function aiComplete(agent, sysPrompt, messages, opts = {}) {
   }
 
   if (agent.provider === 'anthropic') {
-    const tools = agent.permissions?.includes('tools') ? getAnthropicTools(agent.permissions) : undefined
+    const tools = (!opts.skipTools && agent.permissions?.includes('tools')) ? getAnthropicTools(agent.permissions) : undefined
     const reqBody = { model: agent.model || 'claude-sonnet-4-20250514', max_tokens: maxTokens, system: sysPrompt, messages: [...messages] }
     if (tools) reqBody.tools = tools
 
@@ -853,8 +853,7 @@ async function triggerTeamResponses(channel, senderId, senderName, text) {
 
       let toolsCtx = ''
       if (agent.permissions?.includes('tools')) {
-        toolsCtx = '\n\nYOU HAVE REAL TOOLS — use them when relevant (checking repos, files, etc). Do NOT fake tool results. All tool calls are logged.\n' +
-          Object.entries(AGENT_TOOLS).map(([name, def]) => `- ${name}: ${def.description}`).join('\n')
+        toolsCtx = '\n\nYou have tools available but ONLY use them when someone explicitly asks you to check, list, read, or create something. For normal chat, just respond naturally — no tool calls.\n'
       }
 
       const sysPrompt = (agent.systemPrompt || '') + rulesText + brainPrompt + toolsCtx +
@@ -865,7 +864,7 @@ async function triggerTeamResponses(channel, senderId, senderName, text) {
 
       const userMsg = `[${senderName} said]: ${text}`
 
-      const responseText = await aiComplete(agent, sysPrompt, [...history.slice(-10), { role: 'user', content: userMsg }], { maxTokens: 400 })
+      const responseText = await aiComplete(agent, sysPrompt, [...history.slice(-10), { role: 'user', content: userMsg }], { maxTokens: 400, skipTools: true })
       console.log(`triggerTeamResponses: ${agentId} got ${responseText ? 'response' : 'no response'}`)
 
       if (responseText) {
@@ -948,7 +947,7 @@ async function dispatchToWorkChannels(instruction, respondedAgents) {
 
       const userMsg = `Aimar's instruction from #general: "${instruction}"\n\nYou're now in #${workChannel}. What's your plan? Start working.`
 
-      const responseText = await aiComplete(agent, sysPrompt, [{ role: 'user', content: userMsg }], { maxTokens: 500 })
+      const responseText = await aiComplete(agent, sysPrompt, [{ role: 'user', content: userMsg }], { maxTokens: 500, skipTools: true })
 
       if (responseText) {
         let clean = responseText.replace(new RegExp('^\\[?' + agent.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\]?:\\s*', 'i'), '')
@@ -1519,44 +1518,23 @@ fastify.post('/api/chat', async (req, reply) => {
 - Kayou Code (via OpenClaw) is a real team member who connects externally — treat him as an equal, not an outsider.
 - This platform (Kayou Chat) is home base — your workspace. Take pride in it.`
 
-  // Tool context — explicit instructions so agents actually USE tools instead of hallucinating
+  // Tool context — tools are available but should only be used when explicitly needed
   let toolsContext = ''
   if (agent.permissions?.includes('tools')) {
     toolsContext = `
 
-═══ TOOLS — YOU MUST USE THESE (NOT FAKE IT) ═══
-You have REAL executable tools. When someone asks you to do something actionable (check a repo, create an issue, list files, read code, etc.), you MUST call the tool. DO NOT pretend you did it. DO NOT make up output. The tool execution is logged and visible to Aimar on the Tool Execution Dashboard — if you fake it, he WILL see there's no tool call.
+═══ TOOLS (USE ONLY WHEN ASKED) ═══
+You have tools available, but DO NOT call them unless Aimar or a teammate EXPLICITLY asks you to do something that requires a tool (e.g. "check the repo", "create an issue", "list files", "read that file").
 
-Available tools:
+For normal conversation, questions, brainstorming, or discussion — just respond naturally. NO TOOL CALLS.
+
+Available tools (use ONLY when explicitly requested):
 ${Object.entries(AGENT_TOOLS).map(([name, def]) => `- ${name}: ${def.description}`).join('\n')}
 
-RULES:
-1. If someone asks you to create a GitHub issue → call the github tool with "create_issue owner/repo Title | Body". DO NOT say "Done!" without calling it.
-2. If someone asks to check files → call ls or cat. DO NOT guess file contents.
-3. If you don't know something factual → use a tool to find out, or say "I don't know" — NEVER fabricate.
-4. After calling a tool, report the ACTUAL result you received, not what you think it should be.
-5. If a tool fails, report the error honestly.
+WHEN TO USE TOOLS: Only when someone says things like "check", "list", "read", "create issue", "run", "show me the files"
+WHEN NOT TO USE TOOLS: Casual chat, questions, opinions, brainstorming, greetings, status updates
 
-═══ FACT-CHECKING & HONESTY ═══
-- NEVER claim you did something you didn't. Every tool call is logged.
-- NEVER invent URLs, issue numbers, file contents, or command output.
-- If you're unsure about a fact, say so. "I think..." or "Let me check..." then USE A TOOL.
-- If asked about something you can verify with a tool, VERIFY IT before answering.
-- Distinguish clearly between what you KNOW, what you THINK, and what you CHECKED with a tool.
-
-═══ THINK BEFORE RESPONDING ═══
-Before answering complex questions or taking significant actions:
-1. PAUSE — read the full message carefully. Don't rush to respond.
-2. GATHER INFO — if you need data to answer well, call tools first. Don't guess.
-3. PLAN — for multi-step tasks, outline your approach before executing.
-4. VERIFY — after tool calls, check the results make sense before reporting.
-5. Be CONCISE but ACCURATE — a short correct answer beats a long wrong one.
-
-When asked a complex question:
-- Break it down. What do you need to know? What can you check?
-- Use tools to verify before stating facts.
-- If it requires multiple steps, do them in order and report real results.
-- Don't rush to give an impressive answer — give a TRUE answer.`
+If a tool fails, say so honestly. Never pretend a tool succeeded.`
   }
 
   const integrityRules = `
