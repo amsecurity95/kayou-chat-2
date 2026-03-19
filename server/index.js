@@ -1393,18 +1393,29 @@ fastify.post('/api/chat', async (req, reply) => {
       }
       const tools = getGroqTools(agent.permissions)
       const msgs = [{ role: 'system', content: fullSystemPrompt }, ...(history || []).slice(-20), { role: 'user', content: userContent }]
-      const reqBody = { model: 'meta-llama/llama-3.3-70b-instruct:free', max_tokens: 500, messages: msgs }
+      const OR_MODELS = ['meta-llama/llama-3.3-70b-instruct:free', 'nvidia/nemotron-3-super-120b-a12b:free', 'mistralai/mistral-small-3.1-24b-instruct:free', 'qwen/qwen3-coder:free']
+      const reqBody = { model: OR_MODELS[0], max_tokens: 500, messages: msgs }
       if (tools) reqBody.tools = tools
 
       // Tool calling loop (max 3 rounds)
       for (let round = 0; round < 3; round++) {
-        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${orKey}` },
-          body: JSON.stringify(reqBody),
-        })
-        const data = await res.json()
-        if (data.error) throw new Error(data.error.message || JSON.stringify(data.error))
+        let data, lastErr
+        for (const model of OR_MODELS) {
+          reqBody.model = model
+          const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${orKey}` },
+            body: JSON.stringify(reqBody),
+          })
+          data = await res.json()
+          if (data.error) {
+            lastErr = data.error.message || JSON.stringify(data.error)
+            console.log(`OpenRouter ${model} failed for ${agentId}: ${lastErr}, trying next...`)
+            continue
+          }
+          break
+        }
+        if (data.error) throw new Error(lastErr)
 
         const choice = data.choices?.[0]
         if (choice?.finish_reason === 'tool_calls' && choice.message?.tool_calls?.length) {
