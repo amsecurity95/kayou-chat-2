@@ -222,13 +222,13 @@ nav .container {
   );
   animation: auroraRotate 20s linear infinite;
   filter: blur(80px);
-  opacity: .6;
+  opacity: .4;
 }
 .hero::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at center, transparent 40%, rgba(14,8,18,.4) 85%);
+  background: radial-gradient(ellipse at center, rgba(14,8,18,.3) 20%, rgba(14,8,18,.7) 70%);
   pointer-events: none;
 }
 /* Flowing aurora blobs */
@@ -236,7 +236,7 @@ nav .container {
   position: absolute;
   pointer-events: none;
   filter: blur(100px);
-  opacity: .5;
+  opacity: .35;
 }
 .hero-aurora-1 {
   width: 600px; height: 600px;
