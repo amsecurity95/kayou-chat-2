@@ -1725,10 +1725,10 @@ function renderAgentCard(a) {
     const b = a.brain || {};
     const mentorName = b.mentor ? agents.find(x => x.id === b.mentor)?.name : null;
     return `
-    <div class="card agent-card" onclick="showAgentDetail('${a.id}')">
+    <div class="card agent-card" onclick="showAgentDetail('${a.id}')" style="${!a.enabled ? 'opacity:0.5' : ''}">
       ${a.profilePhoto
-        ? `<img class="agent-photo" src="${esc(a.profilePhoto)}">`
-        : `<div class="agent-photo-text" style="background:${a.color || '#6366F1'}">${esc(a.name?.[0])}</div>`
+        ? `<img class="agent-photo" src="${esc(a.profilePhoto)}" style="${!a.enabled ? 'filter:grayscale(1)' : ''}">`
+        : `<div class="agent-photo-text" style="background:${a.enabled ? (a.color || '#6366F1') : '#555'}">${esc(a.name?.[0])}</div>`
       }
       <div class="agent-info">
         <div class="agent-name">${esc(a.name)}</div>
