@@ -589,15 +589,24 @@ nav .container {
   text-align: left;
   position: relative;
   padding-top: 24px;
-  border-top: 1px solid rgba(255,255,255,.1);
+  border-top: 2px solid rgba(139,47,201,.3);
+  transition: border-color .4s;
 }
+.step-card:nth-child(1) { border-image: linear-gradient(90deg, #8b2fc9, #d4547a) 1; }
+.step-card:nth-child(2) { border-image: linear-gradient(90deg, #d4547a, #e8855a) 1; }
+.step-card:nth-child(3) { border-image: linear-gradient(90deg, #e8855a, #c94b8e) 1; }
 .step-num {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(255,255,255,.35);
+  font-size: 32px;
+  font-weight: 800;
   margin-bottom: 16px;
-  letter-spacing: .04em;
+  letter-spacing: -.03em;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
+.step-card:nth-child(1) .step-num { background-image: linear-gradient(135deg, #8b2fc9, #d4547a); }
+.step-card:nth-child(2) .step-num { background-image: linear-gradient(135deg, #d4547a, #e8855a); }
+.step-card:nth-child(3) .step-num { background-image: linear-gradient(135deg, #e8855a, #c94b8e); }
 .step-card h3 {
   font-size: 18px;
   font-weight: 600;
