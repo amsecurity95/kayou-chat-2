@@ -780,9 +780,9 @@ nav .container {
 }
 .team-agents {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  max-width: 780px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  max-width: 880px;
   margin: 0 auto 56px;
 }
 .team-visual {
@@ -825,6 +825,16 @@ nav .container {
 }
 .kayou-card .agent-role {
   color: #a0a0b4;
+}
+.nelfi-card:hover {
+  border-color: rgba(30,120,255,.3);
+  box-shadow: 0 24px 80px rgba(30,120,255,.1), 0 0 120px rgba(30,120,255,.05);
+}
+.nelfi-card .agent-glow {
+  background: radial-gradient(circle, rgba(30,120,255,.2), transparent 70%);
+}
+.nelfi-card .agent-role {
+  color: #4a9eff;
 }
 .agent-leader-badge {
   display: inline-flex;
@@ -965,8 +975,8 @@ nav .container {
 }
 @media (max-width: 768px) {
   .team-agents {
-    grid-template-columns: 1fr;
-    max-width: 280px;
+    grid-template-columns: 1fr 1fr;
+    max-width: 400px;
   }
   .agent-capabilities {
     grid-template-columns: 1fr;
@@ -1411,10 +1421,26 @@ footer {
             </div>
           </div>
         </div>
+
+        <!-- NELFI -->
+        <div class="team-visual reveal reveal-d4">
+          <div class="agent-card nelfi-card">
+            <div class="agent-glow"></div>
+            <div class="agent-avatar">
+              <img src="images/nelfi-agent.png" alt="Nelfi — Research & Analytics Agent">
+            </div>
+            <div class="agent-name">Nelfi</div>
+            <div class="agent-role">Researcher & Analyst</div>
+            <div class="agent-status">
+              <div class="agent-status-dot"></div>
+              Online & ready
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="team-info reveal reveal-d3">
-        <p class="team-desc">Kayou Code leads the build and orchestrates every move. Kayou directs the creative vision for your brand. Claude powers the intelligence — crafting scroll-stopping content with human-level creativity. Together, 24/7, no days off.</p>
+        <p class="team-desc">Kayou Code leads the build and orchestrates every move. Kayou directs the creative vision. Claude powers the intelligence with human-level creativity. Nelfi researches trends and analyzes performance. Together, 24/7, no days off.</p>
         <div class="agent-capabilities">
           <div class="capability">
             <div class="capability-icon"><span class="material-symbols-rounded">edit_note</span></div>
