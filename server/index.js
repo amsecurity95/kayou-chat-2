@@ -525,8 +525,9 @@ fastify.put('/api/user/photo', async (req) => {
 // ══════════════ MESSAGES (persistent) ══════════════
 fastify.get('/api/messages/:channel', async (req) => {
   if (!db) return []
+  // Get the LATEST 200 messages (subquery DESC, then reverse to ASC for display)
   const { rows } = await db.query(
-    'SELECT * FROM messages WHERE channel = $1 ORDER BY created_at ASC LIMIT 200',
+    'SELECT * FROM (SELECT * FROM messages WHERE channel = $1 ORDER BY created_at DESC LIMIT 200) sub ORDER BY created_at ASC',
     [req.params.channel]
   )
   return rows.map(r => ({
