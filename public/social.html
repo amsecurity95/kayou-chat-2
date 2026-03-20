@@ -952,44 +952,24 @@ nav .container {
   position: relative;
   overflow: hidden;
 }
-.capability::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transition: opacity .4s;
-  border-radius: 14px;
-}
-.capability:hover::before { opacity: 1; }
+/* Individual capability colors — always visible */
+.capability:nth-child(1) { --cap-color: #a855f7; background: linear-gradient(135deg, rgba(139,47,201,.1), rgba(139,47,201,.03)); border-color: rgba(168,85,247,.2); }
+.capability:nth-child(2) { --cap-color: #e8855a; background: linear-gradient(135deg, rgba(232,133,90,.1), rgba(232,133,90,.03)); border-color: rgba(232,133,90,.2); }
+.capability:nth-child(3) { --cap-color: #3b82f6; background: linear-gradient(135deg, rgba(59,130,246,.1), rgba(59,130,246,.03)); border-color: rgba(59,130,246,.2); }
+.capability:nth-child(4) { --cap-color: #d4547a; background: linear-gradient(135deg, rgba(212,84,122,.1), rgba(212,84,122,.03)); border-color: rgba(212,84,122,.2); }
+.capability:nth-child(5) { --cap-color: #10b981; background: linear-gradient(135deg, rgba(16,185,129,.1), rgba(16,185,129,.03)); border-color: rgba(16,185,129,.2); }
+.capability:nth-child(6) { --cap-color: #f59e0b; background: linear-gradient(135deg, rgba(245,158,11,.1), rgba(245,158,11,.03)); border-color: rgba(245,158,11,.2); }
+
 .capability:hover {
-  border-color: transparent;
   transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(0,0,0,.2);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--cap-color) 20%, transparent);
 }
-/* Individual capability colors */
-.capability:nth-child(1)::before { background: linear-gradient(135deg, rgba(139,47,201,.12), rgba(139,47,201,.04)); }
-.capability:nth-child(1) { --cap-color: #a855f7; }
-.capability:nth-child(1):hover { border-color: rgba(168,85,247,.25); }
-
-.capability:nth-child(2)::before { background: linear-gradient(135deg, rgba(232,133,90,.12), rgba(232,133,90,.04)); }
-.capability:nth-child(2) { --cap-color: #e8855a; }
-.capability:nth-child(2):hover { border-color: rgba(232,133,90,.25); }
-
-.capability:nth-child(3)::before { background: linear-gradient(135deg, rgba(59,130,246,.12), rgba(59,130,246,.04)); }
-.capability:nth-child(3) { --cap-color: #3b82f6; }
-.capability:nth-child(3):hover { border-color: rgba(59,130,246,.25); }
-
-.capability:nth-child(4)::before { background: linear-gradient(135deg, rgba(212,84,122,.12), rgba(212,84,122,.04)); }
-.capability:nth-child(4) { --cap-color: #d4547a; }
-.capability:nth-child(4):hover { border-color: rgba(212,84,122,.25); }
-
-.capability:nth-child(5)::before { background: linear-gradient(135deg, rgba(16,185,129,.12), rgba(16,185,129,.04)); }
-.capability:nth-child(5) { --cap-color: #10b981; }
-.capability:nth-child(5):hover { border-color: rgba(16,185,129,.25); }
-
-.capability:nth-child(6)::before { background: linear-gradient(135deg, rgba(245,158,11,.12), rgba(245,158,11,.04)); }
-.capability:nth-child(6) { --cap-color: #f59e0b; }
-.capability:nth-child(6):hover { border-color: rgba(245,158,11,.25); }
+.capability:nth-child(1):hover { background: linear-gradient(135deg, rgba(139,47,201,.18), rgba(139,47,201,.06)); border-color: rgba(168,85,247,.35); }
+.capability:nth-child(2):hover { background: linear-gradient(135deg, rgba(232,133,90,.18), rgba(232,133,90,.06)); border-color: rgba(232,133,90,.35); }
+.capability:nth-child(3):hover { background: linear-gradient(135deg, rgba(59,130,246,.18), rgba(59,130,246,.06)); border-color: rgba(59,130,246,.35); }
+.capability:nth-child(4):hover { background: linear-gradient(135deg, rgba(212,84,122,.18), rgba(212,84,122,.06)); border-color: rgba(212,84,122,.35); }
+.capability:nth-child(5):hover { background: linear-gradient(135deg, rgba(16,185,129,.18), rgba(16,185,129,.06)); border-color: rgba(16,185,129,.35); }
+.capability:nth-child(6):hover { background: linear-gradient(135deg, rgba(245,158,11,.18), rgba(245,158,11,.06)); border-color: rgba(245,158,11,.35); }
 
 .capability-icon {
   width: 38px; height: 38px;
@@ -1009,13 +989,13 @@ nav .container {
 .capability span:last-child {
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,.8);
   position: relative;
   z-index: 1;
   transition: color .3s;
 }
 .capability:hover span:last-child {
-  color: var(--text-primary);
+  color: #fff;
 }
 @media (max-width: 768px) {
   .team-agents {
