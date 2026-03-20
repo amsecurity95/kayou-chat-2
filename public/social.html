@@ -145,8 +145,8 @@ nav .container {
   letter-spacing: -.02em;
 }
 .nav-logo img {
-  width: 34px; height: 34px;
-  border-radius: 8px;
+  width: 52px; height: 52px;
+  border-radius: 12px;
   object-fit: contain;
 }
 .nav-links {
@@ -833,23 +833,23 @@ nav .container {
 }
 .team-agents {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 32px;
-  max-width: 820px;
-  margin: 0 auto 64px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  max-width: 780px;
+  margin: 0 auto 56px;
 }
 .team-visual {
   position: relative;
 }
 .agent-card {
   position: relative;
-  border-radius: 28px;
+  border-radius: 22px;
   overflow: hidden;
   background: rgba(255,255,255,.03);
   border: 1px solid var(--border-subtle);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  padding: 40px;
+  padding: 28px 20px;
   text-align: center;
   transition: all .5s var(--transition);
 }
@@ -899,10 +899,10 @@ nav .container {
 .agent-avatar {
   position: relative;
   z-index: 1;
-  width: 220px;
-  height: 220px;
-  margin: 0 auto 28px;
-  border-radius: 24px;
+  width: 140px;
+  height: 140px;
+  margin: 0 auto 20px;
+  border-radius: 20px;
   overflow: hidden;
   background: rgba(255,255,255,.02);
 }
@@ -912,7 +912,7 @@ nav .container {
   object-fit: cover;
 }
 .agent-name {
-  font-size: 28px;
+  font-size: 20px;
   font-weight: 700;
   letter-spacing: -.03em;
   color: var(--text-primary);
@@ -921,20 +921,20 @@ nav .container {
   z-index: 1;
 }
 .agent-role {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   color: #e8855a;
   text-transform: uppercase;
   letter-spacing: .08em;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   position: relative;
   z-index: 1;
 }
 .agent-status {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 16px;
+  gap: 6px;
+  padding: 5px 12px;
   border-radius: 100px;
   background: rgba(76,217,100,.08);
   border: 1px solid rgba(76,217,100,.2);
@@ -1019,11 +1019,19 @@ nav .container {
 @media (max-width: 768px) {
   .team-agents {
     grid-template-columns: 1fr;
-    max-width: 360px;
+    max-width: 280px;
   }
   .agent-capabilities {
     grid-template-columns: 1fr;
   }
+}
+@media (min-width: 769px) and (max-width: 900px) {
+  .team-agents {
+    max-width: 600px;
+    gap: 16px;
+  }
+  .agent-card { padding: 24px 16px; }
+  .agent-avatar { width: 110px; height: 110px; }
 }
 
 /* ── CTA ── */
@@ -1221,12 +1229,16 @@ footer {
     position: absolute;
     top: 100%;
     left: 0; right: 0;
-    background: rgba(10,10,15,.95);
+    background: rgba(10,10,15,.97);
     backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
     padding: 24px;
     gap: 20px;
     border-bottom: 1px solid var(--border-subtle);
+    z-index: 9999;
+    box-shadow: 0 16px 48px rgba(0,0,0,.4);
   }
+  nav { position: relative; z-index: 9999; }
   .nav-hamburger { display: flex; }
   .hero { min-height: auto; padding: 120px 0 80px; }
   .hero .container { flex-direction: column; text-align: center; gap: 48px; }
@@ -1426,8 +1438,24 @@ footer {
           </div>
         </div>
 
-        <!-- CLAUDE -->
+        <!-- KAYOU -->
         <div class="team-visual reveal reveal-d2">
+          <div class="agent-card">
+            <div class="agent-glow"></div>
+            <div class="agent-avatar">
+              <img src="images/kayou-agent.png" alt="Kayou — AI Agent">
+            </div>
+            <div class="agent-name">Kayou</div>
+            <div class="agent-role">Creative Director</div>
+            <div class="agent-status">
+              <div class="agent-status-dot"></div>
+              Online & ready
+            </div>
+          </div>
+        </div>
+
+        <!-- CLAUDE -->
+        <div class="team-visual reveal reveal-d3">
           <div class="agent-card">
             <div class="agent-glow"></div>
             <div class="agent-avatar">
@@ -1444,7 +1472,7 @@ footer {
       </div>
 
       <div class="team-info reveal reveal-d3">
-        <p class="team-desc">Kayou Code leads the build — understanding your brand, planning campaigns, and orchestrating every move. Claude powers the intelligence — crafting scroll-stopping content with human-level creativity across every platform. Together, 24/7, no days off.</p>
+        <p class="team-desc">Kayou Code leads the build and orchestrates every move. Kayou directs the creative vision for your brand. Claude powers the intelligence — crafting scroll-stopping content with human-level creativity. Together, 24/7, no days off.</p>
         <div class="agent-capabilities">
           <div class="capability">
             <div class="capability-icon"><span class="material-symbols-rounded">edit_note</span></div>
