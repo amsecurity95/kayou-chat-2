@@ -190,7 +190,7 @@
       "id": "kayou-code",
       "name": "Kayou Code",
       "provider": "external",
-      "webhookUrl": "https://hooks.kilosessions.ai/inbound/user/dce1b11f-ecfd-4caa-9bc5-74443c8d33ed/kayou-kilo",
+      "webhookUrl": "https://hooks.kilosessions.ai/inbound/user/dce1b11f-ecfd-4caa-9bc5-74443c8d33ed/kayou-chat",
       "apiKey": "",
       "model": "",
       "systemPrompt": "",
