@@ -1930,35 +1930,37 @@ fastify.post('/api/chat', async (req, reply) => {
   if (!agent) return reply.code(404).send({ error: 'Agent not found' })
   if (!agent.enabled) return reply.code(400).send({ error: 'Agent is disabled' })
   if (agent.provider === 'external') {
-    const channelId = req.body.channelId || `dm-${agentId}`
-    const webhookUrl = resolveEnv(agent.webhookUrl)
-    // Notify external system via webhook (async — response comes back via /api/external/send)
-    if (webhookUrl) {
-      fetch(webhookUrl, {
+    // External agent (Kayou Code) — call Anthropic directly as Claude, keep external identity
+    const anthropicKey = process.env.ANTHROPIC_API_KEY
+    if (!anthropicKey) return reply.code(400).send({ error: 'No Anthropic API key for external agent' })
+
+    // Build system prompt with Kayou Code's identity
+    const rules = c.rules || []
+    const rulesText = rules.length > 0 ? '\n\nCOMPANY RULES (you must follow these):\n' + rules.map((r, i) => `${i + 1}. ${r}`).join('\n') : ''
+    const perms = agent.permissions || []
+    let contextText = ''
+    if (perms.includes('projects') && c.projects?.length > 0) {
+      contextText += '\n\nPROJECTS:\n' + c.projects.map(p => `- ${p.name}: ${p.description || ''} [${p.progress || 0}% complete]`).join('\n')
+    }
+    const teamRoster = c.agents.filter(a => a.id !== agentId && a.enabled).map(a => `- ${a.name} (${a.id}): ${a.reportsTo || 'team'}`).join('\n')
+    const sysPrompt = `You are Kayou Code, a senior developer and Claude-powered AI agent on the Kayou AI team. You report directly to Aimar (the CEO). You're practical, direct, and focused on shipping real code. You talk like a dev — casual but competent. Keep responses concise (1-3 sentences unless asked for detail).${rulesText}${contextText}\n\nTEAM:\n${teamRoster}`
+
+    const msgs = [...(history || []).slice(-20), { role: 'user', content: message }]
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message, history: (history || []).slice(-20), agentId, channelId, from: 'aimar',
-          replyTo: `https://kayou-chat-2-production.up.railway.app/api/external/send`,
-          apiKey: c.externalApiKey || process.env.EXTERNAL_API_KEY || '',
-          externalApiKey: c.externalApiKey || process.env.EXTERNAL_API_KEY || ''
-        }),
-      }).catch(e => console.error(`External webhook notify error for ${agentId}:`, e.message))
-    }
-    // Save user message to DB so external agent can see history
-    if (db) {
-      await db.query(
-        'INSERT INTO messages (channel, sender_id, sender_name, text, color) VALUES ($1,$2,$3,$4,$5)',
-        [channelId, 'aimar', 'Aimar', message, '#FFFFFF']
-      )
-    }
-    if (io) {
-      io.emit('new:message', {
-        channel: channelId, sender: 'aimar', name: 'Aimar',
-        text: message, color: '#FFFFFF', ts: new Date().toISOString()
+        headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1024, system: sysPrompt, messages: msgs }),
       })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error.message)
+      const responseText = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n') || "I'm here but had trouble processing that."
+      updateBrain(agentId, message, responseText)
+      return { response: responseText }
+    } catch (e) {
+      console.error(`External agent ${agentId} Anthropic error:`, e.message)
+      return reply.code(500).send({ error: e.message })
     }
-    return { response: null, external: true, pending: true, message: 'Message sent — response arrives via socket' }
   }
   const agentApiKey = resolveEnv(agent.apiKey)
   if (!agentApiKey && agent.provider !== 'ollama' && agent.provider !== 'webhook') return reply.code(400).send({ error: 'No API key' })
