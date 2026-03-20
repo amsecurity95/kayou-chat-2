@@ -620,6 +620,117 @@ nav .container {
   line-height: 1.7;
 }
 
+/* ── CLAUDE INTELLIGENCE ── */
+.claude-section {
+  padding: 100px 0;
+  position: relative;
+  overflow: hidden;
+  background: transparent;
+}
+.claude-banner {
+  position: relative;
+  max-width: 960px;
+  margin: 0 auto;
+  border-radius: 24px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #1a1025, #0f0a18 40%, #0d1520 70%, #0a0f1e);
+  border: 1px solid rgba(232,133,90,.12);
+  padding: 64px 56px;
+  display: flex;
+  align-items: center;
+  gap: 56px;
+}
+.claude-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 80% 50%, rgba(232,100,60,.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 50%, rgba(139,47,201,.06) 0%, transparent 50%);
+  pointer-events: none;
+}
+.claude-badge {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+}
+.claude-badge-img {
+  width: 160px;
+  height: 160px;
+  border-radius: 28px;
+  object-fit: cover;
+  border: 2px solid rgba(232,133,90,.15);
+  box-shadow: 0 0 60px rgba(232,100,60,.1), 0 0 120px rgba(232,100,60,.05);
+}
+.claude-content {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+}
+.claude-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  border-radius: 50px;
+  background: rgba(232,133,90,.1);
+  border: 1px solid rgba(232,133,90,.2);
+  color: #e8855a;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 20px;
+}
+.claude-content h2 {
+  font-size: clamp(26px, 3.5vw, 38px);
+  font-weight: 700;
+  letter-spacing: -.03em;
+  line-height: 1.2;
+  color: var(--text-primary);
+  margin-bottom: 14px;
+}
+.claude-content h2 em {
+  font-style: normal;
+  background: linear-gradient(135deg, #e8855a, #d4547a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.claude-content p {
+  font-size: 16px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  max-width: 440px;
+}
+.claude-features {
+  display: flex;
+  gap: 24px;
+  margin-top: 24px;
+}
+.claude-feat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,.6);
+}
+.claude-feat .material-symbols-rounded {
+  font-size: 18px;
+  color: #e8855a;
+}
+@media (max-width: 768px) {
+  .claude-banner {
+    flex-direction: column;
+    text-align: center;
+    padding: 48px 32px;
+    gap: 32px;
+  }
+  .claude-content p { margin: 0 auto; }
+  .claude-features { justify-content: center; flex-wrap: wrap; }
+}
+
 /* ── PRICING ── */
 .pricing-section {
   background: rgba(19,13,24,.6);
@@ -1490,6 +1601,27 @@ footer {
             <div class="capability-icon"><span class="material-symbols-rounded">language</span></div>
             <span>Multi-platform</span>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CLAUDE INTELLIGENCE -->
+<section class="claude-section">
+  <div class="container">
+    <div class="claude-banner reveal">
+      <div class="claude-badge">
+        <img class="claude-badge-img" src="images/claude-agent.png" alt="Claude AI">
+      </div>
+      <div class="claude-content">
+        <div class="claude-eyebrow"><span class="material-symbols-rounded" style="font-size:14px">bolt</span> Powered by Claude</div>
+        <h2>Because you deserve <em>better.</em></h2>
+        <p>Our agents run on Claude intelligence — the most capable AI available — delivering higher-quality content, smarter decisions, and performance that outclasses every competitor.</p>
+        <div class="claude-features">
+          <div class="claude-feat"><span class="material-symbols-rounded">verified</span> Top-tier accuracy</div>
+          <div class="claude-feat"><span class="material-symbols-rounded">speed</span> Real-time output</div>
+          <div class="claude-feat"><span class="material-symbols-rounded">psychology</span> Deep understanding</div>
         </div>
       </div>
     </div>
