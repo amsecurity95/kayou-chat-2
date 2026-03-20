@@ -1835,7 +1835,7 @@ async function sendMessage() {
   for (let idx = 0; idx < agentIds.length; idx++) {
     const agentId = agentIds[idx];
     const agent = agents.find(a => a.id === agentId);
-    if (!agent || !agent.enabled || agent.provider === 'external') continue;
+    if (!agent || !agent.enabled) continue;
 
     // Wait before showing typing — like a real person reading the message
     const readDelay = idx === 0 ? 600 + Math.random() * 800 : 1500 + Math.random() * 2000;
@@ -1895,7 +1895,7 @@ async function sendMessage() {
       while ((cm = chainRegex.exec(data.response)) !== null) {
         const tagName = cm[1].trim().toLowerCase();
         const found = agents.find(a => a.name.toLowerCase() === tagName || a.id === tagName);
-        if (found && found.id !== agentId && found.id !== 'aimar' && found.enabled && found.provider !== 'external' && !agentIds.includes(found.id)) {
+        if (found && found.id !== agentId && found.id !== 'aimar' && found.enabled && !agentIds.includes(found.id)) {
           chainMentions.push(found.id);
         }
       }
