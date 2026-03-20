@@ -1929,7 +1929,27 @@ fastify.post('/api/chat', async (req, reply) => {
   if (!agent) return reply.code(404).send({ error: 'Agent not found' })
   if (!agent.enabled) return reply.code(400).send({ error: 'Agent is disabled' })
   if (agent.provider === 'external') {
-    // Save user's message to the DM channel so external agent (OpenClaw) can poll it
+    const webhookUrl = resolveEnv(agent.webhookUrl)
+    if (webhookUrl) {
+      // Forward to external webhook (Kilo Sessions) and wait for response
+      try {
+        const channelId = req.body.channelId || `dm-${agentId}`
+        const whRes = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, history: (history || []).slice(-20), agentId, channelId, from: 'aimar' }),
+        })
+        const whData = await whRes.json()
+        const responseText = whData.response || whData.content || whData.message || whData.choices?.[0]?.message?.content || null
+        if (responseText) {
+          updateBrain(agentId, message, responseText)
+          return { response: responseText }
+        }
+      } catch (e) {
+        console.error(`External webhook error for ${agentId}:`, e.message)
+      }
+    }
+    // Fallback: save to DB for polling if webhook failed or not configured
     const dmChannel = `dm-${agentId}`
     if (db) {
       await db.query(
@@ -1937,13 +1957,11 @@ fastify.post('/api/chat', async (req, reply) => {
         [dmChannel, 'aimar', 'Aimar', message, '#FFFFFF']
       )
     }
-    // Notify connected external listeners via socket
     if (io) {
       io.emit('new:message', {
         channel: dmChannel, sender: 'aimar', name: 'Aimar',
         text: message, color: '#FFFFFF', ts: new Date().toISOString()
       })
-      // Special event for external agents to pick up immediately
       io.emit('external:dm', { agentId, from: 'aimar', message, channel: dmChannel, ts: new Date().toISOString() })
     }
     return { response: null, external: true, pending: true, message: 'Message delivered to external agent' }
