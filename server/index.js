@@ -1938,8 +1938,9 @@ fastify.post('/api/chat', async (req, reply) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message, history: (history || []).slice(-20), agentId, channelId, from: 'aimar',
-          replyTo: `${process.env.RAILWAY_PUBLIC_DOMAIN ? 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN : ''}/api/external/send`,
-          apiKey: c.externalApiKey || process.env.EXTERNAL_API_KEY || ''
+          replyTo: `https://kayou-chat-2-production.up.railway.app/api/external/send`,
+          apiKey: c.externalApiKey || process.env.EXTERNAL_API_KEY || '',
+          externalApiKey: c.externalApiKey || process.env.EXTERNAL_API_KEY || ''
         }),
       }).catch(e => console.error(`External webhook notify error for ${agentId}:`, e.message))
     }
