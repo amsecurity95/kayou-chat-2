@@ -76,6 +76,18 @@ async function initDB() {
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
   )`)
+  // Social dashboard users table
+  await db.query(`CREATE TABLE IF NOT EXISTS social_users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    credits INTEGER DEFAULT 3,
+    persona JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`)
+  // Add persona column if missing (for existing tables)
+  await db.query(`ALTER TABLE social_users ADD COLUMN IF NOT EXISTS persona JSONB DEFAULT '{}'`)
   console.log('Database connected — messages will persist')
   } catch(e) { console.error('Database connection failed:', e.message); db = null }
 }
@@ -244,8 +256,8 @@ fastify.get('/api/auth/check', async (req) => {
 fastify.addHook('onRequest', async (req, reply) => {
   if (!APP_PASSWORD) return
   const url = req.url
-  // Allow: health, auth, external API, static files
-  if (url === '/health' || url.startsWith('/api/auth/') || url.startsWith('/api/external/') || !url.startsWith('/api/')) return
+  // Allow: health, auth, external API, social auth/dashboard, static files
+  if (url === '/health' || url.startsWith('/api/auth/') || url.startsWith('/api/external/') || url.startsWith('/api/social/auth/') || url.startsWith('/api/social/dashboard/') || !url.startsWith('/api/')) return
   const token = req.headers['x-auth-token']
   if (token !== VALID_TOKEN) {
     reply.code(401).send({ error: 'Not authenticated' })
@@ -1264,6 +1276,283 @@ fastify.post('/api/external/tools', async (req, reply) => {
   return { ok: true, tool: name, description }
 })
 
+// ══════════════ SOCIAL DASHBOARD AUTH ══════════════
+const crypto = require('crypto')
+
+function hashPassword(password) {
+  return crypto.createHash('sha256').update(password).digest('hex')
+}
+
+function generateSocialToken(userId, email) {
+  return crypto.createHash('sha256').update(`kayou-social-${userId}-${email}-${Date.now()}`).digest('hex')
+}
+
+// In-memory token store (maps token -> user data). Survives within process lifetime.
+const socialTokens = new Map()
+// In-memory user store (fallback when no DB)
+const memUsers = new Map() // email -> { id, email, name, password_hash, credits, created_at }
+const memPosts = [] // fallback posts array
+let memUserIdCounter = 1
+
+function socialAuthMiddleware(req) {
+  const token = req.headers['x-social-token']
+  if (!token || !socialTokens.has(token)) return null
+  return socialTokens.get(token)
+}
+
+// POST /api/social/auth/signup
+fastify.post('/api/social/auth/signup', async (req, reply) => {
+  const { email, name, password } = req.body || {}
+  if (!email || !name || !password) return reply.code(400).send({ error: 'Missing email, name, or password' })
+  if (password.length < 6) return reply.code(400).send({ error: 'Password must be at least 6 characters' })
+  const emailNorm = email.toLowerCase().trim()
+  const passwordHash = hashPassword(password)
+
+  if (db) {
+    const existing = await db.query('SELECT id FROM social_users WHERE email = $1', [emailNorm])
+    if (existing.rows.length > 0) return reply.code(409).send({ error: 'Email already registered. Please log in.' })
+    const { rows } = await db.query(
+      'INSERT INTO social_users (email, name, password_hash, credits) VALUES ($1, $2, $3, 3) RETURNING id, email, name, credits, created_at',
+      [emailNorm, name.trim(), passwordHash]
+    )
+    const user = rows[0]
+    const token = generateSocialToken(user.id, user.email)
+    socialTokens.set(token, { id: user.id, email: user.email, name: user.name, credits: user.credits })
+    return { ok: true, token, user: { id: user.id, email: user.email, name: user.name, credits: user.credits } }
+  }
+
+  // In-memory fallback
+  if (memUsers.has(emailNorm)) return reply.code(409).send({ error: 'Email already registered. Please log in.' })
+  const user = { id: memUserIdCounter++, email: emailNorm, name: name.trim(), password_hash: passwordHash, credits: 3, created_at: new Date().toISOString() }
+  memUsers.set(emailNorm, user)
+  const token = generateSocialToken(user.id, user.email)
+  socialTokens.set(token, { id: user.id, email: user.email, name: user.name, credits: user.credits })
+  return { ok: true, token, user: { id: user.id, email: user.email, name: user.name, credits: user.credits } }
+})
+
+// POST /api/social/auth/login
+fastify.post('/api/social/auth/login', async (req, reply) => {
+  const { email, password } = req.body || {}
+  if (!email || !password) return reply.code(400).send({ error: 'Missing email or password' })
+  const emailNorm = email.toLowerCase().trim()
+
+  if (db) {
+    const { rows } = await db.query('SELECT * FROM social_users WHERE email = $1', [emailNorm])
+    if (!rows.length) return reply.code(401).send({ error: 'Invalid email or password' })
+    const user = rows[0]
+    if (hashPassword(password) !== user.password_hash) return reply.code(401).send({ error: 'Invalid email or password' })
+    const token = generateSocialToken(user.id, user.email)
+    socialTokens.set(token, { id: user.id, email: user.email, name: user.name, credits: user.credits })
+    return { ok: true, token, user: { id: user.id, email: user.email, name: user.name, credits: user.credits } }
+  }
+
+  // In-memory fallback
+  const user = memUsers.get(emailNorm)
+  if (!user || hashPassword(password) !== user.password_hash) return reply.code(401).send({ error: 'Invalid email or password' })
+  const token = generateSocialToken(user.id, user.email)
+  socialTokens.set(token, { id: user.id, email: user.email, name: user.name, credits: user.credits })
+  return { ok: true, token, user: { id: user.id, email: user.email, name: user.name, credits: user.credits } }
+})
+
+// GET /api/social/auth/me — check session
+fastify.get('/api/social/auth/me', async (req, reply) => {
+  const sessionUser = socialAuthMiddleware(req)
+  if (!sessionUser) return reply.code(401).send({ error: 'Not authenticated' })
+  // Refresh from DB if available
+  if (db) {
+    const { rows } = await db.query('SELECT id, email, name, credits, created_at FROM social_users WHERE id = $1', [sessionUser.id])
+    if (rows.length) {
+      const u = rows[0]
+      socialTokens.set(req.headers['x-social-token'], { id: u.id, email: u.email, name: u.name, credits: u.credits })
+      return { ok: true, user: u }
+    }
+  }
+  // Refresh from mem store
+  const memUser = memUsers.get(sessionUser.email)
+  if (memUser) {
+    const fresh = { id: memUser.id, email: memUser.email, name: memUser.name, credits: memUser.credits }
+    socialTokens.set(req.headers['x-social-token'], fresh)
+    return { ok: true, user: fresh }
+  }
+  return { ok: true, user: sessionUser }
+})
+
+// POST /api/social/auth/logout
+fastify.post('/api/social/auth/logout', async (req) => {
+  const token = req.headers['x-social-token']
+  if (token) socialTokens.delete(token)
+  return { ok: true }
+})
+
+// POST /api/social/auth/persona — save onboarding persona
+fastify.post('/api/social/auth/persona', async (req, reply) => {
+  const sessionUser = socialAuthMiddleware(req)
+  if (!sessionUser) return reply.code(401).send({ error: 'Not authenticated' })
+  const { persona } = req.body || {}
+  if (!persona) return reply.code(400).send({ error: 'Missing persona' })
+
+  if (db) {
+    await db.query('UPDATE social_users SET persona = $2 WHERE id = $1', [sessionUser.id, JSON.stringify(persona)])
+  }
+  // Also update in-memory
+  const memUser = memUsers.get(sessionUser.email)
+  if (memUser) memUser.persona = persona
+  return { ok: true }
+})
+
+// ══════════════ PLATFORM CONNECTION (Upload-Post) ══════════════
+
+// Helper: get or create Upload-Post profile slug for a social user
+function uploadPostSlug(user) {
+  return 'kayou-' + user.id + '-' + user.email.split('@')[0].replace(/[^a-z0-9]/gi, '').toLowerCase()
+}
+
+// POST /api/social/auth/connect-platforms — create Upload-Post profile + generate JWT connect URL
+fastify.post('/api/social/auth/connect-platforms', async (req, reply) => {
+  const sessionUser = socialAuthMiddleware(req)
+  if (!sessionUser) return reply.code(401).send({ error: 'Not authenticated' })
+
+  const apiKey = process.env.UPLOAD_POST_API_KEY
+  if (!apiKey) return reply.code(503).send({ error: 'Upload-Post not configured. Platform connections are not available yet.' })
+
+  const slug = uploadPostSlug(sessionUser)
+  const { platforms } = req.body || {}
+
+  try {
+    // Create user profile if it doesn't exist (idempotent — Upload-Post may return error if exists, that's fine)
+    try {
+      await uploadPostFetch('/api/uploadposts/users', { method: 'POST', body: JSON.stringify({ username: slug }) })
+    } catch (e) {
+      // Ignore "already exists" errors
+      if (!e.message.includes('already') && !e.message.includes('exists')) console.log('Upload-Post create user note:', e.message)
+    }
+
+    // Generate JWT connect URL — scoped to single platform for cleaner UX
+    let origin = (req.headers.origin || req.headers.referer || '').replace(/\/$/, '')
+    // For Upload-Post logo: use RAILWAY_URL if available (localhost not reachable externally)
+    const publicOrigin = process.env.RAILWAY_PUBLIC_DOMAIN
+      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+      : (origin.includes('localhost') ? 'https://kayou-chat-2-production.up.railway.app' : origin)
+    const redirectBase = req.body.redirect || `${origin}/social-dashboard.html?connected=1`
+    const platformNames = { instagram: 'Instagram', tiktok: 'TikTok', x: 'X (Twitter)', linkedin: 'LinkedIn', youtube: 'YouTube', facebook: 'Facebook', threads: 'Threads', pinterest: 'Pinterest' }
+    const singlePlatform = platforms && platforms.length === 1 ? platforms[0] : null
+    const platLabel = singlePlatform ? (platformNames[singlePlatform] || singlePlatform) : 'your accounts'
+
+    const jwtBody = {
+      username: slug,
+      redirect_url: singlePlatform ? `${origin}/social-connect-done.html?platform=${singlePlatform}` : redirectBase,
+      redirect_button_text: 'Done — Back to Kayou AI',
+      logo_image: `${publicOrigin}/images/kayou-social-logo.png`,
+      connect_title: singlePlatform ? `Connect ${platLabel}` : 'Connect Your Accounts',
+      connect_description: singlePlatform
+        ? `Sign in to ${platLabel} to let Kayou AI publish content on your behalf. Secure OAuth — we never see your password.`
+        : 'Securely link your social media accounts. Kayou AI will create and publish content on your behalf.'
+    }
+    if (platforms && platforms.length > 0) jwtBody.platforms = platforms
+
+    const jwtResult = await uploadPostFetch('/api/uploadposts/users/generate-jwt', { method: 'POST', body: JSON.stringify(jwtBody) })
+    return { ok: true, url: jwtResult.access_url || jwtResult.url, slug }
+  } catch (e) {
+    return reply.code(500).send({ error: 'Failed to generate connect link: ' + e.message })
+  }
+})
+
+// GET /api/social/auth/connected-platforms — check which platforms are connected
+fastify.get('/api/social/auth/connected-platforms', async (req, reply) => {
+  const sessionUser = socialAuthMiddleware(req)
+  if (!sessionUser) return reply.code(401).send({ error: 'Not authenticated' })
+
+  const apiKey = process.env.UPLOAD_POST_API_KEY
+  if (!apiKey) return { platforms: [], configured: false }
+
+  try {
+    const result = await uploadPostFetch('/api/uploadposts/users')
+    const slug = uploadPostSlug(sessionUser)
+    const profiles = result.profiles || result.users || []
+    const profile = profiles.find(u => u.username === slug)
+    if (!profile) return { platforms: [], connected: {}, configured: true }
+
+    // social_accounts is { tiktok: "", instagram: "username", ... }
+    // Non-empty value means connected
+    const sa = profile.social_accounts || {}
+    const connected = {}
+    for (const [platform, value] of Object.entries(sa)) {
+      connected[platform] = !!value // true if connected (non-empty string)
+    }
+    return { platforms: Object.keys(sa), connected, configured: true, slug }
+  } catch (e) {
+    return { platforms: [], connected: {}, configured: true, error: e.message }
+  }
+})
+
+// DELETE /api/social/auth/account — delete user account
+fastify.delete('/api/social/auth/account', async (req, reply) => {
+  const sessionUser = socialAuthMiddleware(req)
+  if (!sessionUser) return reply.code(401).send({ error: 'Not authenticated' })
+
+  if (db) {
+    await db.query('DELETE FROM social_posts WHERE drafted_by = $1', [sessionUser.email])
+    await db.query('DELETE FROM social_users WHERE id = $1', [sessionUser.id])
+  }
+  // In-memory cleanup
+  memUsers.delete(sessionUser.email)
+  const token = req.headers['x-social-token']
+  if (token) socialTokens.delete(token)
+
+  return { ok: true }
+})
+
+// POST /api/social/dashboard/publish — publish post and decrement credits
+fastify.post('/api/social/dashboard/publish', async (req, reply) => {
+  const sessionUser = socialAuthMiddleware(req)
+  if (!sessionUser) return reply.code(401).send({ error: 'Not authenticated' })
+
+  const { title, description, contentType, platforms, mediaUrls, platformOptions, scheduledDate } = req.body || {}
+  if (!title) return reply.code(400).send({ error: 'Missing title' })
+
+  if (db) {
+    const { rows: userRows } = await db.query('SELECT credits FROM social_users WHERE id = $1', [sessionUser.id])
+    if (!userRows.length) return reply.code(404).send({ error: 'User not found' })
+    if (userRows[0].credits <= 0) return reply.code(403).send({ error: 'No credits remaining. Upgrade to continue publishing.', needsUpgrade: true })
+
+    const { rows: postRows } = await db.query(
+      `INSERT INTO social_posts (title, description, content_type, platforms, media_urls, platform_options, scheduled_date, drafted_by, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending') RETURNING *`,
+      [title, description || '', contentType || 'text', JSON.stringify(platforms || []), JSON.stringify(mediaUrls || []), JSON.stringify(platformOptions || {}), scheduledDate || null, sessionUser.email]
+    )
+    await db.query('UPDATE social_users SET credits = credits - 1 WHERE id = $1', [sessionUser.id])
+    const newCredits = userRows[0].credits - 1
+    socialTokens.set(req.headers['x-social-token'], { ...sessionUser, credits: newCredits })
+    return { ok: true, post: postRows[0], creditsRemaining: newCredits }
+  }
+
+  // In-memory fallback
+  const memUser = memUsers.get(sessionUser.email)
+  if (!memUser) return reply.code(404).send({ error: 'User not found' })
+  if (memUser.credits <= 0) return reply.code(403).send({ error: 'No credits remaining. Upgrade to continue publishing.', needsUpgrade: true })
+
+  const post = { id: memPosts.length + 1, title, description: description || '', content_type: contentType || 'text', platforms: platforms || [], status: 'pending', drafted_by: sessionUser.email, created_at: new Date().toISOString() }
+  memPosts.push(post)
+  memUser.credits--
+  socialTokens.set(req.headers['x-social-token'], { ...sessionUser, credits: memUser.credits })
+  return { ok: true, post, creditsRemaining: memUser.credits }
+})
+
+// GET /api/social/dashboard/posts — get user's posts
+fastify.get('/api/social/dashboard/posts', async (req, reply) => {
+  const sessionUser = socialAuthMiddleware(req)
+  if (!sessionUser) return reply.code(401).send({ error: 'Not authenticated' })
+  if (db) {
+    const { rows } = await db.query(
+      "SELECT * FROM social_posts WHERE drafted_by = $1 ORDER BY created_at DESC LIMIT 50",
+      [sessionUser.email]
+    )
+    return rows
+  }
+  // In-memory fallback
+  return memPosts.filter(p => p.drafted_by === sessionUser.email).reverse().slice(0, 50)
+})
+
 // ══════════════ SOCIAL MEDIA MANAGEMENT ══════════════
 // Upload-Post REST API helper
 const UPLOAD_POST_BASE = 'https://api.upload-post.com'
@@ -1639,7 +1928,26 @@ fastify.post('/api/chat', async (req, reply) => {
   const agent = c.agents.find(a => a.id === agentId)
   if (!agent) return reply.code(404).send({ error: 'Agent not found' })
   if (!agent.enabled) return reply.code(400).send({ error: 'Agent is disabled' })
-  if (agent.provider === 'external') return { response: null, external: true }
+  if (agent.provider === 'external') {
+    // Save user's message to the DM channel so external agent (OpenClaw) can poll it
+    const dmChannel = `dm-${agentId}`
+    if (db) {
+      await db.query(
+        'INSERT INTO messages (channel, sender_id, sender_name, text, color) VALUES ($1,$2,$3,$4,$5)',
+        [dmChannel, 'aimar', 'Aimar', message, '#FFFFFF']
+      )
+    }
+    // Notify connected external listeners via socket
+    if (io) {
+      io.emit('new:message', {
+        channel: dmChannel, sender: 'aimar', name: 'Aimar',
+        text: message, color: '#FFFFFF', ts: new Date().toISOString()
+      })
+      // Special event for external agents to pick up immediately
+      io.emit('external:dm', { agentId, from: 'aimar', message, channel: dmChannel, ts: new Date().toISOString() })
+    }
+    return { response: null, external: true, pending: true, message: 'Message delivered to external agent' }
+  }
   const agentApiKey = resolveEnv(agent.apiKey)
   if (!agentApiKey && agent.provider !== 'ollama' && agent.provider !== 'webhook') return reply.code(400).send({ error: 'No API key' })
 

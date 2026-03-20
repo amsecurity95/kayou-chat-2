@@ -358,6 +358,8 @@ export default function KayouChat() {
           const data = await res.json()
           setTyping(null)
           if (data.error) throw new Error(data.error)
+          // External agent (Kayou Code via OpenClaw) — message delivered, response comes via socket
+          if (data.external && data.pending) return
           const replyContent = data.response
           const reply: Msg = { id: (Date.now() + i + 1).toString(), channelId: activeChannel, senderId: rid, content: replyContent, ts: new Date().toISOString() }
           setAllMessages(prev => {
