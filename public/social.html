@@ -539,30 +539,9 @@ nav .container {
 /* ── HOW IT WORKS ── */
 .how-section {
   background: var(--bg-primary);
-  padding: 120px 0;
+  padding: 100px 0;
   position: relative;
-  overflow: hidden;
 }
-.how-section::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse at 25% 40%, rgba(139,47,201,.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 75% 60%, rgba(232,133,90,.06) 0%, transparent 50%);
-  backdrop-filter: blur(1px);
-  pointer-events: none;
-}
-.how-section .glow {
-  position: absolute;
-  width: 600px; height: 600px;
-  border-radius: 50%;
-  filter: blur(150px);
-  opacity: .06;
-  pointer-events: none;
-}
-.how-section .glow-1 { background: #8b2fc9; top: 0; left: 20%; }
-.how-section .glow-2 { background: #e8855a; bottom: 0; right: 20%; }
 
 .section-header { text-align: center; margin-bottom: 72px; position: relative; z-index: 1; }
 .section-eyebrow {
@@ -600,79 +579,36 @@ nav .container {
 .steps-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 32px;
+  gap: 48px;
   position: relative;
   z-index: 1;
+  max-width: 900px;
+  margin: 0 auto;
 }
 .step-card {
-  text-align: center;
-  padding: 32px 24px;
+  text-align: left;
   position: relative;
-  background: rgba(255,255,255,.02);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  transition: all .4s var(--transition);
-}
-.step-card:hover {
-  background: rgba(255,255,255,.04);
-  border-color: var(--border-light);
-  transform: translateY(-4px);
-  box-shadow: 0 16px 48px rgba(0,0,0,.2);
+  padding-top: 24px;
+  border-top: 1px solid rgba(255,255,255,.1);
 }
 .step-num {
-  width: 64px; height: 64px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #8b2fc9, #d4547a, #e8855a);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 24px;
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text-primary);
-  position: relative;
-  transform: perspective(600px) rotateY(-8deg) rotateX(4deg);
-  box-shadow:
-    8px 8px 0 rgba(139,47,201,.15),
-    16px 16px 0 rgba(139,47,201,.06),
-    0 8px 24px rgba(194,10,215,.2);
-  transition: transform .4s var(--transition), box-shadow .4s;
-}
-.step-card:hover .step-num {
-  transform: perspective(600px) rotateY(0deg) rotateX(0deg);
-  box-shadow:
-    0 0 0 rgba(139,47,201,0),
-    0 0 0 rgba(139,47,201,0),
-    0 12px 32px rgba(194,10,215,.3);
-}
-.step-icon-box {
-  width: 48px; height: 48px;
-  border-radius: 12px;
-  background: rgba(255,255,255,.04);
-  border: 1px solid var(--border-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 18px;
-}
-.step-icon-box .material-symbols-rounded {
-  font-size: 24px;
-  color: var(--blue);
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,.35);
+  margin-bottom: 16px;
+  letter-spacing: .04em;
 }
 .step-card h3 {
   font-size: 18px;
   font-weight: 600;
   margin-bottom: 10px;
   letter-spacing: -.02em;
+  color: var(--text-primary);
 }
 .step-card p {
   font-size: 14px;
   color: var(--text-secondary);
   line-height: 1.7;
-  max-width: 280px;
-  margin: 0 auto;
 }
 
 /* ── PRICING ── */
@@ -1381,8 +1317,6 @@ footer {
 
 <!-- HOW IT WORKS -->
 <section class="how-section" id="how">
-  <div class="glow glow-1"></div>
-  <div class="glow glow-2"></div>
   <div class="container">
     <div class="section-header reveal">
       <div class="section-eyebrow">How It Works</div>
@@ -1391,26 +1325,17 @@ footer {
     </div>
     <div class="steps-grid">
       <div class="step-card reveal reveal-d1">
-        <div class="step-num">1</div>
-        <div class="step-icon-box">
-          <span class="material-symbols-rounded">chat_bubble</span>
-        </div>
+        <div class="step-num">01</div>
         <h3>Tell us your brand</h3>
         <p>Share your voice, audience, and goals. Our AI learns your unique style in minutes.</p>
       </div>
       <div class="step-card reveal reveal-d2">
-        <div class="step-num">2</div>
-        <div class="step-icon-box">
-          <span class="material-symbols-rounded">edit_note</span>
-        </div>
+        <div class="step-num">02</div>
         <h3>We create content</h3>
         <p>Your AI team drafts posts, captions, and hashtags optimized for every platform.</p>
       </div>
       <div class="step-card reveal reveal-d3">
-        <div class="step-num">3</div>
-        <div class="step-icon-box">
-          <span class="material-symbols-rounded">rocket_launch</span>
-        </div>
+        <div class="step-num">03</div>
         <h3>Approve & publish</h3>
         <p>One click to approve. We publish everywhere at the perfect time, automatically.</p>
       </div>
