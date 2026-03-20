@@ -1929,42 +1929,34 @@ fastify.post('/api/chat', async (req, reply) => {
   if (!agent) return reply.code(404).send({ error: 'Agent not found' })
   if (!agent.enabled) return reply.code(400).send({ error: 'Agent is disabled' })
   if (agent.provider === 'external') {
+    const channelId = req.body.channelId || `dm-${agentId}`
     const webhookUrl = resolveEnv(agent.webhookUrl)
+    // Notify external system via webhook (async — response comes back via /api/external/send)
     if (webhookUrl) {
-      // Forward to external webhook (Kilo Sessions) and wait for response
-      try {
-        const channelId = req.body.channelId || `dm-${agentId}`
-        const whRes = await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message, history: (history || []).slice(-20), agentId, channelId, from: 'aimar' }),
-        })
-        const whData = await whRes.json()
-        const responseText = whData.response || whData.content || whData.message || whData.choices?.[0]?.message?.content || null
-        if (responseText) {
-          updateBrain(agentId, message, responseText)
-          return { response: responseText }
-        }
-      } catch (e) {
-        console.error(`External webhook error for ${agentId}:`, e.message)
-      }
+      fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message, history: (history || []).slice(-20), agentId, channelId, from: 'aimar',
+          replyTo: `${process.env.RAILWAY_PUBLIC_DOMAIN ? 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN : ''}/api/external/send`,
+          apiKey: c.externalApiKey || process.env.EXTERNAL_API_KEY || ''
+        }),
+      }).catch(e => console.error(`External webhook notify error for ${agentId}:`, e.message))
     }
-    // Fallback: save to DB for polling if webhook failed or not configured
-    const dmChannel = `dm-${agentId}`
+    // Save user message to DB so external agent can see history
     if (db) {
       await db.query(
         'INSERT INTO messages (channel, sender_id, sender_name, text, color) VALUES ($1,$2,$3,$4,$5)',
-        [dmChannel, 'aimar', 'Aimar', message, '#FFFFFF']
+        [channelId, 'aimar', 'Aimar', message, '#FFFFFF']
       )
     }
     if (io) {
       io.emit('new:message', {
-        channel: dmChannel, sender: 'aimar', name: 'Aimar',
+        channel: channelId, sender: 'aimar', name: 'Aimar',
         text: message, color: '#FFFFFF', ts: new Date().toISOString()
       })
-      io.emit('external:dm', { agentId, from: 'aimar', message, channel: dmChannel, ts: new Date().toISOString() })
     }
-    return { response: null, external: true, pending: true, message: 'Message delivered to external agent' }
+    return { response: null, external: true, pending: true, message: 'Message sent — response arrives via socket' }
   }
   const agentApiKey = resolveEnv(agent.apiKey)
   if (!agentApiKey && agent.provider !== 'ollama' && agent.provider !== 'webhook') return reply.code(400).send({ error: 'No API key' })

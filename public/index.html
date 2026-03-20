@@ -1867,8 +1867,13 @@ async function sendMessage() {
       if (elapsed < minTyping) await sleep(minTyping - elapsed);
 
       if (data.external) {
-        // External agent (Kayou Code via OpenClaw) — message saved to DB, response arrives via socket
-        addMessage(currentChannel, agentId, agent.name, 'Message received — connecting...', agent.color, agent.profilePhoto);
+        // External agent (Kayou Code via OpenClaw) — webhook notified, response comes via socket
+        // Keep typing visible briefly, then hide — real response arrives via socket new:message
+        await sleep(2000);
+        hideTyping();
+        renderMessages();
+        scrollChat();
+        continue; // skip to next agent
       } else if (data.response) {
         // Strip self-name prefix if agent echoes it (e.g. "[Kayou Code]: ..." or "Kayou Code: ...")
         let cleanResponse = data.response.replace(new RegExp('^\\[?' + agent.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\]?:\\s*', 'i'), '');
