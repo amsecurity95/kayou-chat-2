@@ -891,9 +891,9 @@ nav .container {
 }
 .team-agents {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  max-width: 880px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  max-width: 960px;
   margin: 0 auto 56px;
 }
 .team-visual {
@@ -946,6 +946,16 @@ nav .container {
 }
 .nelfi-card .agent-role {
   color: #4a9eff;
+}
+.mimi-card:hover {
+  border-color: rgba(236,72,153,.3);
+  box-shadow: 0 24px 80px rgba(236,72,153,.1), 0 0 120px rgba(236,72,153,.05);
+}
+.mimi-card .agent-glow {
+  background: radial-gradient(circle, rgba(236,72,153,.2), transparent 70%);
+}
+.mimi-card .agent-role {
+  color: #ec4899;
 }
 .agent-leader-badge {
   display: inline-flex;
@@ -1110,20 +1120,21 @@ nav .container {
 }
 @media (max-width: 768px) {
   .team-agents {
-    grid-template-columns: 1fr 1fr;
-    max-width: 400px;
+    grid-template-columns: repeat(3, 1fr);
+    max-width: 540px;
   }
   .agent-capabilities {
     grid-template-columns: 1fr 1fr;
   }
 }
-@media (min-width: 769px) and (max-width: 900px) {
+@media (min-width: 769px) and (max-width: 1024px) {
   .team-agents {
+    grid-template-columns: repeat(3, 1fr);
     max-width: 600px;
-    gap: 16px;
+    gap: 14px;
   }
-  .agent-card { padding: 24px 16px; }
-  .agent-avatar { width: 110px; height: 110px; }
+  .agent-card { padding: 22px 14px; }
+  .agent-avatar { width: 100px; height: 100px; }
 }
 
 /* ── CTA ── */
@@ -1504,11 +1515,11 @@ footer {
       <div class="team-header reveal">
         <div class="section-eyebrow">Meet the Team</div>
         <h2 class="section-title">The AI agents behind<br><span class="highlight-text">your growth.</span></h2>
-        <p class="section-desc">Two powerful agents working together — one leads strategy, the other creates with the highest-quality intelligence available.</p>
+        <p class="section-desc">Five specialized agents working in sync — building, creating, researching, and delivering with the highest-quality intelligence.</p>
       </div>
 
       <div class="team-agents">
-        <!-- KAYOU CODE -->
+        <!-- KAYOU CODE — Lead -->
         <div class="team-visual reveal reveal-d1">
           <div class="agent-card kayou-card">
             <div class="agent-glow"></div>
@@ -1517,16 +1528,16 @@ footer {
               <img src="images/kayou-code-agent.png" alt="Kayou Code — Lead AI Agent">
             </div>
             <div class="agent-name">Kayou Code</div>
-            <div class="agent-role">Lead Builder & Orchestrator</div>
+            <div class="agent-role">Builder & Orchestrator</div>
             <div class="agent-status">
               <div class="agent-status-dot"></div>
-              Online & ready
+              Online
             </div>
           </div>
         </div>
 
-        <!-- KAYOU -->
-        <div class="team-visual reveal reveal-d2">
+        <!-- KAYOU — Creative Director -->
+        <div class="team-visual reveal reveal-d1">
           <div class="agent-card">
             <div class="agent-glow"></div>
             <div class="agent-avatar">
@@ -1536,46 +1547,62 @@ footer {
             <div class="agent-role">Creative Director</div>
             <div class="agent-status">
               <div class="agent-status-dot"></div>
-              Online & ready
+              Online
             </div>
           </div>
         </div>
 
-        <!-- CLAUDE -->
-        <div class="team-visual reveal reveal-d3">
-          <div class="agent-card">
+        <!-- MIMI — Content Creator -->
+        <div class="team-visual reveal reveal-d2">
+          <div class="agent-card mimi-card">
             <div class="agent-glow"></div>
             <div class="agent-avatar">
-              <img src="images/claude-agent.png" alt="Claude — AI Agent">
+              <img src="images/mimi-agent.png" alt="Mimi — Content Creator">
             </div>
-            <div class="agent-name">Claude</div>
-            <div class="agent-role">High-Quality Intelligence</div>
+            <div class="agent-name">Mimi</div>
+            <div class="agent-role">Content Creator</div>
             <div class="agent-status">
               <div class="agent-status-dot"></div>
-              Online & ready
+              Online
             </div>
           </div>
         </div>
 
-        <!-- NELFI -->
-        <div class="team-visual reveal reveal-d4">
+        <!-- NELFI — Researcher -->
+        <div class="team-visual reveal reveal-d2">
           <div class="agent-card nelfi-card">
             <div class="agent-glow"></div>
             <div class="agent-avatar">
-              <img src="images/nelfi-agent.png" alt="Nelfi — Research & Analytics Agent">
+              <img src="images/nelfi-agent.png" alt="Nelfi — Researcher & Analyst">
             </div>
             <div class="agent-name">Nelfi</div>
             <div class="agent-role">Researcher & Analyst</div>
             <div class="agent-status">
               <div class="agent-status-dot"></div>
-              Online & ready
+              Online
+            </div>
+          </div>
+        </div>
+
+        <!-- CLAUDE — Intelligence -->
+        <div class="team-visual reveal reveal-d3">
+          <div class="agent-card">
+            <div class="agent-glow"></div>
+            <div class="agent-avatar">
+              <img src="images/claude-agent.png" alt="Claude — AI Intelligence">
+            </div>
+            <div class="agent-name">Claude</div>
+            <div class="agent-role">AI Intelligence</div>
+            <div class="agent-status">
+              <div class="agent-status-dot"></div>
+              Online
             </div>
           </div>
         </div>
       </div>
 
       <div class="team-info reveal reveal-d3">
-        <p class="team-desc">Kayou Code leads the build and orchestrates every move. Kayou directs the creative vision. Claude powers the intelligence with human-level creativity. Nelfi researches trends and analyzes performance. Together, 24/7, no days off.</p>
+        <p class="team-desc">Kayou Code leads the build. Kayou directs the creative vision. Mimi crafts scroll-stopping content. Nelfi researches trends and analyzes performance. Claude powers it all with the highest-quality intelligence. Together, 24/7, no days off.</p>
         <div class="agent-capabilities">
           <div class="capability">
             <div class="capability-icon"><span class="material-symbols-rounded">edit_note</span></div>
