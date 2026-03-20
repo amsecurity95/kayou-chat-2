@@ -1867,11 +1867,9 @@ async function sendMessage() {
       const minTyping = 800 + Math.random() * 1200;
       if (elapsed < minTyping) await sleep(minTyping - elapsed);
 
-      if (data.external && data.pending) {
-        // External agent (Kayou Code via OpenClaw) — message saved, response arrives via socket
-        // Don't show placeholder — response will come through socket.io when agent replies
-      } else if (data.external) {
-        addMessage(currentChannel, agentId, agent.name, '📨 Message delivered — waiting for response...', agent.color, agent.profilePhoto);
+      if (data.external) {
+        // External agent (Kayou Code via OpenClaw) — message saved to DB, response arrives via socket
+        addMessage(currentChannel, agentId, agent.name, 'Message received — connecting...', agent.color, agent.profilePhoto);
       } else if (data.response) {
         // Strip self-name prefix if agent echoes it (e.g. "[Kayou Code]: ..." or "Kayou Code: ...")
         let cleanResponse = data.response.replace(new RegExp('^\\[?' + agent.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\]?:\\s*', 'i'), '');
