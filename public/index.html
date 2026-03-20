@@ -1059,7 +1059,7 @@ const CHANNELS = [
 ];
 
 const CHANNEL_AGENTS = {
-  general: ['kayou', 'kayou-kilo'],
+  general: ['kayou', 'kayou-kilo', 'kayou-code'],
   ideas: ['kayou-kilo'],
   research: ['kayou-kilo'],
   security: ['claude', 'sonic'],
@@ -1819,15 +1819,14 @@ async function sendMessage() {
   if (isDM) {
     agentIds = [currentChannel.slice(3)];
   } else {
-    // Check for @mentions — if any agent is tagged, only those agents respond
+    // Check for @mentions — match against known agent names/IDs
     const taggedAgents = [];
-    const mentionRegex = /@([\w\s-]+)/g;
-    let match;
-    while ((match = mentionRegex.exec(text)) !== null) {
-      const tagName = match[1].trim().toLowerCase();
-      const found = agents.find(a => a.name.toLowerCase() === tagName || a.id === tagName);
-      if (found) taggedAgents.push(found.id);
-    }
+    const lowerText = text.toLowerCase();
+    agents.forEach(a => {
+      if (lowerText.includes('@' + a.name.toLowerCase()) || lowerText.includes('@' + a.id)) {
+        if (!taggedAgents.includes(a.id)) taggedAgents.push(a.id);
+      }
+    });
     agentIds = taggedAgents.length > 0 ? taggedAgents : (CHANNEL_AGENTS[currentChannel] || []);
   }
 
