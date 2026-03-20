@@ -1277,6 +1277,75 @@ fastify.post('/api/external/tools', async (req, reply) => {
   return { ok: true, tool: name, description }
 })
 
+// ══════════════ SOCIAL DASHBOARD AI (Groq) ══════════════
+const GROQ_SOCIAL_MODEL = 'llama-3.3-70b-versatile'
+
+const SOCIAL_AGENT_PROMPTS = {
+  mimi: `You are Mimi, a creative social media Content Creator at Kayou AI. Your job is to craft engaging social media captions and content.
+
+Rules:
+- Write a compelling, ready-to-post caption based on the user's request
+- Keep it authentic, conversational, and scroll-stopping
+- Adapt tone to the content (professional for business, casual for lifestyle, etc)
+- Include a call-to-action when appropriate
+- Keep captions concise (under 200 words for most platforms)
+- Do NOT include hashtags (Nelfi handles those)
+- Do NOT suggest platforms or timing (Nelfi handles that)
+- End by asking if they'd like a different angle`,
+
+  nelfi: `You are Nelfi, a social media Researcher & Analyst at Kayou AI. Your job is to analyze content and suggest the best publishing strategy.
+
+Rules:
+- Suggest 2-3 best platforms for this specific content
+- Recommend optimal posting time with specific day/time and reasoning
+- Suggest 5-8 relevant trending hashtags
+- Format clearly with bold sections: **Best Platforms**, **Optimal Timing**, **Hashtags**
+- Be data-driven and specific in your reasoning
+- Keep it concise and actionable`,
+
+  kayou: `You are Kayou, the Creative Director at Kayou AI. You review the team's work and give the final recommendation before publishing.
+
+Rules:
+- Briefly summarize why this content + strategy will perform well
+- Be concise and confident — 2-3 short paragraphs max
+- Tell the user to review the preview below and approve when ready
+- Mention they can request changes if needed`
+}
+
+async function callGroqSocial(agentId, messages) {
+  const apiKey = process.env.GROQ_API_KEY
+  if (!apiKey) throw new Error('Groq not configured')
+  const systemPrompt = SOCIAL_AGENT_PROMPTS[agentId]
+  if (!systemPrompt) throw new Error('Unknown agent')
+
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: GROQ_SOCIAL_MODEL,
+      messages: [{ role: 'system', content: systemPrompt }, ...messages],
+      temperature: 0.8,
+      max_tokens: 500
+    })
+  })
+  const data = await res.json()
+  if (data.error) throw new Error(data.error.message || 'Groq API error')
+  return data.choices?.[0]?.message?.content || 'No response'
+}
+
+fastify.post('/api/social/dashboard/agent', async (req, reply) => {
+  const sessionUser = socialAuthMiddleware(req)
+  if (!sessionUser) return reply.code(401).send({ error: 'Not authenticated' })
+  const { agentId, messages } = req.body || {}
+  if (!agentId || !messages) return reply.code(400).send({ error: 'Missing agentId or messages' })
+  try {
+    const response = await callGroqSocial(agentId, messages)
+    return { ok: true, response }
+  } catch (e) {
+    return reply.code(500).send({ error: e.message })
+  }
+})
+
 // ══════════════ SOCIAL DASHBOARD AUTH ══════════════
 const crypto = require('crypto')
 
@@ -1930,37 +1999,32 @@ fastify.post('/api/chat', async (req, reply) => {
   if (!agent) return reply.code(404).send({ error: 'Agent not found' })
   if (!agent.enabled) return reply.code(400).send({ error: 'Agent is disabled' })
   if (agent.provider === 'external') {
-    // External agent (Kayou Code) — call Anthropic directly as Claude, keep external identity
-    const anthropicKey = process.env.ANTHROPIC_API_KEY
-    if (!anthropicKey) return reply.code(400).send({ error: 'No Anthropic API key for external agent' })
-
-    // Build system prompt with Kayou Code's identity
-    const rules = c.rules || []
-    const rulesText = rules.length > 0 ? '\n\nCOMPANY RULES (you must follow these):\n' + rules.map((r, i) => `${i + 1}. ${r}`).join('\n') : ''
-    const perms = agent.permissions || []
-    let contextText = ''
-    if (perms.includes('projects') && c.projects?.length > 0) {
-      contextText += '\n\nPROJECTS:\n' + c.projects.map(p => `- ${p.name}: ${p.description || ''} [${p.progress || 0}% complete]`).join('\n')
+    // External agent (Kayou Code via Kilo Sessions)
+    // 1. Notify via webhook so Kayou Code knows there's a message
+    // 2. Return external:true — Kayou Code responds async via /api/external/send
+    const channelId = req.body.channelId || `dm-${agentId}`
+    const webhookUrl = resolveEnv(agent.webhookUrl)
+    if (webhookUrl) {
+      try {
+        await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message, agentId, channelId, from: 'aimar',
+            history: (history || []).slice(-10),
+            callback: {
+              url: 'https://kayou-chat-2-production.up.railway.app/api/external/send',
+              key: c.externalApiKey || process.env.EXTERNAL_API_KEY || '',
+              channel: channelId
+            }
+          }),
+        })
+        console.log(`Webhook fired to ${agentId} for channel ${channelId}`)
+      } catch (e) {
+        console.error(`Webhook error for ${agentId}:`, e.message)
+      }
     }
-    const teamRoster = c.agents.filter(a => a.id !== agentId && a.enabled).map(a => `- ${a.name} (${a.id}): ${a.reportsTo || 'team'}`).join('\n')
-    const sysPrompt = `You are Kayou Code, a senior developer and Claude-powered AI agent on the Kayou AI team. You report directly to Aimar (the CEO). You're practical, direct, and focused on shipping real code. You talk like a dev — casual but competent. Keep responses concise (1-3 sentences unless asked for detail).${rulesText}${contextText}\n\nTEAM:\n${teamRoster}`
-
-    const msgs = [...(history || []).slice(-20), { role: 'user', content: message }]
-    try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1024, system: sysPrompt, messages: msgs }),
-      })
-      const data = await res.json()
-      if (data.error) throw new Error(data.error.message)
-      const responseText = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n') || "I'm here but had trouble processing that."
-      updateBrain(agentId, message, responseText)
-      return { response: responseText }
-    } catch (e) {
-      console.error(`External agent ${agentId} Anthropic error:`, e.message)
-      return reply.code(500).send({ error: e.message })
-    }
+    return { response: null, external: true, pending: true }
   }
   const agentApiKey = resolveEnv(agent.apiKey)
   if (!agentApiKey && agent.provider !== 'ollama' && agent.provider !== 'webhook') return reply.code(400).send({ error: 'No API key' })
